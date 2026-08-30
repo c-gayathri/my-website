@@ -1,0 +1,88 @@
+---
+// Document shell shared by every page on the site.
+// It contains ONLY the <head>, meta tags and a minimal global reset —
+// no visual language. Each area of the site (research page, future Studio)
+// brings its own styles, so they can look completely different.
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+
+// BASE_URL is '/my-website' on GitHub Pages, '/' locally and on a custom
+// domain. Strip the trailing slash so it composes cleanly with paths.
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={Astro.url?.href} />
+
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: #fdfdfb;
+    color: #171715;
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial,
+      sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+    text-underline-offset: 3px;
+  }
+
+  a:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+
+  :focus-visible {
+    outline: 1.5px solid #171715;
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: #e8e6df;
+  }
+
+  img {
+    max-width: 100%;
+    display: block;
+  }
+</style>

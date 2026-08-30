@@ -1,0 +1,27 @@
+---
+// Minimal top-of-page header: the only visible connection to the
+// future creative site. Keep this understated.
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+---
+
+<header class="site-header">
+  <a href={`${base}/studio/`}>Studio&nbsp;<span aria-hidden="true">↗</span></a>
+</header>
+
+<style>
+  /* Container width comes from .page in index.astro */
+  .site-header {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 16px;
+  }
+
+  a {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  span {
+    font-size: 12.5px;
+  }
+</style>

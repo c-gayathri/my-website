@@ -1,0 +1,64 @@
+---
+// Education block for the bottom band of the homepage.
+import { education } from '../data/education';
+---
+
+<section>
+  <h2 class="section-label">Education</h2>
+
+  {
+    education.map((entry) => (
+      <div class="edu">
+        <h3>{entry.institution}</h3>
+        <ul>
+          {entry.degrees.map((degree) => (
+            <li>{degree}</li>
+          ))}
+        </ul>
+        <p class="period">{entry.period}</p>
+        {entry.note && <p class="note">{entry.note}</p>}
+      </div>
+    ))
+  }
+</section>
+
+<style>
+  .section-label {
+    margin-bottom: 14px;
+  }
+
+  .edu + .edu {
+    margin-top: 22px;
+  }
+
+  h3 {
+    font-size: 14.5px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 6px 0 0;
+  }
+
+  li {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  .period {
+    font-size: 13px;
+    color: var(--ink-faint);
+    margin: 4px 0 0;
+  }
+
+  .note {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin: 10px 0 0;
+  }
+</style>

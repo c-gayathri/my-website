@@ -1,0 +1,93 @@
+---
+// One research project entry. All entries share the same typography —
+// the order they appear is the order in src/data/projects.ts.
+import type { Project } from '../data/projects';
+
+interface Props {
+  project: Project;
+}
+
+const { project } = Astro.props;
+---
+
+<article class="entry">
+  <h3 class="entry-title">{project.title}</h3>
+
+  {
+    project.venues?.map((venue) => (
+      <p class="entry-venue">
+        {venue.href ? (
+          <a class="text-link" href={venue.href} rel="external">
+            {venue.name}
+          </a>
+        ) : (
+          venue.name
+        )}
+      </p>
+    ))
+  }
+
+  {project.affiliation && (
+    <p class="entry-meta">{project.affiliation} · {project.period}</p>
+  )}
+
+  <div class="entry-desc">
+    {project.description.map((paragraph) => <p>{paragraph}</p>)}
+  </div>
+
+  {
+    project.links && project.links.length > 0 && (
+      <ul class="links-row entry-links">
+        {project.links.map((link) => (
+          <li>
+            <a href={link.href} rel="external">
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</article>
+
+<style>
+  .entry + .entry {
+    border-top: 1px solid var(--rule);
+    margin-top: 22px;
+    padding-top: 22px;
+  }
+
+  .entry-title {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .entry-venue {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin: 8px 0 0;
+  }
+
+  .entry-venue + .entry-venue {
+    margin-top: 4px;
+  }
+
+  .entry-meta {
+    font-size: 13px;
+    color: var(--ink-faint);
+    margin: 6px 0 0;
+  }
+
+  .entry-desc p {
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    margin: 12px 0 0;
+  }
+
+  .entry-links {
+    margin-top: 14px;
+  }
+</style>

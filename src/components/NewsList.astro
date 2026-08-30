@@ -1,0 +1,93 @@
+---
+// News block for the bottom band. Renders newest first — the order comes
+// straight from src/data/news.ts, so keep the newest item at the top there.
+// On desktop the list scrolls internally if it overflows the band.
+import { news } from '../data/news';
+---
+
+<section>
+  <h2 class="section-label">News</h2>
+
+  <div class="news-scroll">
+    <ul class="news-list">
+      {
+        news.map((item) => (
+          <li class="news-row">
+            <span class="news-date">{item.date}</span>
+            <span class="news-text">
+              {item.href ? (
+                <a class="text-link" href={item.href} rel="external">
+                  {item.text}
+                </a>
+              ) : (
+                item.text
+              )}
+            </span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  section {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .section-label {
+    margin-bottom: 10px;
+  }
+
+  .news-scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--rule-strong) transparent;
+  }
+
+  .news-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .news-row {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .news-row:last-child {
+    border-bottom: none;
+  }
+
+  .news-date {
+    color: var(--ink-faint);
+    font-size: 13px;
+    padding-top: 1px;
+  }
+
+  .news-text {
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 899px) {
+    section {
+      display: block;
+      height: auto;
+    }
+
+    .news-scroll {
+      overflow: visible;
+    }
+  }
+</style>
