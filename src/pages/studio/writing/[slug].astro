@@ -1,0 +1,145 @@
+---
+// One writing entry — a reading page. Checkpoint 2: readable default.
+// Layout variants (essay / poem / fragment) are refined in checkpoint 7.
+import { getCollection, render } from 'astro:content';
+import StudioLayout from '../../../layouts/StudioLayout.astro';
+import { studioConfig } from '../../../data/studioConfig';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('writing');
+  return entries.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const d = entry.data;
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const { Content } = await render(entry);
+const allProjects = await getCollection('projects');
+const related = allProjects.filter((p) => d.relatedProjects.includes(p.id));
+
+const fmt = (dt: Date) =>
+  [String(dt.getDate()).padStart(2, '0'), String(dt.getMonth() + 1).padStart(2, '0'), String(dt.getFullYear()).slice(2)].join(' / ');
+---
+
+<StudioLayout title={`${d.title ?? studioConfig.writingLabel} — ${studioConfig.name}`}>
+  <article class:list={['reading', `layout-${d.pageLayout}`]}>
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a class="s-link" href={`${base}/studio/writing/`}>← {studioConfig.writingLabel}</a>
+    </nav>
+
+    <header>
+      {d.preview?.showDate !== false && <span class="s-meta">{fmt(d.date)}</span>}
+      {d.preview?.showType !== false && <span class="s-meta">{d.type}</span>}
+      {d.title && <h1>{d.title}</h1>}
+    </header>
+
+    {d.image && <img class="lead" src={d.image.src} alt={d.title ?? ''} width={d.image.width} height={d.image.height} loading="eager" />}
+
+    <div class="prose">
+      <Content />
+    </div>
+
+    {
+      related.length > 0 && (
+        <aside class="related">
+          <span class="s-meta">related projects</span>
+          {related.map((p) => (
+            <a class="s-link" href={`${base}/studio/projects/${p.id}/`}>
+              {p.data.title}
+            </a>
+          ))}
+        </aside>
+      )
+    }
+  </article>
+</StudioLayout>
+
+<style>
+  .reading {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .crumbs {
+    margin-bottom: 8px;
+  }
+
+  .crumbs a {
+    color: var(--s-grey);
+  }
+
+  header .s-meta {
+    display: inline-block;
+    margin-right: 18px;
+  }
+
+  h1 {
+    font-family: var(--s-serif);
+    font-weight: 500;
+    font-size: clamp(36px, 4.6vw, 54px);
+    line-height: 1.05;
+    margin: 10px 0 0;
+  }
+
+  .lead {
+    width: 100%;
+    height: auto;
+    margin-top: 30px;
+  }
+
+  .prose {
+    margin-top: 34px;
+  }
+
+  /* essay: readable serif column */
+  .layout-essay .prose {
+    font-family: var(--s-serif);
+    font-size: 19.5px;
+    line-height: 1.75;
+  }
+
+  .layout-essay .prose p {
+    margin: 0 0 1.2em;
+  }
+
+  /* poem: mono, narrow, more air */
+  .layout-poem {
+    max-width: 560px;
+  }
+
+  .layout-poem .prose {
+    font-family: var(--s-mono);
+    font-size: 13.5px;
+    line-height: 2;
+    color: var(--s-ink);
+    padding-top: 26px;
+  }
+
+  .layout-poem .prose p {
+    margin: 0 0 1.6em;
+  }
+
+  /* fragment: very sparse */
+  .layout-fragment {
+    max-width: 560px;
+  }
+
+  .layout-fragment .prose {
+    font-family: var(--s-mono);
+    font-size: 14px;
+    line-height: 2.1;
+    padding-top: 40px;
+  }
+
+  .prose em {
+    font-style: italic;
+  }
+
+  .related {
+    margin-top: 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+</style>

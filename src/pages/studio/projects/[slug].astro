@@ -1,0 +1,231 @@
+---
+// One project page. Checkpoint 2: basic rendering of the simple preset.
+// The full preset/MDX/custom system arrives in checkpoint 6.
+import { getCollection, render } from 'astro:content';
+import StudioLayout from '../../../layouts/StudioLayout.astro';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+  return projects.map((project) => ({ params: { slug: project.id }, props: { project } }));
+}
+
+const { project } = Astro.props;
+const d = project.data;
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const clusterIds = d.clusters;
+const allClusters = await getCollection('clusters');
+const clusterLinks = allClusters.filter((c) => clusterIds.includes(c.id));
+const img = d.thumbnail ?? d.hero;
+const { Content } = await render(project);
+
+const sizeClass = `size-${d.size}`;
+---
+
+<StudioLayout title={`${d.title} — Studio`}>
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a class="s-link" href={`${base}/studio/`}>← constellation</a>
+    {
+      clusterLinks.map((c) => (
+        <a class="s-link" href={`${base}/studio/clusters/${c.id}/`}>
+          {c.data.title}
+        </a>
+      ))
+    }
+  </nav>
+
+  <article class:list={['project', d.pageLayout, sizeClass]}>
+    <header>
+      <h1>{d.title}</h1>
+      <p class="s-meta">
+        {[d.medium.join(', '), d.year ? String(d.year) : '', d.types.join(' / ')]
+          .filter(Boolean)
+          .join(' · ')}
+      </p>
+    </header>
+
+    {
+      d.previewType === 'text' ? (
+        <blockquote class="text-piece">
+          <p>“{d.textExcerpt ?? d.summary}”</p>
+        </blockquote>
+      ) : (
+        img && (
+          <figure>
+            <img src={img.src} alt={d.title} width={img.width} height={img.height} loading="eager" />
+            {d.previewType === 'video' && (
+              <span class="play" aria-hidden="true">
+                ▶
+              </span>
+            )}
+          </figure>
+        )
+      )
+    }
+
+    {
+      d.gallery && d.gallery.length > 0 && (
+        <div class="gallery">
+          {d.gallery.map((g) => (
+            <img src={g.src} alt={`${d.title} — detail`} width={g.width} height={g.height} loading="lazy" />
+          ))}
+        </div>
+      )
+    }
+
+    {d.summary && <p class="summary">{d.summary}</p>}
+
+    {Content && (
+      <div class="body">
+        <Content />
+      </div>
+    )}
+
+    {
+      d.relatedWriting.length > 0 && (
+        <aside class="related">
+          <span class="s-meta">related writing</span>
+          {d.relatedWriting.map((slug) => (
+            <a class="s-link" href={`${base}/studio/writing/${slug}/`}>
+              {slug.replace(/-/g, ' ')}
+            </a>
+          ))}
+        </aside>
+      )
+    }
+  </article>
+</StudioLayout>
+
+<style>
+  .crumbs {
+    display: flex;
+    gap: 22px;
+    margin-bottom: 10px;
+  }
+
+  .crumbs a {
+    color: var(--s-grey);
+  }
+
+  header h1 {
+    font-family: var(--s-serif);
+    font-weight: 500;
+    font-size: clamp(34px, 4vw, 52px);
+    line-height: 1.05;
+    margin: 26px 0 8px;
+  }
+
+  header p {
+    margin: 0;
+  }
+
+  article {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    column-gap: 28px;
+    margin-top: 26px;
+  }
+
+  header,
+  figure,
+  .gallery,
+  .summary,
+  .body,
+  .related,
+  .text-piece {
+    grid-column: 2 / span 10;
+  }
+
+  .size-small figure :is(img) { max-width: 560px; }
+  .size-medium figure :is(img) { max-width: 780px; }
+  .size-large figure :is(img) { max-width: 1000px; }
+
+  figure {
+    margin: 34px 0 0;
+    position: relative;
+  }
+
+  figure img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .play {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 16px;
+  }
+
+  .gallery {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+  }
+
+  .gallery img {
+    width: calc(25% - 12px);
+    height: auto;
+  }
+
+  .summary,
+  .body {
+    font-family: var(--s-mono);
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--s-grey);
+    max-width: 62ch;
+  }
+
+  .summary {
+    margin-top: 26px;
+  }
+
+  .body {
+    margin-top: 20px;
+  }
+
+  .text-piece {
+    margin: 40px 0 0;
+  }
+
+  .text-piece p {
+    margin: 0;
+    font-family: var(--s-serif);
+    font-size: 30px;
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  .related {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  @media (max-width: 820px) {
+    header,
+    figure,
+    .gallery,
+    .summary,
+    .body,
+    .related,
+    .text-piece {
+      grid-column: 1 / -1;
+    }
+
+    .gallery img {
+      width: calc(50% - 8px);
+    }
+  }
+</style>

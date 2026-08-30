@@ -1,0 +1,65 @@
+---
+// Bookshelf — annual reading challenges. Full design arrives in
+// checkpoint 8; this placeholder keeps the route working meanwhile.
+import { getCollection } from 'astro:content';
+import StudioLayout from '../../../layouts/StudioLayout.astro';
+import { studioConfig } from '../../../data/studioConfig';
+
+const books = await getCollection('books');
+const years = [...new Set(books.map((b) => b.data.yearRead))].sort((a, b) => b - a);
+const challenge = studioConfig.readingChallenge as Record<number, { goal: number }>;
+---
+
+<StudioLayout title={`${studioConfig.bookshelfLabel} — ${studioConfig.name}`}>
+  <h1 class="s-page-title">{studioConfig.bookshelfLabel}</h1>
+
+  {
+    books.length === 0 ? (
+      <p class="empty s-meta">the shelf is being built — books arrive here soon.</p>
+    ) : (
+      years.map((y) => (
+        <section>
+          <h2 class="s-meta">
+            {y} · {challenge[y]?.goal ?? '—'} goal
+          </h2>
+          <div class="covers">
+            {books
+              .filter((b) => b.data.yearRead === y)
+              .map((b) => (
+                <img
+                  src={b.data.cover.src}
+                  alt={`${b.data.title}, ${b.data.author}`}
+                  width={b.data.cover.width}
+                  height={b.data.cover.height}
+                  loading="lazy"
+                />
+              ))}
+          </div>
+        </section>
+      ))
+    )
+  }
+</StudioLayout>
+
+<style>
+  .empty {
+    margin-top: 40px;
+  }
+
+  section {
+    margin-top: 44px;
+  }
+
+  .covers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    margin-top: 16px;
+  }
+
+  .covers img {
+    height: 200px;
+    width: auto;
+    box-shadow: 0 2px 14px rgba(20, 18, 10, 0.12);
+  }
+</style>

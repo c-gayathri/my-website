@@ -1,0 +1,139 @@
+// ── Studio content collections ───────────────────────────────────────────
+// Schemas for the creative side of the site. See docs/content-model.md.
+//
+// Clusters   — themes shown as constellation nodes (frontmatter only).
+// Projects   — canonical creative works; MDX body = modular page content.
+// Writing    — "Writing pad" entries (poems, essays, fragments).
+// Books      — bookshelf entries; markdown body = the review.
+
+import { defineCollection, z } from 'astro:content';
+import { glob } from 'astro/loaders';
+
+const clusters = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/clusters' }),
+  schema: z.object({
+    title: z.string(),
+    subtitle: z.string().optional(),
+    description: z.string(),
+    hoverDescription: z.string().optional(),
+    hoverColor: z.string().optional(),
+    /** featured clusters frame the view when the constellation opens */
+    featured: z.boolean().default(false),
+    /** authored constellation geometry — the anchor, never randomised */
+    desktop: z.object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number().default(420),
+      driftRadius: z.number().default(10),
+    }),
+    mobile: z
+      .object({
+        order: z.number().default(99),
+        width: z.string().default('full'),
+        align: z.enum(['left', 'center', 'right']).default('left'),
+      })
+      .default({}),
+    /** other cluster ids to draw constellation lines to */
+    connections: z.array(z.string()).default([]),
+  }),
+});
+
+const projects = defineCollection({
+  loader: glob({ pattern: '**/*.mdx', base: './src/content/projects' }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      year: z.number().int(),
+      date: z.string().optional(),
+      clusters: z.array(z.string()).default([]),
+      types: z.array(z.string()).default([]),
+      medium: z.array(z.string()).default([]),
+      tags: z.array(z.string()).default([]),
+      summary: z.string().optional(),
+      previewType: z
+        .enum(['image', 'gallery', 'video', 'text', 'media-text', 'custom'])
+        .default('image'),
+      hero: image().optional(),
+      thumbnail: image().optional(),
+      gallery: z.array(image()).default([]),
+      videoSrc: z.string().optional(),
+      videoPoster: image().optional(),
+      textExcerpt: z.string().optional(),
+      /** how the individual page is built */
+      pageType: z.enum(['simple', 'mdx', 'custom']).default('simple'),
+      /** simple-page preset */
+      pageLayout: z.enum(['image-dominant', 'side-caption', 'offset']).default('image-dominant'),
+      size: z.enum(['small', 'medium', 'large']).default('medium'),
+      customComponent: z.string().optional(),
+      relatedWriting: z.array(z.string()).default([]),
+      /** manual placement inside the cluster page (optional override) */
+      clusterPreview: z
+        .object({
+          x: z.number(),
+          y: z.number(),
+          width: z.number(),
+          align: z.enum(['left', 'center', 'right']).optional(),
+          featured: z.boolean().optional(),
+        })
+        .optional(),
+      mobile: z
+        .object({
+          order: z.number(),
+          width: z.string().optional(),
+          align: z.string().optional(),
+        })
+        .optional(),
+    })
+    .refine((p) => p.pageType !== 'custom' || p.customComponent, {
+      message: 'pageType "custom" requires customComponent',
+    }),
+});
+
+const writing = defineCollection({
+  loader: glob({ pattern: '**/*.mdx', base: './src/content/writing' }),
+  schema: ({ image }) => z.object({
+    title: z.string().optional(),
+    date: z.coerce.date(),
+    type: z.enum(['poem', 'essay', 'fragment', 'mixed']).default('fragment'),
+    excerpt: z.string().optional(),
+    image: image().optional(),
+    relatedProjects: z.array(z.string()).default([]),
+    pageLayout: z.enum(['essay', 'poem', 'fragment', 'mixed', 'custom']).default('fragment'),
+    preview: z
+      .object({
+        variant: z.enum(['title-excerpt', 'minimal', 'fragment', 'image-text']).optional(),
+        desktop: z
+          .object({
+            x: z.number(),
+            y: z.number(),
+            width: z.number(),
+            align: z.enum(['left', 'center', 'right']).optional(),
+          })
+          .optional(),
+        mobile: z
+          .object({ order: z.number(), width: z.string().optional() })
+          .optional(),
+        excerptLength: z.number().optional(),
+        showDate: z.boolean().default(true),
+        showType: z.boolean().default(true),
+        featured: z.boolean().optional(),
+      })
+      .optional(),
+  }),
+});
+
+const books = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/books' }),
+  schema: ({ image }) => z.object({
+    title: z.string(),
+    author: z.string(),
+    cover: image(),
+    yearRead: z.number().int(),
+    rating: z.number().min(0).max(5).optional(),
+    dateFinished: z.string().optional(),
+    featured: z.boolean().optional(),
+    goodreadsLink: z.string().optional(),
+  }),
+});
+
+export const collections = { clusters, projects, writing, books };

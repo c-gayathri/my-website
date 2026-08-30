@@ -1,0 +1,86 @@
+---
+// Studio shell: fonts, nav, footer. Separate visual universe from the
+// research page — shares only the BaseLayout document shell.
+import BaseLayout from './BaseLayout.astro';
+import StudioNav from '../components/studio/StudioNav.astro';
+import { studioConfig } from '../data/studioConfig';
+import { externalLinks } from '../data/externalLinks';
+
+import '@fontsource/cormorant-garamond/400.css';
+import '@fontsource/cormorant-garamond/500.css';
+import '@fontsource/cormorant-garamond/600.css';
+import '@fontsource/cormorant-garamond/400-italic.css';
+import '@fontsource/space-mono/400.css';
+import '@fontsource/space-mono/700.css';
+import '../styles/studio.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  /** full-bleed pages (constellation) skip the standard page frame */
+  fullBleed?: boolean;
+}
+
+const { title, description = `${studioConfig.name} — studio. Images, words, moving things, experiments.`, fullBleed = false } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const elsewhere = Object.entries(externalLinks).filter(
+  ([key, href]) => key !== 'research' && href,
+);
+---
+
+<BaseLayout title={title} description={description}>
+  <div class="studio">
+    <StudioNav />
+    <main class:list={['studio-main', { 's-page': !fullBleed }]}>
+      <slot />
+    </main>
+
+    <footer class="studio-footer">
+      <div class="elsewhere">
+        <span class="s-meta">elsewhere</span>
+        {
+          elsewhere.map(([key, href]) => (
+            <a class="s-link" href={href} rel="external">
+              {key} ↗
+            </a>
+          ))
+        }
+        <a class="s-link" href={externalLinks.research}>Research ↗</a>
+      </div>
+      <span class="s-meta">© {new Date().getFullYear()} {studioConfig.name}</span>
+    </footer>
+  </div>
+</BaseLayout>
+
+<style>
+  .studio {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .studio-main {
+    flex: 1;
+  }
+
+  /* full-bleed pages manage their own frame */
+  .studio-main.s-page {
+    padding-top: 12px;
+  }
+
+  .studio-footer {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px clamp(24px, 4vw, 72px) 26px;
+  }
+
+  .elsewhere {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+</style>

@@ -1,0 +1,66 @@
+---
+// One cluster: all its projects, loosely composed.
+// (Checkpoint 2 basic composition — refined in checkpoint 5.)
+import { getCollection } from 'astro:content';
+import StudioLayout from '../../../layouts/StudioLayout.astro';
+import ProjectPreview from '../../../components/studio/ProjectPreview.astro';
+
+export async function getStaticPaths() {
+  const clusters = await getCollection('clusters');
+  return clusters.map((cluster) => ({ params: { slug: cluster.id }, props: { cluster } }));
+}
+
+const { cluster } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const all = await getCollection('projects');
+const projects = all
+  .filter((p) => p.data.clusters.includes(cluster.id))
+  .sort((a, b) => b.data.year - a.data.year);
+---
+
+<StudioLayout title={`${cluster.data.title} — Studio`}>
+  <h1 class="s-page-title">{cluster.data.title}</h1>
+  {cluster.data.subtitle && <p class="s-meta">{cluster.data.subtitle}</p>}
+  <p class="desc">{cluster.data.description}</p>
+  <p class="s-meta count">{projects.length} projects</p>
+
+  <a class="s-link back" href={`${base}/studio/`}>← constellation</a>
+
+  <div class="previews">
+    {projects.map((p) => <ProjectPreview project={p} />)}
+  </div>
+</StudioLayout>
+
+<style>
+  .desc {
+    font-family: var(--s-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--s-grey);
+    max-width: 52ch;
+    margin: 10px 0 0;
+  }
+
+  .count {
+    display: block;
+    margin-top: 10px;
+  }
+
+  .back {
+    display: inline-block;
+    margin-top: 18px;
+    color: var(--s-grey);
+  }
+
+  .previews {
+    columns: 2;
+    column-gap: 56px;
+    margin-top: 48px;
+  }
+
+  @media (max-width: 820px) {
+    .previews {
+      columns: 1;
+    }
+  }
+</style>

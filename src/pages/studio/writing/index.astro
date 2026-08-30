@@ -1,0 +1,97 @@
+---
+// Writing pad index. Checkpoint 2: quiet editorial list; the spatial
+// art-directed composition arrives in checkpoint 7.
+import { getCollection } from 'astro:content';
+import StudioLayout from '../../../layouts/StudioLayout.astro';
+import { studioConfig } from '../../../data/studioConfig';
+
+const entries = (await getCollection('writing')).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+
+const fmt = (d: Date) =>
+  [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), String(d.getFullYear()).slice(2)].join(' / ');
+---
+
+<StudioLayout title={`${studioConfig.writingLabel} — ${studioConfig.name}`}>
+  <h1 class="s-page-title">{studioConfig.writingLabel}</h1>
+  <p class="s-meta">{entries.length} entries</p>
+
+  <div class="list">
+    {
+      entries.map((e, i) => (
+        <a class="entry" href={`${base}/studio/writing/${e.id}/`}>
+          {e.data.preview?.showDate !== false && <span class="s-meta date">{fmt(e.data.date)}</span>}
+          {e.data.preview?.showType !== false && <span class="s-meta type">{e.data.type}</span>}
+          {e.data.title && <h2>{e.data.title}</h2>}
+          {e.data.excerpt && <p class="excerpt">{e.data.excerpt}</p>}
+          <span class="s-meta go" aria-hidden="true">
+            {i % 3 === 2 ? '↗' : '→'}
+          </span>
+        </a>
+      ))
+    }
+  </div>
+</StudioLayout>
+
+<style>
+  .list {
+    margin-top: 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 64px;
+    max-width: 760px;
+  }
+
+  .entry {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    max-width: 560px;
+  }
+
+  /* quiet asymmetry: entries drift across the column */
+  .entry:nth-child(3n + 2) {
+    margin-left: clamp(0px, 14vw, 220px);
+  }
+
+  .entry:nth-child(3n) {
+    margin-left: clamp(0px, 6vw, 90px);
+  }
+
+  .date,
+  .type {
+    display: inline-block;
+    margin-right: 18px;
+  }
+
+  h2 {
+    font-family: var(--s-serif);
+    font-weight: 500;
+    font-size: clamp(26px, 3vw, 34px);
+    line-height: 1.12;
+    margin: 8px 0 0;
+  }
+
+  .excerpt {
+    font-family: var(--s-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--s-grey);
+    margin: 10px 0 0;
+    max-width: 44ch;
+  }
+
+  .go {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--s-faint);
+  }
+
+  .entry:hover h2 {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1px;
+  }
+</style>

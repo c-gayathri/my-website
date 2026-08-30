@@ -1,0 +1,147 @@
+---
+// A project preview in its many possible shapes. Used on cluster pages and
+// the Index. Heterogeneous by design: not every project looks the same.
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+
+const { project } = Astro.props;
+const d = project.data;
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const href = `${base}/studio/projects/${project.id}/`;
+
+const img = d.thumbnail ?? d.hero;
+const isVideo = d.previewType === 'video';
+const poster = d.videoPoster ?? d.hero;
+const mediumLine = [d.medium.join(', '), d.year ? String(d.year) : '']
+  .filter(Boolean)
+  .join(' · ');
+---
+
+<article class:list={['preview', `type-${d.previewType}`]}>
+  <a href={href} class="media" aria-label={d.title}>
+    {
+      d.previewType === 'text' ? (
+        <blockquote class="text-preview">
+          <p>“{d.textExcerpt ?? d.summary ?? d.title}”</p>
+        </blockquote>
+      ) : isVideo && poster ? (
+        <span class="video-frame">
+          <img src={poster.src} alt={d.title} width={poster.width} height={poster.height} loading="lazy" />
+          <span class="play" aria-hidden="true">
+            ▶
+          </span>
+        </span>
+      ) : img ? (
+        <img src={img.src} alt={d.title} width={img.width} height={img.height} loading="lazy" />
+      ) : null
+    }
+    {
+      d.previewType === 'gallery' && d.gallery.length > 0 && (
+        <span class="count s-meta">+ {d.gallery.length}</span>
+      )
+    }
+  </a>
+
+  <div class="caption">
+    <a class="title" href={href}>{d.title}</a>
+    {mediumLine && <span class="s-meta">{mediumLine}</span>}
+    {d.summary && <p class="summary">{d.summary}</p>}
+  </div>
+</article>
+
+<style>
+  .preview {
+    break-inside: avoid;
+    margin: 0 0 56px;
+  }
+
+  .media {
+    display: block;
+    position: relative;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* video stills get a small, quiet play indicator */
+  .video-frame {
+    position: relative;
+    display: block;
+  }
+
+  .play {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 15px;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.18);
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    place-self: center;
+    margin: auto;
+  }
+
+  .text-preview {
+    border: 1px solid var(--s-line);
+    margin: 0;
+    padding: 28px 26px;
+  }
+
+  .text-preview p {
+    margin: 0;
+    font-family: var(--s-serif);
+    font-size: 22px;
+    font-style: italic;
+    line-height: 1.45;
+  }
+
+  .count {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    background: var(--s-bg);
+    padding: 3px 8px;
+    border: 1px solid var(--s-line);
+  }
+
+  .caption {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .title {
+    font-family: var(--s-serif);
+    font-weight: 500;
+    font-size: 21px;
+    line-height: 1.15;
+    color: var(--s-ink);
+    text-decoration: none;
+  }
+
+  .title:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .summary {
+    margin: 4px 0 0;
+    font-family: var(--s-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--s-grey);
+    max-width: 42ch;
+  }
+</style>

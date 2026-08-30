@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
+import mdx from '@astrojs/mdx';
 
 // ── GitHub Pages settings ────────────────────────────────────────────────
 // The site deploys as a *project site*: https://c-gayathri.github.io/my-website
@@ -13,5 +14,5 @@ export default defineConfig({
   site: 'https://c-gayathri.github.io',
   base: '/my-website',
   output: 'static',
-  integrations: [react()],
+  integrations: [react(), mdx()],
 });

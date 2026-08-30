@@ -1,0 +1,149 @@
+---
+// The Index — practical, searchable directory of everything.
+// Checkpoint 2: static directory. Search arrives in checkpoint 9.
+import { getCollection } from 'astro:content';
+import StudioLayout from '../../../layouts/StudioLayout.astro';
+import { studioConfig } from '../../../data/studioConfig';
+import { externalLinks } from '../../../data/externalLinks';
+
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const clusters = await getCollection('clusters');
+const projects = await getCollection('projects');
+const writing = (await getCollection('writing')).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+const books = await getCollection('books');
+
+const elsewhere = Object.entries(externalLinks).filter(([, href]) => href);
+---
+
+<StudioLayout title={`${studioConfig.indexLabel} — ${studioConfig.name}`}>
+  <h1 class="s-page-title">{studioConfig.indexLabel}</h1>
+  <p class="s-meta">everything, in plain sight · search arrives in a later pass</p>
+
+  <section>
+    <h2 class="s-page-kicker">clusters</h2>
+    <ul class="rows">
+      {
+        clusters.map((c) => (
+          <li>
+            <a class="s-link title" href={`${base}/studio/clusters/${c.id}/`}>
+              {c.data.title}
+            </a>
+            <span class="s-meta">{c.data.subtitle}</span>
+            <span class="s-meta count">
+              {projects.filter((p) => p.data.clusters.includes(c.id)).length} projects
+            </span>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="s-page-kicker">projects</h2>
+    <ul class="rows">
+      {
+        projects
+          .sort((a, b) => b.data.year - a.data.year)
+          .map((p) => (
+            <li>
+              <a class="s-link title" href={`${base}/studio/projects/${p.id}/`}>
+                {p.data.title}
+              </a>
+              <span class="s-meta">{p.data.medium.join(', ')}</span>
+              <span class="s-meta count">{p.data.year}</span>
+            </li>
+          ))
+      }
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="s-page-kicker">{studioConfig.writingLabel}</h2>
+    <ul class="rows">
+      {
+        writing.map((w) => (
+          <li>
+            <a class="s-link title" href={`${base}/studio/writing/${w.id}/`}>
+              {w.data.title ?? w.id.replace(/-/g, ' ')}
+            </a>
+            <span class="s-meta">{w.data.type}</span>
+            <span class="s-meta count">{w.data.date.getFullYear()}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="s-page-kicker">{studioConfig.bookshelfLabel}</h2>
+    {
+      books.length === 0 ? (
+        <p class="s-meta">no books logged yet</p>
+      ) : (
+        <ul class="rows">
+          {books.map((b) => (
+            <li>
+              <a class="s-link title" href={`${base}/studio/bookshelf/${b.id}/`}>
+                {b.data.title}
+              </a>
+              <span class="s-meta">{b.data.author}</span>
+              <span class="s-meta count">{b.data.yearRead}</span>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </section>
+
+  <section>
+    <h2 class="s-page-kicker">elsewhere</h2>
+    <ul class="rows">
+      {
+        elsewhere.map(([key, href]) => (
+          <li>
+            <a class="s-link title" href={href} rel="external">
+              {key} ↗
+            </a>
+          </li>
+        ))
+      }
+      <li>
+        <a class="s-link title" href={externalLinks.research}>Research ↗</a>
+      </li>
+    </ul>
+  </section>
+</StudioLayout>
+
+<style>
+  section {
+    margin-top: 52px;
+  }
+
+  .rows {
+    list-style: none;
+    padding: 0;
+    margin: 18px 0 0;
+    max-width: 860px;
+  }
+
+  .rows li {
+    display: flex;
+    align-items: baseline;
+    gap: 22px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--s-line);
+  }
+
+  .title {
+    font-family: var(--s-serif);
+    font-size: 20px;
+    font-weight: 500;
+    min-width: 240px;
+  }
+
+  .count {
+    margin-left: auto;
+  }
+</style>

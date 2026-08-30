@@ -1,0 +1,96 @@
+---
+// One book — cover, metadata, and the review (markdown body).
+// Full detail-pane design arrives in checkpoint 8.
+import { getCollection, render } from 'astro:content';
+import StudioLayout from '../../../layouts/StudioLayout.astro';
+import { studioConfig } from '../../../data/studioConfig';
+
+export async function getStaticPaths() {
+  const books = await getCollection('books');
+  return books.map((book) => ({ params: { slug: book.id }, props: { book } }));
+}
+
+const { book } = Astro.props;
+const d = book.data;
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const { Content } = await render(book);
+---
+
+<StudioLayout title={`${d.title} — ${studioConfig.bookshelfLabel}`}>
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a class="s-link" href={`${base}/studio/bookshelf/`}>← {studioConfig.bookshelfLabel}</a>
+  </nav>
+
+  <article class="book">
+    <img class="cover" src={d.cover.src} alt={`${d.title}, ${d.author}`} width={d.cover.width} height={d.cover.height} />
+
+    <div class="info">
+      <h1>{d.title}</h1>
+      <p class="s-meta">{d.author}</p>
+      <p class="s-meta">
+        {[
+          d.rating != null ? `${d.rating} / 5` : '',
+          d.dateFinished ? `read ${d.dateFinished}` : '',
+          String(d.yearRead),
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </p>
+      {d.goodreadsLink && <a class="s-link" href={d.goodreadsLink} rel="external">goodreads ↗</a>}
+
+      {
+        Content && (
+          <div class="review">
+            <Content />
+          </div>
+        )
+      }
+    </div>
+  </article>
+</StudioLayout>
+
+<style>
+  .crumbs {
+    margin-bottom: 10px;
+  }
+
+  .crumbs a {
+    color: var(--s-grey);
+  }
+
+  .book {
+    display: grid;
+    grid-template-columns: minmax(180px, 300px) minmax(0, 1fr);
+    gap: clamp(28px, 5vw, 72px);
+    margin-top: 36px;
+  }
+
+  .cover {
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    box-shadow: 0 4px 24px rgba(20, 18, 10, 0.16);
+  }
+
+  h1 {
+    font-family: var(--s-serif);
+    font-weight: 500;
+    font-size: clamp(32px, 4vw, 46px);
+    line-height: 1.05;
+    margin: 12px 0 6px;
+  }
+
+  .review {
+    margin-top: 26px;
+    font-family: var(--s-serif);
+    font-size: 19px;
+    line-height: 1.75;
+    max-width: 60ch;
+  }
+
+  @media (max-width: 700px) {
+    .book {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

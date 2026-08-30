@@ -1,0 +1,100 @@
+/*
+ * Studio visual language. Imported ONLY by StudioLayout.astro —
+ * the research page must not import this file (see docs/technical-decisions.md).
+ */
+
+:root {
+  --s-bg: #faf9f6;
+  --s-ink: #1a1915;
+  --s-grey: #6f6d64;
+  --s-faint: #a4a29a;
+  --s-line: #d9d7cf;
+  --s-serif: 'Cormorant Garamond', 'Times New Roman', Georgia, serif;
+  --s-mono: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+.studio {
+  background: var(--s-bg);
+  color: var(--s-ink);
+  min-height: 100vh;
+}
+
+/* ── typography utilities ─────────────────────────────────────────────── */
+
+.studio .s-serif {
+  font-family: var(--s-serif);
+  font-weight: 500;
+}
+
+.studio .s-mono {
+  font-family: var(--s-mono);
+}
+
+/* tiny technical annotations, e.g. dates / medium / counts */
+.studio .s-meta {
+  font-family: var(--s-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--s-grey);
+}
+
+/* section wordmark, e.g. STUDIO / Writing pad headings */
+.studio .s-wordmark {
+  font-family: var(--s-serif);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* understated text link */
+.studio .s-link {
+  font-family: var(--s-mono);
+  font-size: 12px;
+  color: var(--s-ink);
+  text-decoration: none;
+}
+
+.studio .s-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.studio .s-link:visited {
+  color: var(--s-ink);
+}
+
+/* keyboard focus — visible everywhere in the studio */
+.studio :focus-visible,
+.constellation :focus-visible {
+  outline: 1.5px solid currentColor;
+  outline-offset: 4px;
+}
+
+/* page frame for non-constellation studio pages */
+.studio .s-page {
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: 24px clamp(24px, 5vw, 88px) 120px;
+}
+
+.studio .s-page-title {
+  font-family: var(--s-serif);
+  font-weight: 500;
+  font-size: clamp(40px, 5vw, 64px);
+  line-height: 1.02;
+  letter-spacing: 0.01em;
+  margin: 40px 0 8px;
+}
+
+.studio .s-page-kicker {
+  font-family: var(--s-serif);
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--s-ink);
+  margin: 48px 0 4px;
+}
+
+.studio .s-rule {
+  border: 0;
+  border-top: 1px solid var(--s-line);
+  margin: 28px 0;
+}
