@@ -1,65 +1,207 @@
 ---
-// Bookshelf — annual reading challenges. Full design arrives in
-// checkpoint 8; this placeholder keeps the route working meanwhile.
+// Bookshelf — annual reading challenges. Deliberately simpler than the
+// rest of the Studio: year sections, covers, featured book, reviews.
 import { getCollection } from 'astro:content';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
 
 const books = await getCollection('books');
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const years = [...new Set(books.map((b) => b.data.yearRead))].sort((a, b) => b - a);
 const challenge = studioConfig.readingChallenge as Record<number, { goal: number }>;
+
+const byYear = years.map((y) => {
+  const list = books
+    .filter((b) => b.data.yearRead === y)
+    .sort((a, b) => (b.data.featured ? 1 : 0) - (a.data.featured ? 1 : 0));
+  return { year: y, list, goal: challenge[y]?.goal ?? list.length };
+});
 ---
 
 <StudioLayout title={`${studioConfig.bookshelfLabel} — ${studioConfig.name}`}>
   <h1 class="s-page-title">{studioConfig.bookshelfLabel}</h1>
 
   {
-    books.length === 0 ? (
-      <p class="empty s-meta">the shelf is being built — books arrive here soon.</p>
-    ) : (
-      years.map((y) => (
-        <section>
-          <h2 class="s-meta">
-            {y} · {challenge[y]?.goal ?? '—'} goal
-          </h2>
-          <div class="covers">
-            {books
-              .filter((b) => b.data.yearRead === y)
-              .map((b) => (
+    byYear.map(({ year, list, goal }) => {
+      const featured = list.find((b) => b.data.featured) ?? list[0];
+      const rest = list.filter((b) => b !== featured);
+      return (
+        <section class="year" id={`y${year}`}>
+          <header class="year-head">
+            <h2 class="s-meta">
+              {year} reading challenge
+            </h2>
+            <p class="challenge-num">
+              <span class="big">{list.length}</span>
+              <span class="s-meta"> / {goal} books</span>
+            </p>
+            <div class="bar">
+              <div class="fill" style={`width: ${Math.min(100, (list.length / goal) * 100)}%`} />
+            </div>
+          </header>
+
+          {
+            featured && (
+              <a class="featured" href={`${base}/studio/bookshelf/${featured.id}/`}>
                 <img
-                  src={b.data.cover.src}
-                  alt={`${b.data.title}, ${b.data.author}`}
-                  width={b.data.cover.width}
-                  height={b.data.cover.height}
+                  src={featured.data.cover.src}
+                  alt={`${featured.data.title}, ${featured.data.author}`}
+                  width={featured.data.cover.width}
+                  height={featured.data.cover.height}
                   loading="lazy"
                 />
-              ))}
+                <div class="featured-info">
+                  <h3>{featured.data.title}</h3>
+                  <p class="s-meta">{featured.data.author}</p>
+                  <p class="s-meta">
+                    {[
+                      featured.data.rating != null ? `★ ${featured.data.rating} / 5` : '',
+                      featured.data.dateFinished ? `read ${featured.data.dateFinished}` : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                  <p class="s-meta review-hint">read the review →</p>
+                </div>
+              </a>
+            )
+          }
+
+          <div class="covers">
+            {
+              rest.map((b) => (
+                <a class="cover" href={`${base}/studio/bookshelf/${b.id}/`}>
+                  <img
+                    src={b.data.cover.src}
+                    alt={`${b.data.title}, ${b.data.author}`}
+                    width={b.data.cover.width}
+                    height={b.data.cover.height}
+                    loading="lazy"
+                  />
+                  {b.data.rating != null && <span class="s-meta rating">★ {b.data.rating}</span>}
+                </a>
+              ))
+            }
           </div>
         </section>
-      ))
-    )
+      );
+    })
+  }
+
+  {
+    books.length === 0 && <p class="s-meta empty">the shelf is being built — books arrive here soon.</p>
   }
 </StudioLayout>
 
 <style>
-  .empty {
-    margin-top: 40px;
+  section.year {
+    margin-top: 56px;
   }
 
-  section {
-    margin-top: 44px;
+  .year-head {
+    border-bottom: 1px solid var(--s-line);
+    padding-bottom: 16px;
+  }
+
+  .year-head h2 {
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--s-ink);
+  }
+
+  .challenge-num {
+    margin: 16px 0 0;
+  }
+
+  .challenge-num .big {
+    font-family: var(--s-serif);
+    font-size: 56px;
+    line-height: 1;
+  }
+
+  .bar {
+    width: 220px;
+    height: 5px;
+    border: 1px solid var(--s-ink);
+    margin-top: 14px;
+  }
+
+  .fill {
+    height: 100%;
+    background: var(--s-ink);
+  }
+
+  .featured {
+    display: flex;
+    gap: clamp(20px, 3vw, 44px);
+    margin-top: 40px;
+    text-decoration: none;
+    color: inherit;
+    align-items: flex-start;
+  }
+
+  .featured img {
+    height: 230px;
+    width: auto;
+    box-shadow: 0 4px 26px rgba(20, 18, 10, 0.16);
+  }
+
+  .featured-info h3 {
+    font-family: var(--s-serif);
+    font-weight: 500;
+    font-size: 26px;
+    line-height: 1.15;
+    margin: 6px 0 0;
+  }
+
+  .review-hint {
+    margin-top: 14px;
+    color: var(--s-ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .featured:hover h3 {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
   }
 
   .covers {
     display: flex;
     flex-wrap: wrap;
-    gap: 22px;
-    margin-top: 16px;
+    gap: 26px;
+    margin-top: 40px;
   }
 
-  .covers img {
-    height: 200px;
+  .cover {
+    display: block;
+    position: relative;
+    text-decoration: none;
+  }
+
+  .cover img {
+    height: 190px;
     width: auto;
-    box-shadow: 0 2px 14px rgba(20, 18, 10, 0.12);
+    display: block;
+    box-shadow: 0 3px 18px rgba(20, 18, 10, 0.13);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .cover:hover img {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 26px rgba(20, 18, 10, 0.18);
+  }
+
+  .rating {
+    position: absolute;
+    left: 0;
+    bottom: -20px;
+    color: var(--s-grey);
+  }
+
+  .empty {
+    margin-top: 40px;
   }
 </style>

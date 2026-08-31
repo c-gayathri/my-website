@@ -737,8 +737,6 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       fieldRef.current?.setAttribute('transform', `translate(${tx} ${ty}) scale(${c.scale})`);
       twinkleLayerRef.current?.setAttribute('transform', `translate(${tx} ${ty}) scale(${c.scale})`);
 
-      const cursorWorldX = (cursor.current.x - tx) / c.scale;
-      const cursorWorldY = (cursor.current.y - ty) / c.scale;
       const pushK = reduced.current ? 0 : 0.32;
       const relax = Math.exp(-dt * RELAX);
 

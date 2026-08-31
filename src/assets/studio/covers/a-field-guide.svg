@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="540" viewBox="0 0 360 540">
+  <rect width="360" height="540" fill="#11114d"/>
+  <rect x="14" y="14" width="332" height="512" fill="none" stroke="#e8e6da" stroke-opacity="0.35"/>
+  <text font-family="Georgia, serif" font-size="34" fill="#e8e6da">
+    <tspan x="36" y="120">a field guide to getting lost</tspan>
+  </text>
+  <line x1="36" y1="440" x2="120" y2="440" stroke="#e8e6da" stroke-opacity="0.5"/>
+  <text x="36" y="470" font-family="Menlo, monospace" font-size="15" letter-spacing="2" fill="#e8e6da" fill-opacity="0.85">Rebecca Solnit</text>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="540" viewBox="0 0 360 540">
+  <rect width="360" height="540" fill="#f0ede2"/>
+  <rect x="14" y="14" width="332" height="512" fill="none" stroke="#1a1a17" stroke-opacity="0.35"/>
+  <text font-family="Georgia, serif" font-size="34" fill="#1a1a17">
+    <tspan x="36" y="120">Outline</tspan>
+  </text>
+  <line x1="36" y1="440" x2="120" y2="440" stroke="#1a1a17" stroke-opacity="0.5"/>
+  <text x="36" y="470" font-family="Menlo, monospace" font-size="15" letter-spacing="2" fill="#1a1a17" fill-opacity="0.85">Rachel Cusk</text>
+</svg>

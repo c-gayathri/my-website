@@ -4,7 +4,7 @@ import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import { profile } from '../data/profile';
 
-const { name, role, intro, links } = profile;
+const { name, intro, links } = profile;
 
 // The portrait is picked up automatically: drop a file named
 // portrait.(png|jpg|jpeg|webp|svg) into src/assets/ — no code change
@@ -26,16 +26,17 @@ const portrait = candidates[portraitPath].default;
 ---
 
 <div class="hero">
-  <Image
-    src={portrait}
-    alt={`Portrait of ${name}`}
-    width={480}
-    densities={[1, 2]}
-    class="portrait"
-    loading="eager"
-  />
-  <h1>{name}</h1>
-  <p class="role">{role}</p>
+  <div class="hero-id">
+    <Image
+      src={portrait}
+      alt={`Portrait of ${name}`}
+      width={480}
+      height={600}
+      class="portrait"
+      loading="eager"
+    />
+    <h1>{name}</h1>
+  </div>
   {intro.map((paragraph) => <p class="intro-line">{paragraph}</p>)}
 
   <ul class="links-row profile-links">
@@ -63,23 +64,23 @@ const portrait = candidates[portraitPath].default;
 </div>
 
 <style>
+  .hero-id {
+    display: flex;
+    align-items: flex-end;
+    gap: 22px;
+  }
+
   .portrait {
-    width: min(156px, 46vw);
+    width: min(170px, 42vw);
     height: auto;
   }
 
   h1 {
-    font-size: clamp(26px, 2.4vw, 34px);
+    font-size: clamp(26px, 2.4vw, 36px);
     font-weight: 600;
     letter-spacing: -0.02em;
-    line-height: 1.1;
-    margin: 18px 0 0;
-  }
-
-  .role {
-    font-size: 15px;
-    font-weight: 500;
-    margin: 10px 0 0;
+    line-height: 1.12;
+    margin: 0 0 8px;
   }
 
   .intro-line {
