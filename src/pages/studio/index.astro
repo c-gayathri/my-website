@@ -249,6 +249,7 @@ const data = await Promise.all(
 
   /* title plate — visible at rest and in map view, gone while hovering */
   .constellation-cluster .plate {
+    pointer-events: auto;
     position: absolute;
     left: 50%;
     top: 50%;
@@ -265,6 +266,7 @@ const data = await Promise.all(
   }
 
   .constellation.hovered .constellation-cluster .plate {
+    pointer-events: auto;
     opacity: 0;
   }
 
@@ -337,6 +339,21 @@ const data = await Promise.all(
     max-width: 360px;
     pointer-events: none;
     animation: info-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* marks breathe: slow rotation + gentle size pulse */
+  .constellation .breathe {
+    transform-origin: 0 0;
+    animation: mark-breathe 9s ease-in-out infinite alternate;
+  }
+
+  @keyframes mark-breathe {
+    from {
+      transform: rotate(-3deg) scale(0.95);
+    }
+    to {
+      transform: rotate(4deg) scale(1.07);
+    }
   }
 
   @keyframes info-in {

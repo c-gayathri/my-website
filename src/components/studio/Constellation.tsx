@@ -134,7 +134,7 @@ function makeNode(
     y,
     kind,
     size,
-    rot: rand() * 90,
+    rot: rand() * 180,
     t1: 9 + rand() * 11,
     t2: 5 + rand() * 6,
     p1: rand() * Math.PI * 2,
@@ -173,8 +173,8 @@ function buildField(clusters: CCluster[], config: CConfig): Field {
     hubOf.set(c.id, ids);
   }
 
-  /* free sparkles — statement + small */
-  for (let i = 0; i < 24; i++) {
+  /* free sparkles — statement + small, wider rotation range */
+  for (let i = 0; i < 34; i++) {
     const statement = rand() < 0.3;
     nodes.push(
       makeNode(
@@ -194,7 +194,7 @@ function buildField(clusters: CCluster[], config: CConfig): Field {
   }
 
   /* star clusters — small constellations of mixed sparkles */
-  for (let g = 0; g < 6; g++) {
+  for (let g = 0; g < 9; g++) {
     const gx = rand() * W;
     const gy = rand() * H;
     const n = 3 + Math.floor(rand() * 4);
@@ -213,7 +213,7 @@ function buildField(clusters: CCluster[], config: CConfig): Field {
     }
     /* join the group with short segments */
     for (let k = 1; k < n; k++) {
-      edges.push({ a: anchor + k - 1, b: anchor + k, dashed: rand() < 0.4, broken: rand() < 0.4 });
+      edges.push({ a: anchor + k - 1, b: anchor + k, dashed: rand() < 0.4, broken: false });
     }
   }
 
@@ -293,7 +293,7 @@ function buildField(clusters: CCluster[], config: CConfig): Field {
           a: chain[k],
           b: chain[k + 1],
           dashed: dashed && rand() < 0.7,
-          broken: rand() < 0.5,
+          broken: false,
         });
       }
     }
@@ -308,7 +308,7 @@ function buildField(clusters: CCluster[], config: CConfig): Field {
     const a = freeStarIdx[i];
     const b = freeStarIdx[i + 1];
     if (Math.hypot(nodes[a].x - nodes[b].x, nodes[a].y - nodes[b].y) < 560) {
-      edges.push({ a, b, dashed: rand() < 0.45, broken: rand() < 0.55 });
+      edges.push({ a, b, dashed: rand() < 0.45, broken: false });
     }
   }
 
@@ -732,6 +732,21 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       const map = c.scale < config.zoom.mapBelow && !active;
       setMapOnIf(map);
 
+      /* hover hysteresis: stay active until the pointer leaves a generous
+         radius around the cluster (the enter side is handled by imagery
+         hit-testing, so boundary crossing never flickers) */
+      if (active) {
+        const acl = clusters.find((x) => x.id === active);
+        if (acl) {
+          const halfDiag = Math.hypot(acl.width, acl.width * 0.78) / 2;
+          const threshold = halfDiag * c.scale * 1.7 + 70;
+          const sx = vp.w / 2 + (acl.x - c.cx) * c.scale;
+          const sy = vp.h / 2 + (acl.y - c.cy) * c.scale;
+          const d = Math.hypot(cursor.current.x - sx, cursor.current.y - sy);
+          if (d > threshold) activate(null);
+        }
+      }
+
       const tx = vp.w / 2 - c.cx * c.scale;
       const ty = vp.h / 2 - c.cy * c.scale;
       fieldRef.current?.setAttribute('transform', `translate(${tx} ${ty}) scale(${c.scale})`);
@@ -959,6 +974,13 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                     nodeRefs.current[i] = el;
                   }}
                 >
+                  <g
+                    className="breathe"
+                    style={{
+                      animationDelay: (-n.p1 * 1.4).toFixed(2) + 's',
+                      animationDuration: (n.t2 * 1.7).toFixed(2) + 's',
+                    }}
+                  >
                   {n.kind === 'dot' ? (
                     <circle r={n.size} fill="currentColor" opacity={0.85} />
                   ) : n.kind === 'star4' ? (
@@ -972,6 +994,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                   {n.burst?.map((b, k) => (
                     <circle key={k} cx={b.dx} cy={b.dy} r={b.r} fill="currentColor" opacity={0.55} />
                   ))}
+                  </g>
                 </g>
               ))}
             </g>
@@ -1009,9 +1032,8 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                 .filter(Boolean)
                 .join(' ')}
               aria-label={`${c.title} — ${c.projectCount} projects`}
-              style={{ width: c.width, height: boxH * c.width }}
+              style={{ width: c.width, height: boxH * c.width, pointerEvents: 'none' }}
               onPointerEnter={() => !isTouch && activate(c.id)}
-              onPointerLeave={() => !isTouch && activeId === c.id && activate(null)}
               onFocus={() => activate(c.id)}
               onBlur={() => activeId === c.id && activate(null)}
               onClick={(e) => {
@@ -1040,6 +1062,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                       top: `${(slot.y * 100).toFixed(2)}%`,
                       width: `${(slot.w * 100).toFixed(2)}%`,
                       zIndex: i + 1,
+                      pointerEvents: 'auto',
                     }}
                   />
                 );
