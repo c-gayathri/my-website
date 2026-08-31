@@ -71,9 +71,10 @@
 
 /* page frame for non-constellation studio pages */
 .studio .s-page {
-  max-width: 1460px;
+  width: 100%; /* flex parents + auto margins would otherwise shrink-to-fit */
+  max-width: 1680px;
   margin: 0 auto;
-  padding: 24px clamp(24px, 5vw, 88px) 120px;
+  padding: 24px clamp(24px, 4vw, 88px) 120px;
 }
 
 .studio .s-page-title {

@@ -19,3 +19,7 @@ pnpm-debug.log*
 
 # macOS
 .DS_Store
+
+# raw sample videos (compressed versions live in public/studio/videos)
+src/assets/studio/sample/*.MOV
+src/assets/studio/sample/Untitled_Artwork.MP4

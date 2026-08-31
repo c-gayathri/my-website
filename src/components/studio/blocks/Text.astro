@@ -1,0 +1,29 @@
+---
+// MDX block: small mono text, for fragments and marginal notes.
+import Place from './Place.astro';
+
+interface Props {
+  preset?: 'centered' | 'left' | 'right' | 'offset-left' | 'offset-right' | 'narrow' | 'narrow-left' | 'large';
+}
+
+const { preset = 'narrow-left' } = Astro.props;
+---
+
+<Place {preset}>
+  <div class="blk-text">
+    <slot />
+  </div>
+</Place>
+
+<style>
+  .blk-text {
+    font-family: var(--s-mono);
+    font-size: 12.5px;
+    line-height: 1.85;
+    color: var(--s-grey);
+  }
+
+  .blk-text :global(p) {
+    margin: 0 0 1em;
+  }
+</style>

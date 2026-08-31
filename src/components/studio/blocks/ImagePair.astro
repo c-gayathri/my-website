@@ -1,0 +1,57 @@
+---
+// MDX block: two images side by side, the right one deliberately lower.
+import Place from './Place.astro';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  left: ImageMetadata | string;
+  right: ImageMetadata | string;
+  altLeft?: string;
+  altRight?: string;
+  caption?: string;
+  preset?: 'centered' | 'large' | 'left' | 'right';
+}
+
+const { left, right, altLeft = '', altRight = '', caption, preset = 'large' } = Astro.props;
+
+const url = (v: ImageMetadata | string) => (typeof v === 'string' ? v : v.src);
+const dims = (v: ImageMetadata | string) =>
+  typeof v === 'string' ? {} : { width: v.width, height: v.height };
+---
+
+<Place {preset}>
+  <div class="pair">
+    <img src={url(left)} alt={altLeft} {...dims(left)} loading="lazy" />
+    <img class="low" src={url(right)} alt={altRight} {...dims(right)} loading="lazy" />
+  </div>
+  {caption && <p class="s-meta cap">{caption}</p>}
+</Place>
+
+<style>
+  .pair {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+  }
+
+  img {
+    width: calc(50% - 9px);
+    height: auto;
+    display: block;
+    box-shadow: 0 2px 18px rgba(20, 18, 10, 0.08);
+  }
+
+  .low {
+    margin-top: 44px;
+  }
+
+  .cap {
+    margin: 10px 0 0;
+  }
+
+  @media (max-width: 640px) {
+    .low {
+      margin-top: 22px;
+    }
+  }
+</style>

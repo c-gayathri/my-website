@@ -6,14 +6,15 @@ hoverDescription: Pattern studies that repeat until they break — colour, noise
 hoverColor: '#ff2e88'
 featured: true
 desktop:
-  x: 1010
-  y: 430
-  width: 470
+  x: 1150
+  y: 420
+  width: 440
   driftRadius: 12
+  depth: 1
 mobile:
   order: 1
 connections:
   - self-portrait
+  - letters-type
   - line-study
-  - visual-diary
 ---

@@ -12,7 +12,33 @@ gallery:
   - ../../assets/studio/sample/sample-09.png
   - ../../assets/studio/sample/sample-11.png
   - ../../assets/studio/sample/sample-12.png
-pageType: simple
-pageLayout: image-dominant
+pageType: mdx
 size: large
 ---
+
+import swirlGreen from '../../assets/studio/sample/sample-10.png';
+import swirlPink from '../../assets/studio/sample/sample-09.png';
+import swirlViolet from '../../assets/studio/sample/sample-11.png';
+import swirlEmber from '../../assets/studio/sample/sample-12.png';
+
+<Text preset="narrow-left">
+
+Four cities under invented weather. Each swirl began as the same photograph of the
+same skyline — then the pattern was painted over it until the buildings stopped
+being buildings and became weather.
+
+</Text>
+
+<ImagePair left={swirlGreen} right={swirlEmber} caption="green / ember — the same night, twice" preset="large" />
+
+<Quote preset="offset-right">the pattern was painted until it hummed</Quote>
+
+<Image src={swirlViolet} preset="narrow" caption="violet, with the last tower standing" />
+
+<Image src={swirlPink} preset="offset-left" caption="pink — the first one, before the series knew itself" />
+
+<Text preset="narrow-left">
+
+The series continues whenever the skyline does something worth painting over.
+
+</Text>

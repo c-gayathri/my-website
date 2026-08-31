@@ -19,19 +19,25 @@ interface Props {
   description?: string;
   /** full-bleed pages (constellation) skip the standard page frame */
   fullBleed?: boolean;
+  /** detail pages: one-line header */
+  slim?: boolean;
 }
 
-const { title, description = `${studioConfig.name} — studio. Images, words, moving things, experiments.`, fullBleed = false } = Astro.props;
+const {
+  title,
+  description = `${studioConfig.name} — studio. Images, words, moving things, experiments.`,
+  fullBleed = false,
+  slim = false,
+} = Astro.props;
 
-const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const elsewhere = Object.entries(externalLinks).filter(
   ([key, href]) => key !== 'research' && href,
 );
 ---
 
 <BaseLayout title={title} description={description}>
-  <div class="studio">
-    <StudioNav />
+  <div class:list={['studio', { 'studio-full': fullBleed }]}>
+    <StudioNav variant={slim ? 'slim' : 'full'} />
     <main class:list={['studio-main', { 's-page': !fullBleed }]}>
       <slot />
     </main>
@@ -60,8 +66,31 @@ const elsewhere = Object.entries(externalLinks).filter(
     min-height: 100vh;
   }
 
-  .studio-main {
+  /* full-bleed pages: the canvas owns the viewport; the footer overlays it */
+  .studio-full {
+    position: relative;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .studio-full .studio-main {
     flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .studio-full .studio-main > :global(*) {
+    flex: 1;
+  }
+
+  .studio-full .studio-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
   }
 
   /* full-bleed pages manage their own frame */

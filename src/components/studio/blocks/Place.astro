@@ -1,0 +1,62 @@
+---
+// Internal placement primitive for MDX blocks.
+// Presets map to the 12-column project grid; explicit colStart/colSpan and
+// small offsets override them. Mobile always collapses to full width.
+interface Props {
+  preset?:
+    | 'centered'
+    | 'left'
+    | 'right'
+    | 'offset-left'
+    | 'offset-right'
+    | 'narrow'
+    | 'narrow-left'
+    | 'large'
+    | 'full-bleed';
+  colStart?: number;
+  colSpan?: number;
+  offsetY?: number;
+  offsetX?: number;
+  class?: string;
+}
+
+const { preset = 'centered', colStart, colSpan, offsetY = 0, offsetX = 0, class: className } = Astro.props;
+
+const PRESETS: Record<string, { start: number; span: number; oy?: number }> = {
+  centered: { start: 3, span: 8 },
+  left: { start: 1, span: 7 },
+  right: { start: 6, span: 7 },
+  'offset-left': { start: 1, span: 6, oy: 56 },
+  'offset-right': { start: 7, span: 6, oy: -44 },
+  narrow: { start: 4, span: 5 },
+  'narrow-left': { start: 1, span: 5 },
+  large: { start: 1, span: 12 },
+  'full-bleed': { start: 1, span: 12 },
+};
+
+const p = PRESETS[preset] ?? PRESETS.centered;
+const start = colStart ?? p.start;
+const span = colSpan ?? p.span;
+const oy = offsetY || p.oy || 0;
+
+const style = `grid-column: ${start} / span ${span};${oy ? ` transform: translateY(${oy}px);` : ''}${offsetX ? ` margin-left: ${offsetX}px;` : ''}${preset === 'full-bleed' ? ' margin-inline: min(-4vw, -48px);' : ''}`;
+---
+
+<div class:list={['place', className]} style={style}>
+  <slot />
+</div>
+
+<style>
+  .place {
+    min-width: 0;
+  }
+
+  @media (max-width: 820px) {
+    .place {
+      grid-column: 1 / -1 !important;
+      transform: none !important;
+      margin-left: 0 !important;
+      margin-inline: 0 !important;
+    }
+  }
+</style>

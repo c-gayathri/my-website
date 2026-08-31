@@ -3,7 +3,7 @@
 // in component code.
 
 export const studioConfig = {
-  name: 'Gayathri Chandran',
+  name: 'Gayathri Neela Chandran',
   tagline: 'images / words / moving things / experiments',
 
   // Section labels (display names). Routes stay stable: /studio/writing etc.
@@ -12,7 +12,7 @@ export const studioConfig = {
   indexLabel: 'Index',
 
   // Constellation world space (authored coordinates live in this box).
-  world: { width: 2000, height: 1250 },
+  world: { width: 2600, height: 1700 },
 
   // Camera bounds. Below `mapBelow` the map mode kicks in:
   // images fade out and screen-space titles remain readable.

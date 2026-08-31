@@ -6,13 +6,14 @@ hoverDescription: Faces as arguments with the self — halftone, watercolour, sm
 hoverColor: '#2438ff'
 featured: true
 desktop:
-  x: 470
-  y: 370
+  x: 520
+  y: 420
   width: 420
   driftRadius: 10
+  depth: 1.2
 mobile:
   order: 2
 connections:
-  - visual-diary
   - swirl-signal
+  - visual-diary
 ---

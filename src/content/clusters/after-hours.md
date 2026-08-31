@@ -6,12 +6,13 @@ hoverDescription: Work made late — smoke, ink hands, and the hour when the col
 hoverColor: '#ff3d1f'
 featured: false
 desktop:
-  x: 1500
-  y: 920
+  x: 2080
+  y: 1380
   width: 380
   driftRadius: 9
+  depth: 0.8
 mobile:
-  order: 4
+  order: 7
 connections:
-  - visual-diary
+  - going-out
 ---

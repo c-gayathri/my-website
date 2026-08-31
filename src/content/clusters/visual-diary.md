@@ -6,13 +6,15 @@ hoverDescription: A running diary of tastes, tears and weather — documentation
 hoverColor: '#ff7a00'
 featured: true
 desktop:
-  x: 560
-  y: 910
-  width: 440
+  x: 600
+  y: 1150
+  width: 430
   driftRadius: 11
+  depth: 1.1
 mobile:
   order: 3
 connections:
   - self-portrait
-  - after-hours
+  - paper-press
+  - pink-weather
 ---

@@ -6,12 +6,14 @@ hoverDescription: Quiet line work — figures, petals and geometry, drawn withou
 hoverColor: '#7a2bff'
 featured: false
 desktop:
-  x: 1660
-  y: 310
+  x: 2130
+  y: 340
   width: 360
   driftRadius: 9
+  depth: 0.8
 mobile:
-  order: 5
+  order: 6
 connections:
   - swirl-signal
+  - letters-type
 ---

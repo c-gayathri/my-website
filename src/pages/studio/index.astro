@@ -42,6 +42,7 @@ const data = await Promise.all(
       y: c.data.desktop.y,
       width: c.data.desktop.width,
       driftRadius: c.data.desktop.driftRadius,
+      depth: c.data.desktop.depth,
       color:
         c.data.hoverColor ??
         studioConfig.palette[hashStr(c.id) % studioConfig.palette.length],
@@ -60,7 +61,15 @@ const data = await Promise.all(
     <Constellation
       client:load
       clusters={data}
-      config={{ seed: studioConfig.layoutSeed, world: { ...studioConfig.world } }}
+      config={{
+        seed: studioConfig.layoutSeed,
+        world: { ...studioConfig.world },
+        zoom: { ...studioConfig.zoom },
+        drift: {
+          periodSeconds: studioConfig.drift.periodSeconds,
+          hoverMultiplier: studioConfig.drift.hoverMultiplier,
+        },
+      }}
       basePath={base}
     />
     <p class="s-meta hint">drag to explore · scroll to zoom</p>
@@ -70,7 +79,9 @@ const data = await Promise.all(
 <style>
   .constellation-page {
     position: relative;
-    height: clamp(540px, calc(100dvh - 158px), 1200px);
+    width: 100%;
+    height: 100%;
+    min-height: 540px;
   }
 
   .hint {
@@ -84,19 +95,162 @@ const data = await Promise.all(
 
 <style is:global>
   /* island styles live here so they can target rendered children */
+
   .constellation {
     position: relative;
     width: 100%;
     height: 100%;
     overflow: hidden;
     background: var(--s-bg);
+    cursor: grab;
+    touch-action: pan-y;
   }
 
+  .constellation.grabbing {
+    cursor: grabbing;
+  }
+
+  .star-layer,
+  .twinkle-layer,
+  .splotch-layer {
+    position: absolute;
+    inset: 0;
+  }
+
+  .star-layer {
+    color: var(--s-ink);
+    transition: color 0.45s ease;
+  }
+
+  .twinkle-layer {
+    color: #fff;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .splotch-layer {
+    pointer-events: none;
+    z-index: 1;
+    overflow: visible;
+  }
+
+  .splotch-layer path {
+    opacity: 0;
+    transition:
+      transform 0.72s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.3s ease;
+    will-change: transform;
+  }
+
+  .splotch-layer path.open {
+    opacity: 1;
+  }
+
+  /* hovered state: geometry turns white, lines shimmer, stars pulse */
+  .constellation.hovered {
+    cursor: pointer;
+  }
+
+  .constellation.hovered .star-layer {
+    color: #fff;
+  }
+
+  .constellation.hovered .star-layer path.ln {
+    stroke-dasharray: 5 9;
+    animation: line-shimmer 2.4s linear infinite;
+  }
+
+  @keyframes line-shimmer {
+    to {
+      stroke-dashoffset: -56;
+    }
+  }
+
+  .constellation.hovered .star-layer g.pulse {
+    animation: star-pulse 2.2s ease-in-out infinite alternate;
+  }
+
+  .constellation.hovered .star-layer g.pulse:nth-child(3n) {
+    animation-delay: -0.9s;
+  }
+
+  .constellation.hovered .star-layer g.pulse:nth-child(4n) {
+    animation-delay: -1.5s;
+  }
+
+  @keyframes star-pulse {
+    from {
+      opacity: 0.72;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* pointillist spawn/despawn */
+  .twinkle-layer .tw {
+    opacity: 0;
+    animation-name: twinkle-blink;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-play-state: paused;
+  }
+
+  .constellation.hovered .twinkle-layer .tw {
+    animation-play-state: running;
+  }
+
+  @keyframes twinkle-blink {
+    0% {
+      opacity: 0;
+    }
+    4% {
+      opacity: 0.95;
+    }
+    16% {
+      opacity: 0.85;
+    }
+    22% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* clusters */
   .constellation-cluster {
     position: absolute;
+    top: 0;
+    left: 0;
     display: block;
     text-decoration: none;
     color: inherit;
+    transform-origin: 50% 50%;
+    transition: opacity 0.45s ease;
+    will-change: transform;
+  }
+
+  .constellation-cluster.dimmed {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .constellation-cluster.active {
+    z-index: 5;
+  }
+
+  .cluster-inner {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-origin: 50% 50%;
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .constellation-cluster.active .cluster-inner {
+    transform: scale(1.25);
   }
 
   .constellation-cluster img {
@@ -104,11 +258,122 @@ const data = await Promise.all(
     height: auto;
     display: block;
     box-shadow: 0 2px 16px rgba(20, 18, 10, 0.09);
-    transition: transform 0.35s ease;
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .constellation-cluster:hover img:first-child,
-  .constellation-cluster:focus-visible img:first-child {
-    transform: scale(1.02);
+  /* on focus the images spread radially from the cluster centre */
+  .constellation-cluster.active img {
+    transform: translate(var(--sx, 0), var(--sy, 0));
+  }
+
+  /* map mode — zoomed out: images fade, screen-space titles remain */
+  .constellation.map .constellation-cluster img {
+    opacity: 0;
+  }
+
+  .map-label {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-family: var(--s-mono);
+    font-size: 13px;
+    color: var(--s-ink);
+    background: var(--s-bg);
+    padding: 2px 8px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+    z-index: 4;
+  }
+
+  .constellation.map .map-label {
+    opacity: 1;
+  }
+
+  .constellation.map .star-layer,
+  .constellation.map .twinkle-layer {
+    opacity: 0.45;
+  }
+
+  /* cluster info block (anchored to the active cluster) */
+  .cluster-info {
+    position: absolute;
+    z-index: 8;
+    color: #fff;
+    max-width: 360px;
+    pointer-events: none;
+    animation: info-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes info-in {
+    from {
+      opacity: 0;
+      translate: 0 10px;
+    }
+    to {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
+
+  .cluster-info .ci-kicker {
+    font-family: var(--s-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    margin: 0 0 10px;
+    opacity: 0.85;
+  }
+
+  .cluster-info .ci-title {
+    font-family: var(--s-serif);
+    font-weight: 500;
+    font-size: clamp(30px, 3.4vw, 46px);
+    line-height: 1.02;
+    margin: 0 0 12px;
+  }
+
+  .cluster-info .ci-desc {
+    font-family: var(--s-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    margin: 0 0 14px;
+    opacity: 0.95;
+    max-width: 40ch;
+  }
+
+  .cluster-info .ci-meta {
+    font-family: var(--s-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    margin: 0 0 10px;
+  }
+
+  .cluster-info .ci-link {
+    font-family: var(--s-mono);
+    font-size: 12px;
+    color: #fff;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    pointer-events: auto;
+  }
+
+  /* while hovering, the studio chrome steps back */
+  body[data-studio-hover] .studio-footer,
+  body[data-studio-hover] .hint {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .studio-footer,
+  .hint {
+    transition: opacity 0.4s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .constellation *,
+    .constellation {
+      transition: none !important;
+      animation: none !important;
+    }
   }
 </style>

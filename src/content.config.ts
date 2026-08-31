@@ -25,6 +25,8 @@ const clusters = defineCollection({
       y: z.number(),
       width: z.number().default(420),
       driftRadius: z.number().default(10),
+      /** parallax weight: nearer clusters drift/drag more (0.6–1.4) */
+      depth: z.number().default(1),
     }),
     mobile: z
       .object({
@@ -97,6 +99,7 @@ const writing = defineCollection({
     type: z.enum(['poem', 'essay', 'fragment', 'mixed']).default('fragment'),
     excerpt: z.string().optional(),
     image: image().optional(),
+    gallery: z.array(image()).default([]),
     relatedProjects: z.array(z.string()).default([]),
     pageLayout: z.enum(['essay', 'poem', 'fragment', 'mixed', 'custom']).default('fragment'),
     preview: z

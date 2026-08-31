@@ -1,6 +1,8 @@
 ---
-// Writing pad index. Checkpoint 2: quiet editorial list; the spatial
-// art-directed composition arrives in checkpoint 7.
+// Writing pad index.
+// Desktop: a spatial, scattered composition — deterministic placements from
+// preview.desktop overrides, else seeded defaults (layoutSeed shuffles them).
+// Mobile: the ordered stack.
 import { getCollection } from 'astro:content';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
@@ -12,52 +14,148 @@ const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 
 const fmt = (d: Date) =>
   [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), String(d.getFullYear()).slice(2)].join(' / ');
+
+/* deterministic seeded placement (same composition every build) */
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const rand = mulberry32(studioConfig.layoutSeed * 2654435761);
+const COLUMN_X = [4, 37, 68];
+
+const placed = entries.map((e, i) => {
+  const manual = e.data.preview?.desktop;
+  const isBig = e.data.type === 'essay' || e.data.gallery.length > 0;
+  const width = manual?.width ?? (isBig ? 34 : 24);
+  const x = manual?.x ?? clamp(COLUMN_X[i % 3] + (rand() - 0.5) * 10, 2, 72);
+  const y = manual?.y ?? clamp(i * 17 + (rand() - 0.5) * 6, 0, 86);
+  return { e, x, y, width };
+});
+
+function clamp(v: number, lo: number, hi: number) {
+  return Math.min(hi, Math.max(lo, v));
+}
+
+const canvasH = Math.max(placed.length * 360, 900);
+
+/* decorative marks scattered between the entries (desktop only) */
+const markRand = mulberry32(studioConfig.layoutSeed + 11);
+const marks = Array.from({ length: 16 }, () => ({
+  x: markRand() * 100,
+  y: markRand() * 100,
+  star: markRand() < 0.3,
+  s: 5 + markRand() * 9,
+  dot: 0.8 + markRand() * 1.4,
+  o: 0.2 + markRand() * 0.4,
+}));
 ---
 
 <StudioLayout title={`${studioConfig.writingLabel} — ${studioConfig.name}`}>
-  <h1 class="s-page-title">{studioConfig.writingLabel}</h1>
-  <p class="s-meta">{entries.length} entries</p>
+  <div class="writing-head">
+    <h1 class="s-page-title">{studioConfig.writingLabel}</h1>
+    <p class="s-meta">{entries.length} entries</p>
+  </div>
 
-  <div class="list">
+  <div class="canvas" style={`--canvas-h: ${canvasH}px`}>
+    <svg class="deco" aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none">
+      {
+        marks.map((m) =>
+          m.star ? (
+            <path
+              d={`M${m.x},${m.y - m.s / 6} Q${m.x + m.s / 24},${m.y - m.s / 24} ${m.x + m.s / 12},${m.y} Q${m.x + m.s / 24},${m.y + m.s / 24} ${m.x},${m.y + m.s / 6} Q${m.x - m.s / 24},${m.y + m.s / 24} ${m.x - m.s / 12},${m.y} Q${m.x - m.s / 24},${m.y - m.s / 24} ${m.x},${m.y - m.s / 6} Z`}
+              fill="var(--s-ink)"
+              opacity={0.7}
+            />
+          ) : (
+            <circle cx={m.x} cy={m.y} r={m.dot / 6} fill="var(--s-ink)" opacity={m.o} />
+          ),
+        )
+      }
+    </svg>
+
     {
-      entries.map((e, i) => (
-        <a class="entry" href={`${base}/studio/writing/${e.id}/`}>
-          {e.data.preview?.showDate !== false && <span class="s-meta date">{fmt(e.data.date)}</span>}
-          {e.data.preview?.showType !== false && <span class="s-meta type">{e.data.type}</span>}
-          {e.data.title && <h2>{e.data.title}</h2>}
-          {e.data.excerpt && <p class="excerpt">{e.data.excerpt}</p>}
-          <span class="s-meta go" aria-hidden="true">
-            {i % 3 === 2 ? '↗' : '→'}
-          </span>
-        </a>
-      ))
+      placed.map(({ e, x, y, width }) => {
+        const img = e.data.image ?? e.data.gallery[0];
+        const isImageText = Boolean(img) || e.data.preview?.variant === 'image-text';
+        return (
+          <a
+            class="entry"
+            href={`${base}/studio/writing/${e.id}/`}
+            style={`--x: ${x}%; --y: ${y}%; --w: ${width}%`}
+          >
+            {e.data.preview?.showDate !== false && (
+              <span class="s-meta date">{fmt(e.data.date)}</span>
+            )}
+            {e.data.preview?.showType !== false && <span class="s-meta type">{e.data.type}</span>}
+            {img && (
+              <img
+                class="thumb"
+                src={img.src}
+                alt={e.data.title ?? ''}
+                width={img.width}
+                height={img.height}
+                loading="lazy"
+              />
+            )}
+            {e.data.title && <h2>{e.data.title}</h2>}
+            {e.data.excerpt && <p class="excerpt">{e.data.excerpt}</p>}
+            <span class="s-meta go" aria-hidden="true">
+              →
+            </span>
+          </a>
+        );
+      })
     }
   </div>
 </StudioLayout>
 
 <style>
-  .list {
-    margin-top: 56px;
+  .writing-head {
     display: flex;
-    flex-direction: column;
-    gap: 64px;
-    max-width: 760px;
+    align-items: baseline;
+    gap: 26px;
   }
 
+  .writing-head p {
+    margin: 40px 0 0;
+  }
+
+  /* desktop: spatial canvas */
+  @media (min-width: 900px) {
+    .canvas {
+      position: relative;
+      height: var(--canvas-h);
+    }
+
+    .deco {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .entry {
+      position: absolute;
+      left: var(--x);
+      top: var(--y);
+      width: var(--w);
+    }
+  }
+
+  /* mobile: ordered stack */
   .entry {
     display: block;
     text-decoration: none;
     color: inherit;
+    margin: 0 0 56px;
     max-width: 560px;
-  }
-
-  /* quiet asymmetry: entries drift across the column */
-  .entry:nth-child(3n + 2) {
-    margin-left: clamp(0px, 14vw, 220px);
-  }
-
-  .entry:nth-child(3n) {
-    margin-left: clamp(0px, 6vw, 90px);
   }
 
   .date,
@@ -66,10 +164,18 @@ const fmt = (d: Date) =>
     margin-right: 18px;
   }
 
+  .thumb {
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    display: block;
+    margin: 12px 0 4px;
+  }
+
   h2 {
     font-family: var(--s-serif);
     font-weight: 500;
-    font-size: clamp(26px, 3vw, 34px);
+    font-size: clamp(26px, 3vw, 36px);
     line-height: 1.12;
     margin: 8px 0 0;
   }

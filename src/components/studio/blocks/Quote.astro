@@ -1,0 +1,39 @@
+---
+// MDX block: an oversized serif quote that can sit off-grid.
+import Place from './Place.astro';
+
+interface Props {
+  preset?: 'centered' | 'left' | 'right' | 'offset-left' | 'offset-right' | 'narrow' | 'narrow-left' | 'large';
+  attribution?: string;
+}
+
+const { preset = 'offset-right', attribution } = Astro.props;
+---
+
+<Place {preset}>
+  <blockquote class="blk-quote">
+    <p><slot /></p>
+    {attribution && <cite class="s-meta">— {attribution}</cite>}
+  </blockquote>
+</Place>
+
+<style>
+  .blk-quote {
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+    font-family: var(--s-serif);
+    font-weight: 500;
+    font-size: clamp(26px, 3vw, 38px);
+    font-style: italic;
+    line-height: 1.25;
+  }
+
+  cite {
+    display: block;
+    margin-top: 12px;
+    font-style: normal;
+  }
+</style>
