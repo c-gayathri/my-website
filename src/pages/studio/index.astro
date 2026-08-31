@@ -87,9 +87,12 @@ const data = await Promise.all(
   .hint {
     position: absolute;
     left: clamp(24px, 4vw, 72px);
-    bottom: 14px;
+    bottom: 64px;
     margin: 0;
     color: var(--s-faint);
+    background: var(--s-bg);
+    padding: 4px 12px;
+    z-index: 9;
   }
 </style>
 
@@ -290,45 +293,47 @@ const data = await Promise.all(
     opacity: 0;
   }
 
-  /* view controls — focus / map */
+  /* view controls — focus / map, bottom-right, rotated labels */
   .view-controls {
     position: absolute;
-    right: clamp(18px, 2.6vw, 40px);
-    top: 50%;
-    transform: translateY(-50%);
+    right: clamp(14px, 2vw, 30px);
+    bottom: 12px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 8px;
+    gap: 20px;
     z-index: 9;
+    background: var(--s-bg);
+    padding: 14px 9px;
+    border: 1px solid var(--s-line);
   }
 
   .view-controls button {
-    font-family: var(--s-mono);
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    color: var(--s-grey);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
     background: none;
     border: none;
-    padding: 4px 2px;
+    padding: 0;
     cursor: pointer;
+    color: var(--s-grey);
   }
 
-  .view-controls button:hover {
-    color: var(--s-ink);
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
-
+  .view-controls button:hover,
   .view-controls button[aria-pressed='true'] {
     color: var(--s-ink);
-    text-decoration: underline;
-    text-underline-offset: 4px;
+  }
+
+  .view-controls svg {
+    width: 13px;
+    height: 13px;
   }
 
   .view-controls span {
-    color: var(--s-faint);
+    font-family: var(--s-mono);
     font-size: 10px;
+    letter-spacing: 0.14em;
+    writing-mode: vertical-rl;
   }
 
   /* cluster info block (anchored to the active cluster) */
@@ -408,11 +413,20 @@ const data = await Promise.all(
     pointer-events: auto;
   }
 
-  /* hover: the colour reaches the header — so the header reads white */
+  /* hover: the colour reaches the header and the footer strip */
   body[data-studio-hover] .studio-nav a,
   body[data-studio-hover] .studio-nav .name,
   body[data-studio-hover] .studio-nav .tagline {
     color: #fff;
+  }
+
+  .studio-full .studio-footer {
+    background: var(--s-bg);
+    transition: background 0.4s ease;
+  }
+
+  body[data-studio-hover] .studio-full .studio-footer {
+    background: transparent;
   }
 
   /* while hovering, the studio chrome steps back */

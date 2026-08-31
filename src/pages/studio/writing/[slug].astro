@@ -4,6 +4,7 @@
 import { getCollection, render } from 'astro:content';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
+import { studioBlocks } from '../../../components/studio/blocks';
 
 export async function getStaticPaths() {
   const entries = await getCollection('writing');
@@ -36,7 +37,7 @@ const fmt = (dt: Date) =>
     {d.image && <img class="lead" src={d.image.src} alt={d.title ?? ''} width={d.image.width} height={d.image.height} loading="eager" />}
 
     <div class="prose">
-      <Content />
+      <Content components={studioBlocks} />
     </div>
 
     {

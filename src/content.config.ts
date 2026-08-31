@@ -135,6 +135,8 @@ const books = defineCollection({
     rating: z.number().min(0).max(5).optional(),
     dateFinished: z.string().optional(),
     featured: z.boolean().optional(),
+    recommended: z.boolean().default(false),
+    excerpt: z.string().optional(),
     goodreadsLink: z.string().optional(),
   }),
 });

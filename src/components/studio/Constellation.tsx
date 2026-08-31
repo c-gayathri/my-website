@@ -459,6 +459,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
   const drag = useRef({ on: false, x: 0, y: 0, moved: false });
   const vel = useRef({ x: 0, y: 0, vx: 0, vy: 0, lx: 0, ly: 0 });
   const cursor = useRef({ x: -9999, y: -9999 });
+  const pointerSeen = useRef(false);
   const activeRef = useRef<string | null>(null);
 
   const layouts = useMemo(
@@ -570,6 +571,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       const rect = el.getBoundingClientRect();
       cursor.current.x = e.clientX - rect.left;
       cursor.current.y = e.clientY - rect.top;
+      pointerSeen.current = true;
       vel.current.vx = (e.clientX - vel.current.lx) * 0.55 + vel.current.vx * 0.45;
       vel.current.vy = (e.clientY - vel.current.ly) * 0.55 + vel.current.vy * 0.45;
       vel.current.lx = e.clientX;
@@ -672,8 +674,9 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       const info = infoRef.current;
       if (info) {
         const placeRight = sx < vp.w * 0.58;
-        info.style.left = placeRight ? `${sx + (cl.width * t.scale) / 2 + 44}px` : '';
-        info.style.right = placeRight ? '' : `${vp.w - sx + (cl.width * t.scale) / 2 + 44}px`;
+        const halfSpan = (cl.width * t.scale) / 2 + 110;
+        info.style.left = placeRight ? `${sx + halfSpan}px` : '';
+        info.style.right = placeRight ? '' : `${vp.w - sx + halfSpan}px`;
         info.style.top = `${sy - 44}px`;
       }
     } else {
@@ -735,7 +738,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       /* hover hysteresis: stay active until the pointer leaves a generous
          radius around the cluster (the enter side is handled by imagery
          hit-testing, so boundary crossing never flickers) */
-      if (active) {
+      if (active && pointerSeen.current) {
         const acl = clusters.find((x) => x.id === active);
         if (acl) {
           const halfDiag = Math.hypot(acl.width, acl.width * 0.78) / 2;
@@ -1072,12 +1075,23 @@ export default function Constellation({ clusters, config, basePath }: Props) {
           ))}
 
           <div className="view-controls">
-            <button type="button" onClick={goFocus}>
-              focus
+            <button type="button" onClick={goFocus} aria-label="Focus view">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path
+                  d="M10,1 Q11,9 19,10 Q11,11 10,19 Q9,11 1,10 Q9,9 10,1 Z"
+                  fill="currentColor"
+                />
+              </svg>
+              <span>focus</span>
             </button>
-            <span aria-hidden="true">·</span>
-            <button type="button" onClick={goMap} aria-pressed={mapOn}>
-              map
+            <button type="button" onClick={goMap} aria-pressed={mapOn} aria-label="Map view">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="10" cy="3.5" r="1.6" fill="currentColor" />
+                <circle cx="16.5" cy="10" r="1.6" fill="currentColor" />
+                <circle cx="10" cy="16.5" r="1.6" fill="currentColor" />
+                <circle cx="3.5" cy="10" r="1.6" fill="currentColor" />
+              </svg>
+              <span>map</span>
             </button>
           </div>
 

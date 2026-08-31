@@ -1,6 +1,8 @@
 ---
-// Bookshelf — annual reading challenges. Deliberately simpler than the
-// rest of the Studio: year sections, covers, featured book, reviews.
+// Bookshelf — annual reading challenges.
+// Layout: challenge rail on the left, covers on the right; the featured
+// book carries a persistent review pane; other covers reveal rating +
+// review excerpt on hover. A recommended shelf collects hand-picked books.
 import { getCollection } from 'astro:content';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
@@ -16,21 +18,23 @@ const byYear = years.map((y) => {
     .sort((a, b) => (b.data.featured ? 1 : 0) - (a.data.featured ? 1 : 0));
   return { year: y, list, goal: challenge[y]?.goal ?? list.length };
 });
+
+const recommended = books.filter((b) => b.data.recommended);
+
+const ratingOf = (b: (typeof books)[number]) =>
+  b.data.rating != null ? `★ ${b.data.rating} / 5` : '';
 ---
 
-<StudioLayout title={`${studioConfig.bookshelfLabel} — ${studioConfig.name}`}>
-  <h1 class="s-page-title">{studioConfig.bookshelfLabel}</h1>
-
+<StudioLayout title={`${studioConfig.bookshelfLabel} — ${studioConfig.name}`} section={studioConfig.bookshelfLabel}>
+  <div class="bookshelf-page">
   {
     byYear.map(({ year, list, goal }) => {
       const featured = list.find((b) => b.data.featured) ?? list[0];
       const rest = list.filter((b) => b !== featured);
       return (
         <section class="year" id={`y${year}`}>
-          <header class="year-head">
-            <h2 class="s-meta">
-              {year} reading challenge
-            </h2>
+          <aside class="rail">
+            <p class="s-meta rail-label">reading challenge</p>
             <p class="challenge-num">
               <span class="big">{list.length}</span>
               <span class="s-meta"> / {goal} books</span>
@@ -38,36 +42,36 @@ const byYear = years.map((y) => {
             <div class="bar">
               <div class="fill" style={`width: ${Math.min(100, (list.length / goal) * 100)}%`} />
             </div>
-          </header>
-
-          {
-            featured && (
-              <a class="featured" href={`${base}/studio/bookshelf/${featured.id}/`}>
-                <img
-                  src={featured.data.cover.src}
-                  alt={`${featured.data.title}, ${featured.data.author}`}
-                  width={featured.data.cover.width}
-                  height={featured.data.cover.height}
-                  loading="lazy"
-                />
-                <div class="featured-info">
-                  <h3>{featured.data.title}</h3>
-                  <p class="s-meta">{featured.data.author}</p>
-                  <p class="s-meta">
-                    {[
-                      featured.data.rating != null ? `★ ${featured.data.rating} / 5` : '',
-                      featured.data.dateFinished ? `read ${featured.data.dateFinished}` : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </p>
-                  <p class="s-meta review-hint">read the review →</p>
-                </div>
-              </a>
-            )
-          }
+            <p class="s-meta past">
+              {years.map((y2) => (
+                <a class="s-link" href={`${base}/studio/bookshelf/#y${y2}`}>
+                  {y2}
+                </a>
+              ))}
+            </p>
+          </aside>
 
           <div class="covers">
+            {
+              featured && (
+                <a class="cover big" href={`${base}/studio/bookshelf/${featured.id}/`}>
+                  <img
+                    src={featured.data.cover.src}
+                    alt={`${featured.data.title}, ${featured.data.author}`}
+                    width={featured.data.cover.width}
+                    height={featured.data.cover.height}
+                    loading="lazy"
+                  />
+                  <span class="pane">
+                    <span class="s-meta stars">{ratingOf(featured)}</span>
+                    <span class="s-meta excerpt">
+                      {featured.data.excerpt ? `“${featured.data.excerpt}”` : 'review →'}
+                    </span>
+                    <span class="s-meta date">{featured.data.dateFinished}</span>
+                  </span>
+                </a>
+              )
+            }
             {
               rest.map((b) => (
                 <a class="cover" href={`${base}/studio/bookshelf/${b.id}/`}>
@@ -78,7 +82,13 @@ const byYear = years.map((y) => {
                     height={b.data.cover.height}
                     loading="lazy"
                   />
-                  {b.data.rating != null && <span class="s-meta rating">★ {b.data.rating}</span>}
+                  <span class="pane">
+                    <span class="s-meta stars">{ratingOf(b)}</span>
+                    <span class="s-meta excerpt">
+                      {b.data.excerpt ? `“${b.data.excerpt}”` : `${b.data.title} — review →`}
+                    </span>
+                  </span>
+                  {b.data.recommended && <span class="s-meta rec">recommended</span>}
                 </a>
               ))
             }
@@ -89,29 +99,54 @@ const byYear = years.map((y) => {
   }
 
   {
-    books.length === 0 && <p class="s-meta empty">the shelf is being built — books arrive here soon.</p>
+    recommended.length > 0 && (
+      <section class="reco">
+        <header class="sec-head">
+          <span class="sec-title s-meta">recommended</span>
+          <span class="s-meta hint">hand-picked, would lend to friends</span>
+        </header>
+        <div class="covers small">
+          {
+            recommended.map((b) => (
+              <a class="cover" href={`${base}/studio/bookshelf/${b.id}/`}>
+                <img
+                  src={b.data.cover.src}
+                  alt={`${b.data.title}, ${b.data.author}`}
+                  width={b.data.cover.width}
+                  height={b.data.cover.height}
+                  loading="lazy"
+                />
+              </a>
+            ))
+          }
+        </div>
+      </section>
+    )
   }
+  </div>
 </StudioLayout>
 
 <style>
+  .bookshelf-page {
+    padding-bottom: 130px;
+  }
+
   section.year {
-    margin-top: 56px;
+    margin-top: 34px;
+    display: grid;
+    grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+    gap: clamp(28px, 4vw, 72px);
+    align-items: start;
   }
 
-  .year-head {
-    border-bottom: 1px solid var(--s-line);
-    padding-bottom: 16px;
-  }
-
-  .year-head h2 {
+  .rail-label {
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    margin: 0;
     color: var(--s-ink);
   }
 
   .challenge-num {
-    margin: 16px 0 0;
+    margin: 14px 0 0;
   }
 
   .challenge-num .big {
@@ -121,7 +156,7 @@ const byYear = years.map((y) => {
   }
 
   .bar {
-    width: 220px;
+    width: 200px;
     height: 5px;
     border: 1px solid var(--s-ink);
     margin-top: 14px;
@@ -132,47 +167,17 @@ const byYear = years.map((y) => {
     background: var(--s-ink);
   }
 
-  .featured {
+  .past {
+    margin-top: 16px;
     display: flex;
-    gap: clamp(20px, 3vw, 44px);
-    margin-top: 40px;
-    text-decoration: none;
-    color: inherit;
-    align-items: flex-start;
-  }
-
-  .featured img {
-    height: 230px;
-    width: auto;
-    box-shadow: 0 4px 26px rgba(20, 18, 10, 0.16);
-  }
-
-  .featured-info h3 {
-    font-family: var(--s-serif);
-    font-weight: 500;
-    font-size: 26px;
-    line-height: 1.15;
-    margin: 6px 0 0;
-  }
-
-  .review-hint {
-    margin-top: 14px;
-    color: var(--s-ink);
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
-
-  .featured:hover h3 {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 4px;
+    gap: 12px;
   }
 
   .covers {
     display: flex;
     flex-wrap: wrap;
     gap: 26px;
-    margin-top: 40px;
+    align-items: flex-start;
   }
 
   .cover {
@@ -182,26 +187,134 @@ const byYear = years.map((y) => {
   }
 
   .cover img {
-    height: 190px;
+    height: 185px;
     width: auto;
     display: block;
     box-shadow: 0 3px 18px rgba(20, 18, 10, 0.13);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
 
-  .cover:hover img {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 26px rgba(20, 18, 10, 0.18);
+  .cover.big {
+    display: flex;
+    gap: 16px;
+    background: transparent;
+    border: none;
   }
 
-  .rating {
+  .cover.big img {
+    height: 260px;
+  }
+
+  .cover.big .pane {
+    position: static;
+    inset: auto;
+    width: 200px;
+    padding: 0;
+    background: transparent;
+  }
+
+  .cover:hover img {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(20, 18, 10, 0.2);
+  }
+
+  /* review pane: persistent on the featured book, on hover for the rest */
+  .pane {
+    position: absolute;
+    inset: 0;
+    background: rgba(250, 249, 246, 0.96);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+
+  .cover.big .pane {
+    opacity: 1;
+  }
+
+  .cover:hover .pane {
+    opacity: 1;
+  }
+
+  .stars {
+    color: var(--s-ink);
+    font-size: 12px;
+  }
+
+  .excerpt {
+    line-height: 1.6;
+  }
+
+  .rec {
     position: absolute;
     left: 0;
-    bottom: -20px;
+    bottom: -22px;
     color: var(--s-grey);
   }
 
-  .empty {
-    margin-top: 40px;
+  /* recommended shelf */
+  .reco {
+    margin-top: 72px;
+  }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    border-bottom: 1px solid var(--s-line);
+    padding-bottom: 10px;
+  }
+
+  .sec-title {
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--s-ink);
+  }
+
+  .hint {
+    color: var(--s-faint);
+  }
+
+  .covers.small img {
+    height: 150px;
+  }
+
+  /* fixed footer on this page only */
+  .studio-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--s-bg);
+    border-top: 1px solid var(--s-line);
+    z-index: 20;
+  }
+
+  @media (max-width: 820px) {
+    section.year {
+      grid-template-columns: 1fr;
+    }
+
+    .pane {
+      opacity: 1;
+    }
+  }
+</style>
+
+<style is:global>
+  /* fixed footer for the bookshelf (page content adds matching padding) */
+  .studio-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--s-bg);
+    border-top: 1px solid var(--s-line);
+    z-index: 20;
   }
 </style>

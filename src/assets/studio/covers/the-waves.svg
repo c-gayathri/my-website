@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="540" viewBox="0 0 360 540">
+  <rect width="360" height="540" fill="#e8e6da"/>
+  <rect x="14" y="14" width="332" height="512" fill="none" stroke="#2438ff" stroke-opacity="0.35"/>
+  <text font-family="Georgia, serif" font-size="30" fill="#2438ff">
+    <tspan x="36" y="110">The Waves</tspan>
+  </text>
+  <line x1="36" y1="450" x2="120" y2="450" stroke="#2438ff" stroke-opacity="0.5"/>
+  <text x="36" y="478" font-family="Menlo, monospace" font-size="14" letter-spacing="2" fill="#2438ff" fill-opacity="0.85">Virginia Woolf</text>
+</svg>

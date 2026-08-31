@@ -4,7 +4,7 @@
 
 export const studioConfig = {
   name: 'Gayathri Neela Chandran',
-  tagline: 'images / words / moving things / experiments',
+  tagline: 'art | writing | experiments',
 
   // Section labels (display names). Routes stay stable: /studio/writing etc.
   writingLabel: 'Writing pad',

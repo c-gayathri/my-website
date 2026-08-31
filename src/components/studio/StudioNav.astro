@@ -1,50 +1,51 @@
 ---
-// Studio navigation. The name is leftmost; STUDIO lives in the footer.
-// The active state matches exactly — the Constellation link is only
-// underlined on /studio itself, not across the whole /studio section.
+// Studio navigation.
+// - Constellation: name leftmost (prominent) + tagline.
+// - Inner pages: section title topmost, name smaller beside it.
 import { studioConfig } from '../../data/studioConfig';
 
 interface Props {
-  variant?: 'full' | 'slim';
+  variant?: string;
+  section?: string;
 }
 
-const { variant = 'full' } = Astro.props;
+const { section } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const path = Astro.url.pathname.replace(/\/+$/, '');
 
 const navItems = [
-  { label: 'Constellation', href: `${base}/studio`, exact: true },
-  { label: studioConfig.writingLabel, href: `${base}/studio/writing`, exact: false },
-  { label: studioConfig.bookshelfLabel, href: `${base}/studio/bookshelf`, exact: false },
-  { label: studioConfig.indexLabel, href: `${base}/studio/index`, exact: false },
+  { label: 'Constellation', href: base + '/studio', exact: true },
+  { label: studioConfig.writingLabel, href: base + '/studio/writing', exact: false },
+  { label: studioConfig.bookshelfLabel, href: base + '/studio/bookshelf', exact: false },
+  { label: studioConfig.indexLabel, href: base + '/studio/index', exact: false },
+  { label: 'About', href: base + '/studio/about', exact: false },
 ];
 
 const isActive = (item: (typeof navItems)[number]) =>
   item.exact ? path === item.href : path === item.href || path.startsWith(item.href);
 ---
 
-<header class:list={['studio-nav', variant]}>
+<header class="studio-nav">
   <div class="nav-left">
-    <a class="name" href={`${base}/studio/`}>{studioConfig.name}</a>
-    {
-      variant === 'full' && (
-        <span class="tagline">{studioConfig.tagline}</span>
-      )
-    }
+    {section ? (
+      <span class="section-title">{section}</span>
+    ) : (
+      <a class="name" href={base + '/studio/'}>{studioConfig.name}</a>
+    )}
+    {section && <a class="name-small s-meta" href={base + '/studio/'}>{studioConfig.name}</a>}
+    {section ? null : <span class="tagline">{studioConfig.tagline}</span>}
   </div>
 
   <nav class="nav-right" aria-label="Studio">
-    {
-      navItems.map((item) => (
-        <a
-          class:list={['s-link', { active: isActive(item) }]}
-          href={`${item.href}/`}
-          aria-current={isActive(item) ? 'page' : undefined}
-        >
-          {item.label}
-        </a>
-      ))
-    }
+    {navItems.map((item) => (
+      <a
+        class:list={['s-link', { active: isActive(item) }]}
+        href={item.href + '/'}
+        aria-current={isActive(item) ? 'page' : undefined}
+      >
+        {item.label}
+      </a>
+    ))}
   </nav>
 </header>
 
@@ -61,7 +62,6 @@ const isActive = (item: (typeof navItems)[number]) =>
     display: flex;
     align-items: baseline;
     gap: 18px;
-    min-width: 0;
     flex-wrap: wrap;
   }
 
@@ -69,15 +69,25 @@ const isActive = (item: (typeof navItems)[number]) =>
     font-family: var(--s-serif);
     font-weight: 500;
     font-size: clamp(28px, 3vw, 40px);
-    letter-spacing: 0.01em;
+    color: var(--s-ink);
     text-decoration: none;
+    line-height: 1;
+  }
+
+  .section-title {
+    font-family: var(--s-serif);
+    font-weight: 500;
+    font-size: clamp(30px, 3.2vw, 44px);
     color: var(--s-ink);
     line-height: 1;
   }
 
-  /* detail pages: the name steps back */
-  .studio-nav.slim .name {
-    font-size: 20px;
+  .name-small {
+    color: var(--s-grey);
+  }
+
+  .name-small:hover {
+    color: var(--s-ink);
   }
 
   .tagline {

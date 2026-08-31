@@ -21,6 +21,8 @@ interface Props {
   fullBleed?: boolean;
   /** detail pages: one-line header */
   slim?: boolean;
+  /** inner section pages: title shown topmost in the header */
+  section?: string;
 }
 
 const {
@@ -28,6 +30,7 @@ const {
   description = `${studioConfig.name} — studio. Images, words, moving things, experiments.`,
   fullBleed = false,
   slim = false,
+  section,
 } = Astro.props;
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
@@ -38,25 +41,25 @@ const elsewhere = Object.entries(externalLinks).filter(
 
 <BaseLayout title={title} description={description}>
   <div class:list={['studio', { 'studio-full': fullBleed }]}>
-    <StudioNav variant={slim ? 'slim' : 'full'} />
+    <StudioNav variant={slim ? 'slim' : 'full'} section={section} />
     <main class:list={['studio-main', { 's-page': !fullBleed }]}>
       <slot />
     </main>
 
-    <footer class="studio-footer">
+    <footer class:list={['studio-footer', { 'footer-canvas': fullBleed }]}>
       <a class="footer-wordmark s-link" href={`${base}/studio/`}>STUDIO<span class="dot">.</span></a>
       <div class="elsewhere">
         <span class="s-meta">elsewhere</span>
         {
           elsewhere.map(([key, href]) => (
-            <a class="s-link" href={href} rel="external">
+            <a class="s-link" href={href} rel="external" target="_blank">
               {key} ↗
             </a>
           ))
         }
-        <a class="s-link" href={`${base}${externalLinks.research}`}>Research ↗</a>
+        <a class="s-link" href={`${base}${externalLinks.research}`} target="_blank">research ↗</a>
       </div>
-      <span class="s-meta">© {new Date().getFullYear()} {studioConfig.name}</span>
+      {!fullBleed && <span class="s-meta">© {new Date().getFullYear()} {studioConfig.name}</span>}
     </footer>
   </div>
 </BaseLayout>
