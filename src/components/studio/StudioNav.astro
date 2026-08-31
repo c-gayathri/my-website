@@ -1,9 +1,7 @@
 ---
-// Studio navigation. Labels come from studioConfig so sections can be
-// renamed without touching this file. All links are base-path aware.
-//
-// variant "full"  — standard pages: small STUDIO wordmark + prominent name
-// variant "slim"  — detail pages: everything on one quiet line
+// Studio navigation. The name is leftmost; STUDIO lives in the footer.
+// The active state matches exactly — the Constellation link is only
+// underlined on /studio itself, not across the whole /studio section.
 import { studioConfig } from '../../data/studioConfig';
 
 interface Props {
@@ -12,24 +10,21 @@ interface Props {
 
 const { variant = 'full' } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
-const path = Astro.url.pathname;
+const path = Astro.url.pathname.replace(/\/+$/, '');
 
 const navItems = [
-  { label: 'Constellation', href: `${base}/studio/` },
-  { label: studioConfig.writingLabel, href: `${base}/studio/writing/` },
-  { label: studioConfig.bookshelfLabel, href: `${base}/studio/bookshelf/` },
-  { label: studioConfig.indexLabel, href: `${base}/studio/index/` },
+  { label: 'Constellation', href: `${base}/studio`, exact: true },
+  { label: studioConfig.writingLabel, href: `${base}/studio/writing`, exact: false },
+  { label: studioConfig.bookshelfLabel, href: `${base}/studio/bookshelf`, exact: false },
+  { label: studioConfig.indexLabel, href: `${base}/studio/index`, exact: false },
 ];
 
-const isActive = (href: string) => {
-  const clean = href.replace(/\/$/, '');
-  return path === href || path === clean || path.startsWith(clean);
-};
+const isActive = (item: (typeof navItems)[number]) =>
+  item.exact ? path === item.href : path === item.href || path.startsWith(item.href);
 ---
 
 <header class:list={['studio-nav', variant]}>
   <div class="nav-left">
-    <a class="wordmark" href={`${base}/studio/`}>STUDIO</a>
     <a class="name" href={`${base}/studio/`}>{studioConfig.name}</a>
     {
       variant === 'full' && (
@@ -42,9 +37,9 @@ const isActive = (href: string) => {
     {
       navItems.map((item) => (
         <a
-          class:list={['s-link', { active: isActive(item.href) }]}
-          href={item.href}
-          aria-current={isActive(item.href) ? 'page' : undefined}
+          class:list={['s-link', { active: isActive(item) }]}
+          href={`${item.href}/`}
+          aria-current={isActive(item) ? 'page' : undefined}
         >
           {item.label}
         </a>
@@ -70,27 +65,19 @@ const isActive = (href: string) => {
     flex-wrap: wrap;
   }
 
-  .wordmark {
-    font-family: var(--s-mono);
-    font-size: 12px;
-    letter-spacing: 0.22em;
-    text-decoration: none;
-    color: var(--s-grey);
-  }
-
   .name {
     font-family: var(--s-serif);
     font-weight: 500;
-    font-size: 24px;
+    font-size: clamp(28px, 3vw, 40px);
     letter-spacing: 0.01em;
     text-decoration: none;
     color: var(--s-ink);
     line-height: 1;
   }
 
-  /* constellation page: the name is the identity — larger */
-  .studio-nav.full .name {
-    font-size: clamp(28px, 3vw, 40px);
+  /* detail pages: the name steps back */
+  .studio-nav.slim .name {
+    font-size: 20px;
   }
 
   .tagline {

@@ -1,11 +1,12 @@
 // ── External links ───────────────────────────────────────────────────────
-// High-level destinations shown in the Studio (nav footer, Index).
-// Fill in real URLs when ready; empty strings are omitted from the UI.
+// High-level destinations shown in the Studio (footer, Index).
+// `research` is the professional homepage at the site root — it is prefixed
+// with the deployment base path at render time. Empty values are omitted.
 
 export const externalLinks = {
-  research: '/', // the professional homepage at the site root
-  substack: '', // TODO: add URL
-  blog: '', // TODO: add URL
-  instagram: '', // TODO: add URL
+  research: '/',
+  instagram: 'https://www.instagram.com/iamascribble/',
+  substack: 'https://substack.com/@gayathrineelachandran',
+  blog: 'https://vanillalamusings.wordpress.com/',
   twitter: '', // optional, later
 };

@@ -1,20 +1,23 @@
 /*
  * The Studio constellation — homepage, menu, and instrument.
  *
- * World space: authored cluster anchors (never randomised). All procedural
- * motion is seeded and bounded around those anchors.
+ * DESIGN (v2, per art direction):
+ * - Cluster images: centre masonry — no overlap, gaps, seeded asymmetry.
+ * - Marks are NODES: every star/dot drifts constantly on its own two sines;
+ *   lines are drawn between drifted node positions (with breaks/joints), so
+ *   the whole web moves independently and never freezes.
+ * - Cursor physics: marks near the cursor are PUSHED in the direction of
+ *   cursor movement (dragged through the field) and relax slowly back.
+ * - Hover: camera zooms to the cluster; everything else is removed; the
+ *   field turns white with violent twinkle; the header goes white; an info
+ *   block anchors beside the cluster; the colour splotch grows from the
+ *   cluster and withdraws on exit.
+ * - Title plates: background-coloured rectangles at cluster centres —
+ *   visible at rest and in map mode, hidden while hovering.
+ * - Controls: focus (authored view) and map (whole world) at the right edge.
+ * - prefers-reduced-motion: no drift/push/twinkle; instant colour switch.
  *
- * Checkpoint 3: drag pan, wheel zoom (bounded), map mode when zoomed out,
- * ambient drift with per-cluster depth, cursor rubber-band drag on marks.
- *
- * Checkpoint 4: hover/focus — seeded blob splotch grows from the cluster,
- * marks turn white and twinkle (pointillist spawn/despawn + line shimmer),
- * other clusters fade out, focused cluster scales 1.25 and spreads,
- * info block anchored to the cluster. Keyboard + touch equivalents.
- * prefers-reduced-motion: instant colour, no twinkle/spread/drift.
- *
- * Debug: /studio/?hover=<cluster-id> forces the hover state (for testing
- * and screenshots).
+ * Debug: /studio/?hover=<cluster-id> forces the hover state.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -74,258 +77,322 @@ function hashStr(s: string): number {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/* ── cluster image arrangement (no rotation — content stays upright) ───── */
+/* ── star shapes (drawn at origin; positioned via transform) ────────────── */
 
-type Slot = { x: number; y: number; w: number; z: number; sx: number; sy: number };
-
-const PATTERNS: Array<Array<[number, number, number]>> = [
-  [[0.18, 0.06, 0.64]],
-  [
-    [0.02, 0.04, 0.44],
-    [0.5, 0.4, 0.48],
-  ],
-  [
-    [0.32, 0.0, 0.5],
-    [0.0, 0.26, 0.32],
-    [0.56, 0.5, 0.4],
-  ],
-  [
-    [0.24, 0.0, 0.46],
-    [0.0, 0.28, 0.3],
-    [0.54, 0.36, 0.4],
-    [0.3, 0.68, 0.3],
-  ],
-  [
-    [0.26, 0.0, 0.44],
-    [0.0, 0.22, 0.28],
-    [0.46, 0.34, 0.36],
-    [0.12, 0.56, 0.26],
-    [0.58, 0.64, 0.32],
-  ],
-];
-
-function slotsFor(count: number, seedStr: string): Slot[] {
-  const rand = mulberry32(hashStr(seedStr));
-  const n = clamp(count, 1, PATTERNS.length);
-  const pattern = PATTERNS[n - 1];
-  return pattern.map(([x, y, w], i) => ({
-    x: clamp(x + (rand() - 0.5) * 0.03, 0.01, 0.72),
-    y: clamp(y + (rand() - 0.5) * 0.03, 0.01, 0.7),
-    w,
-    z: i,
-    // radial spread direction (unit vector from cluster centre), used on hover
-    sx: x + w / 2 - 0.5,
-    sy: y + w * 0.39 - 0.39,
-  }));
-}
-
-/* ── constellation marks ───────────────────────────────────────────────────
-   Thin lines (straight / bowed / dashed / overshooting / occasional
-   doubles), scattered dots, pointillist patches, cell micro-grids, orbital
-   node+ring systems, arc fragments, dash clusters, dotted trails, and a
-   family of 4/8-point sparkles. Partly atmospheric by design. */
-
-type Line = { d: string; dashed: boolean; double: boolean };
-type Dot = { x: number; y: number; r: number; o: number };
-type StarPart = { d: string; rot: number };
-type Star = { x: number; y: number; parts: StarPart[] };
-type Circle = { x: number; y: number; r: number };
-type Arc = { d: string };
-type Dash = { x: number; y: number; len: number };
-type Patch = { cx: number; cy: number; rx: number; ry: number; n: number; rot: number };
-type Lattice = { x: number; y: number; cell: number; n: number; rot: number };
-type Orbit = { x: number; y: number; rx: number; ry: number; rot: number };
-type Trail = Array<{ x: number; y: number; r: number }>;
-
-type Marks = {
-  lines: Line[];
-  dots: Dot[];
-  stars: Star[];
-  circles: Circle[];
-  arcs: Arc[];
-  dashes: Dash[];
-  patches: Patch[];
-  lattices: Lattice[];
-  orbits: Orbit[];
-  trails: Trail[];
-};
-
-function star4(x: number, y: number, size: number): string {
+function star4Path(size: number): string {
   const v = size;
   const h = size * 0.55;
   const k = size * 0.1;
   return (
-    `M${x},${y - v} Q${x + k},${y - k} ${x + h},${y}` +
-    ` Q${x + k},${y + k} ${x},${y + v}` +
-    ` Q${x - k},${y + k} ${x - h},${y}` +
-    ` Q${x - k},${y - k} ${x},${y - v} Z`
+    `M0,${-v} Q${k},${-k} ${h},0` +
+    ` Q${k},${k} 0,${v}` +
+    ` Q${-k},${k} ${-h},0` +
+    ` Q${-k},${-k} 0,${-v} Z`
   );
 }
 
-function star8Parts(x: number, y: number, size: number): StarPart[] {
-  return [
-    { d: star4(x, y, size), rot: 0 },
-    { d: star4(x, y, size * 0.62), rot: 45 },
-  ];
+/* ── the field: nodes + edges ──────────────────────────────────────────────
+   Every node drifts on its own two sines forever. Edges join current node
+   positions, so lines move too. Lines route through intermediate stars and
+   carry breaks — hand-drawn, not direct cluster-to-cluster beams. */
+
+type FieldNode = {
+  x: number;
+  y: number;
+  kind: 'star4' | 'star8' | 'dot';
+  size: number;
+  rot: number;
+  t1: number;
+  t2: number;
+  p1: number;
+  p2: number;
+  a1: number;
+  a2: number;
+  burst?: Array<{ dx: number; dy: number; r: number }>;
+  /* runtime displacement (cursor drag) */
+  ox: number;
+  oy: number;
+};
+
+type FieldEdge = { a: number; b: number; dashed: boolean; broken: boolean };
+
+type Field = {
+  nodes: FieldNode[];
+  edges: FieldEdge[];
+};
+
+function makeNode(
+  rand: () => number,
+  x: number,
+  y: number,
+  kind: FieldNode['kind'],
+  size: number,
+  amp: number,
+): FieldNode {
+  return {
+    x,
+    y,
+    kind,
+    size,
+    rot: rand() * 90,
+    t1: 9 + rand() * 11,
+    t2: 5 + rand() * 6,
+    p1: rand() * Math.PI * 2,
+    p2: rand() * Math.PI * 2,
+    a1: amp * (0.6 + rand() * 0.8),
+    a2: amp * (0.4 + rand() * 0.7),
+    ox: 0,
+    oy: 0,
+  };
 }
 
-function buildMarks(clusters: CCluster[], config: CConfig): Marks {
+function buildField(clusters: CCluster[], config: CConfig): Field {
   const rand = mulberry32(config.seed);
   const W = config.world.width;
   const H = config.world.height;
-  const byId = new Map(clusters.map((c) => [c.id, c]));
+  const nodes: FieldNode[] = [];
+  const edges: FieldEdge[] = [];
 
-  const lines: Line[] = [];
-  const dots: Dot[] = [];
-  const stars: Star[] = [];
-  const circles: Circle[] = [];
-  const arcs: Arc[] = [];
-  const dashes: Dash[] = [];
-  const patches: Patch[] = [];
-  const lattices: Lattice[] = [];
-  const orbits: Orbit[] = [];
-  const trails: Trail[] = [];
+  /* hub nodes beside each cluster anchor (edge endpoints) */
+  const hubOf = new Map<string, number[]>();
+  for (const c of clusters) {
+    const ids: number[] = [];
+    for (let k = 0; k < 2; k++) {
+      nodes.push(
+        makeNode(
+          rand,
+          c.x + (rand() - 0.5) * c.width * 1.1,
+          c.y + (rand() - 0.5) * c.width * 0.8,
+          'dot',
+          1.6 + rand() * 1.2,
+          2.4,
+        ),
+      );
+      ids.push(nodes.length - 1);
+    }
+    hubOf.set(c.id, ids);
+  }
 
-  /* cluster-to-cluster edges */
+  /* free sparkles — statement + small */
+  for (let i = 0; i < 24; i++) {
+    const statement = rand() < 0.3;
+    nodes.push(
+      makeNode(
+        rand,
+        rand() * W,
+        rand() * H,
+        rand() < 0.55 ? 'star4' : 'star8',
+        statement ? 10 + rand() * 9 : 3.5 + rand() * 5,
+        2.2 + rand() * 2.4,
+      ),
+    );
+  }
+
+  /* scattered stardust */
+  for (let i = 0; i < 78; i++) {
+    nodes.push(makeNode(rand, rand() * W, rand() * H, 'dot', 0.6 + rand() * 1.3, 1.2 + rand() * 2));
+  }
+
+  /* star clusters — small constellations of mixed sparkles */
+  for (let g = 0; g < 6; g++) {
+    const gx = rand() * W;
+    const gy = rand() * H;
+    const n = 3 + Math.floor(rand() * 4);
+    const anchor = nodes.length;
+    for (let k = 0; k < n; k++) {
+      nodes.push(
+        makeNode(
+          rand,
+          gx + (rand() - 0.5) * 120,
+          gy + (rand() - 0.5) * 90,
+          rand() < 0.7 ? 'star4' : 'star8',
+          3 + rand() * 7,
+          1.8 + rand() * 2,
+        ),
+      );
+    }
+    /* join the group with short segments */
+    for (let k = 1; k < n; k++) {
+      edges.push({ a: anchor + k - 1, b: anchor + k, dashed: rand() < 0.4, broken: rand() < 0.4 });
+    }
+  }
+
+  /* pointillist bursts — a node ringed by decaying stardust */
+  for (let i = 0; i < 9; i++) {
+    const node = makeNode(
+      rand,
+      rand() * W,
+      rand() * H,
+      rand() < 0.5 ? 'star4' : 'dot',
+      3 + rand() * 5,
+      2 + rand() * 2,
+    );
+    const burst: Array<{ dx: number; dy: number; r: number }> = [];
+    const n = 14 + Math.floor(rand() * 14);
+    for (let k = 0; k < n; k++) {
+      const a = rand() * Math.PI * 2;
+      const rr = 12 + Math.pow(rand(), 0.6) * 34;
+      burst.push({ dx: Math.cos(a) * rr, dy: Math.sin(a) * rr, r: 0.4 + rand() * 1 });
+    }
+    node.burst = burst;
+    nodes.push(node);
+  }
+
+  /* margin dust — sparse fill beyond the world, for the map view */
+  const M = 620;
+  for (let i = 0; i < 64; i++) {
+    const side = rand();
+    let x: number;
+    let y: number;
+    if (side < 0.25) {
+      x = -M + rand() * (W + 2 * M);
+      y = -M + rand() * M;
+    } else if (side < 0.5) {
+      x = -M + rand() * (W + 2 * M);
+      y = H + rand() * M;
+    } else if (side < 0.75) {
+      x = -M + rand() * M;
+      y = rand() * H;
+    } else {
+      x = W + rand() * M;
+      y = rand() * H;
+    }
+    nodes.push(makeNode(rand, x, y, 'dot', 0.5 + rand() * 1, 1 + rand() * 1.6));
+  }
+
+  /* semantic edges route through drifting waypoint stars — no direct beams.
+     each connection becomes a zigzag of 3–4 short segments with breaks. */
   const seen = new Set<string>();
-  const edge = (a: { x: number; y: number }, b: { x: number; y: number }, atmosphere = false) => {
-    const dashed = atmosphere ? rand() < 0.6 : rand() < 0.3;
-    const bow = (rand() - 0.5) * (atmosphere ? 260 : 110);
-    const over = rand() < 0.3 ? 26 + rand() * 40 : 0;
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const bx = b.x + (dx / len) * over;
-    const by = b.y + (dy / len) * over;
-    const mx = (a.x + bx) / 2 - (dy / len) * bow;
-    const my = (a.y + by) / 2 + (dx / len) * bow;
-    lines.push({
-      d: `M${a.x.toFixed(1)},${a.y.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${bx.toFixed(1)},${by.toFixed(1)}`,
-      dashed,
-      double: !dashed && !atmosphere && rand() < 0.22,
-    });
-  };
-
   for (const c of clusters) {
     for (const t of c.connections) {
       const key = [c.id, t].sort().join('~');
-      if (seen.has(key) || !byId.has(t)) continue;
+      if (seen.has(key) || !hubOf.has(t)) continue;
       seen.add(key);
-      edge(c, byId.get(t)!);
+      const aHub = hubOf.get(c.id)![0];
+      const bHub = hubOf.get(t)![1];
+      const dashed = rand() < 0.3;
+      const a = nodes[aHub];
+      const b = nodes[bHub];
+      const ddx = b.x - a.x;
+      const ddy = b.y - a.y;
+      const len = Math.hypot(ddx, ddy) || 1;
+      const nx = -ddy / len;
+      const ny = ddx / len;
+      const chain = [aHub];
+      for (let k = 1; k <= 2; k++) {
+        const t2 = k / 3 + (rand() - 0.5) * 0.16;
+        const off = (rand() - 0.5) * 2 * (60 + rand() * 90);
+        nodes.push(
+          makeNode(rand, a.x + ddx * t2 + nx * off, a.y + ddy * t2 + ny * off, 'dot', 1.3 + rand(), 2),
+        );
+        chain.push(nodes.length - 1);
+      }
+      chain.push(bHub);
+      for (let k = 0; k < chain.length - 1; k++) {
+        edges.push({
+          a: chain[k],
+          b: chain[k + 1],
+          dashed: dashed && rand() < 0.7,
+          broken: rand() < 0.5,
+        });
+      }
     }
   }
 
-  /* atmospheric lines between scattered points */
-  for (let i = 0; i < 5; i++) {
-    edge({ x: rand() * W, y: rand() * H }, { x: rand() * W, y: rand() * H }, true);
-  }
-
-  /* scattered dots */
-  for (let i = 0; i < 150; i++) {
-    dots.push({ x: rand() * W, y: rand() * H, r: 0.6 + rand() * 1.4, o: 0.15 + rand() * 0.4 });
-  }
-
-  /* sparkles — a few statement stars, many small */
-  for (let i = 0; i < 26; i++) {
-    const statement = rand() < 0.28;
-    const size = statement ? 12 + rand() * 10 : 3.5 + rand() * 6;
-    const x = rand() * W;
-    const y = rand() * H;
-    const kind = rand() < 0.55 ? 4 : 8;
-    stars.push({
-      x,
-      y,
-      parts:
-        kind === 4
-          ? [{ d: star4(x, y, size), rot: rand() * 90 }]
-          : star8Parts(x, y, size),
-    });
-  }
-
-  /* open circles */
-  for (let i = 0; i < 8; i++) {
-    circles.push({ x: rand() * W, y: rand() * H, r: 3.5 + rand() * 5 });
-  }
-
-  /* large arc fragments (partial circles, thin) */
-  for (let i = 0; i < 3; i++) {
-    const cx = rand() * W;
-    const cy = rand() * H;
-    const r = 130 + rand() * 220;
-    const a0 = rand() * Math.PI * 2;
-    const a1 = a0 + 0.7 + rand() * 1.1;
-    const x0 = cx + Math.cos(a0) * r;
-    const y0 = cy + Math.sin(a0) * r;
-    const x1 = cx + Math.cos(a1) * r;
-    const y1 = cy + Math.sin(a1) * r;
-    arcs.push({ d: `M${x0.toFixed(1)},${y0.toFixed(1)} A${r},${r} 0 0 1 ${x1.toFixed(1)},${y1.toFixed(1)}` });
-  }
-
-  /* clusters of tiny vertical dashes */
-  for (let i = 0; i < 6; i++) {
-    const x0 = rand() * W;
-    const y0 = rand() * H;
-    for (let k = 0; k < 6 + Math.floor(rand() * 6); k++) {
-      dashes.push({
-        x: x0 + (rand() - 0.5) * 46,
-        y: y0 + (rand() - 0.5) * 60,
-        len: 3 + rand() * 7,
-      });
+  /* atmospheric chains — connect nearby free stars, never across the map */
+  const freeStarIdx = nodes
+    .map((n, i) => ({ n, i }))
+    .filter(({ n, i }) => i >= 18 && i < 42 && n.kind !== 'dot')
+    .map(({ i }) => i);
+  for (let i = 0; i < freeStarIdx.length - 1 && i < 9; i++) {
+    const a = freeStarIdx[i];
+    const b = freeStarIdx[i + 1];
+    if (Math.hypot(nodes[a].x - nodes[b].x, nodes[a].y - nodes[b].y) < 560) {
+      edges.push({ a, b, dashed: rand() < 0.45, broken: rand() < 0.55 });
     }
   }
 
-  /* pointillist patches — dense dot clouds */
-  for (let i = 0; i < 3; i++) {
-    patches.push({
-      cx: rand() * W,
-      cy: rand() * H,
-      rx: 40 + rand() * 60,
-      ry: 26 + rand() * 40,
-      n: 42,
-      rot: rand() * Math.PI,
-    });
-  }
-
-  /* cell micro-grids of tiny connected stars */
-  for (let i = 0; i < 2; i++) {
-    lattices.push({
-      x: rand() * (W - 220),
-      y: rand() * (H - 220),
-      cell: 26 + rand() * 16,
-      n: 3,
-      rot: (rand() - 0.5) * 30,
-    });
-  }
-
-  /* orbital node + ring systems */
-  for (let i = 0; i < 3; i++) {
-    orbits.push({
-      x: rand() * W,
-      y: rand() * H,
-      rx: 22 + rand() * 26,
-      ry: 7 + rand() * 9,
-      rot: rand() * 180,
-    });
-  }
-
-  /* dotted trails */
-  for (let i = 0; i < 6; i++) {
-    const x0 = rand() * W;
-    const y0 = rand() * H;
-    const a = rand() * Math.PI * 2;
-    const len = 60 + rand() * 110;
-    const pts = [];
-    for (let k = 0; k < 6; k++) {
-      const t = k / 5;
-      pts.push({ x: x0 + Math.cos(a) * len * t, y: y0 + Math.sin(a) * len * t, r: 1.7 - t * 1.25 });
+  /* stardust clustered along semantic lines */
+  const lineDustStart = nodes.length;
+  for (const e of edges.slice(0, 16)) {
+    const a = nodes[e.a];
+    const b = nodes[e.b];
+    const n = 4 + Math.floor(rand() * 7);
+    for (let k = 0; k < n; k++) {
+      const t = rand();
+      const px = a.x + (b.x - a.x) * t + (rand() - 0.5) * 56;
+      const py = a.y + (b.y - a.y) * t + (rand() - 0.5) * 56;
+      nodes.push(makeNode(rand, px, py, 'dot', 0.5 + rand() * 1.1, 1 + rand() * 1.4));
     }
-    trails.push(pts);
   }
+  void lineDustStart;
 
-  return { lines, dots, stars, circles, arcs, dashes, patches, lattices, orbits, trails };
+  return { nodes, edges };
 }
 
-/* irregular blob (the hover splotch) — seeded per cluster, unit radius 100 */
+/* ── centre masonry for cluster images ────────────────────────────────────
+   No overlap; gaps; organised around the centre with seeded asymmetry. */
+
+type MasonSlot = { x: number; y: number; w: number };
+
+function masonryLayout(
+  count: number,
+  aspects: number[],
+  seedStr: string,
+): { slots: MasonSlot[]; height: number } {
+  const rand = mulberry32(hashStr(seedStr));
+  const gap = 0.05;
+  const cols = count <= 1 ? 1 : count <= 4 ? 2 : 3;
+  const slots: MasonSlot[] = [];
+
+  const colX: number[] = [];
+  const colW: number[] = [];
+  if (cols === 1) {
+    colW.push(0.68);
+    colX.push(0.16);
+  } else if (cols === 2) {
+    const w1 = 0.42 + rand() * 0.05;
+    colW.push(w1, 1 - w1 - gap);
+    colX.push(0.02 + (rand() - 0.5) * 0.02, w1 + gap - (rand() - 0.5) * 0.02);
+  } else {
+    const w = (1 - 2 * gap) / 3;
+    colW.push(w, w, w);
+    colX.push(0.01 + gap / 2, w + gap * 1.5, 2 * w + gap * 2.5);
+  }
+
+  const colY = new Array(cols).fill(0);
+  /* seeded assignment order for asymmetry */
+  const order = Array.from({ length: count }, (_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+
+  let height = 0;
+  for (const idx of order) {
+    let col = 0;
+    for (let k = 1; k < cols; k++) if (colY[k] < colY[col] - 0.02) col = k;
+    const aspect = aspects[idx] ?? 1.25;
+    const w = clamp(colW[col] * (0.92 + rand() * 0.14), 0.2, 0.55);
+    const h = w * clamp(aspect, 0.6, 2.1);
+    slots[idx] = {
+      x: colX[col] + (colW[col] - w) / 2 + (rand() - 0.5) * 0.02,
+      y: colY[col],
+      w,
+    };
+    colY[col] += h + gap;
+    height = Math.max(height, colY[col]);
+  }
+
+  /* centre columns vertically as a group around the cluster middle */
+  const yOffset = -height / 2;
+  for (const s of slots) s.y += yOffset;
+
+  return { slots, height: height + gap };
+}
+
+/* ── hover splotch ───────────────────────────────────────────────────────── */
+
 function blobPath(seedStr: string): string {
   const rand = mulberry32(hashStr(seedStr));
   const lobes = 5 + Math.floor(rand() * 3);
@@ -336,7 +403,6 @@ function blobPath(seedStr: string): string {
     const lobe = 0.62 + 0.38 * (0.5 + 0.5 * Math.sin(t + rand() * 0.6));
     radii.push(100 * clamp(lobe * (0.82 + rand() * 0.36), 0.45, 1.35));
   }
-  /* smooth closed curve through the radius points (Catmull-Rom → bezier) */
   const pts = radii.map((r, i) => {
     const a = (i / N) * Math.PI * 2;
     return [Math.cos(a) * r, Math.sin(a) * r] as const;
@@ -354,16 +420,16 @@ function blobPath(seedStr: string): string {
   return d + ' Z';
 }
 
-/* twinkle dots — appear/despawn across the field while hovering */
-function twinkleDots(config: CConfig): Array<{ x: number; y: number; delay: number; dur: number; r: number }> {
+/* twinkle dots — pointillist spawn/despawn while hovering */
+function twinkleDots(config: CConfig) {
   const rand = mulberry32(config.seed ^ 0x9e3779b9);
   const out = [];
-  for (let i = 0; i < 130; i++) {
+  for (let i = 0; i < 150; i++) {
     out.push({
-      x: rand() * config.world.width,
-      y: rand() * config.world.height,
+      x: -400 + rand() * (config.world.width + 800),
+      y: -400 + rand() * (config.world.height + 800),
       delay: rand() * 9,
-      dur: 5 + rand() * 6,
+      dur: 4 + rand() * 6,
       r: 0.7 + rand() * 1.6,
     });
   }
@@ -374,41 +440,46 @@ function twinkleDots(config: CConfig): Array<{ x: number; y: number; delay: numb
 
 export default function Constellation({ clusters, config, basePath }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
-  const markLayerRef = useRef<SVGGElement>(null);
+  const fieldRef = useRef<SVGGElement>(null);
   const twinkleLayerRef = useRef<SVGGElement>(null);
   const splotchRef = useRef<SVGPathElement>(null);
   const infoRef = useRef<HTMLDivElement>(null);
   const clusterRefs = useRef<Map<string, HTMLElement>>(new Map());
-  const labelRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   const [vp, setVp] = useState<{ w: number; h: number } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [mapOn, setMapOn] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
 
   const reduced = useRef(false);
   const cam = useRef({ cx: config.world.width / 2, cy: config.world.height / 2, scale: 0.6 });
   const camTarget = useRef({ ...cam.current });
-  const drag = useRef<{ on: boolean; x: number; y: number; moved: boolean }>({ on: false, x: 0, y: 0, moved: false });
-  const pointerVel = useRef({ x: 0, y: 0, vx: 0, vy: 0, lx: 0, ly: 0 });
-  const markOffset = useRef({ x: 0, y: 0, vx: 0, vy: 0 });
-  const mapMode = useRef(false);
+  const initialCam = useRef({ ...cam.current });
+  const prevTarget = useRef<{ cx: number; cy: number; scale: number } | null>(null);
+  const drag = useRef({ on: false, x: 0, y: 0, moved: false });
+  const vel = useRef({ x: 0, y: 0, vx: 0, vy: 0, lx: 0, ly: 0 });
+  const cursor = useRef({ x: -9999, y: -9999 });
   const activeRef = useRef<string | null>(null);
 
   const layouts = useMemo(
     () =>
-      clusters.map((c) => ({
-        c,
-        slots: slotsFor(c.images.length, c.id),
-        blob: blobPath(c.id),
-        phase: hashStr(c.id) % 1000,
-      })),
+      clusters.map((c) => {
+        const m = masonryLayout(
+          c.images.length,
+          c.images.map((im) => im.h / im.w),
+          c.id,
+        );
+        return { c, slots: m.slots, boxH: m.height, blob: blobPath(c.id), phase: hashStr(c.id) % 1000 };
+      }),
     [clusters],
   );
 
-  const marks = useMemo(() => buildMarks(clusters, config), [clusters, config]);
+  const field = useMemo(() => buildField(clusters, config), [clusters, config]);
   const twinkles = useMemo(() => twinkleDots(config), [config]);
+  const nodeRefs = useRef<Array<SVGGElement | null>>([]);
+  const edgeRefs = useRef<Array<SVGPathElement | null>>([]);
 
-  /* initial forced hover (debug/preview) + touch detection + reduced motion */
+  /* env + forced hover debug */
   useEffect(() => {
     const forced = new URLSearchParams(window.location.search).get('hover');
     if (forced && clusters.some((c) => c.id === forced)) setActiveId(forced);
@@ -435,9 +506,9 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       ? featured.reduce(
           (acc, c) => ({
             x0: Math.min(acc.x0, c.x - c.width),
-            y0: Math.min(acc.y0, c.y - c.width * 0.6),
+            y0: Math.min(acc.y0, c.y - c.width * 0.55),
             x1: Math.max(acc.x1, c.x + c.width),
-            y1: Math.max(acc.y1, c.y + c.width * 0.6),
+            y1: Math.max(acc.y1, c.y + c.width * 0.55),
           }),
           { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity },
         )
@@ -451,19 +522,58 @@ export default function Constellation({ clusters, config, basePath }: Props) {
     );
     cam.current = { cx, cy, scale };
     camTarget.current = { cx, cy, scale };
+    initialCam.current = { cx, cy, scale };
+    /* debug/preview: /studio/?view=map jumps to the full-map framing */
+    if (new URLSearchParams(window.location.search).get('view') === 'map') {
+      const s = clamp(
+        Math.min(vp.w / config.world.width, vp.h / config.world.height) * 0.96,
+        config.zoom.min,
+        config.zoom.max,
+      );
+      cam.current = { cx: config.world.width / 2, cy: config.world.height / 2, scale: s };
+      camTarget.current = { ...cam.current };
+      setMapOnIf(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vp]);
 
-  /* pointer velocity + rubber-band mark drag */
+  const clampCamera = (t: { cx: number; cy: number; scale: number }, maxScale?: number) => {
+    t.cx = clamp(t.cx, -config.world.width * 0.2, config.world.width * 1.2);
+    t.cy = clamp(t.cy, -config.world.height * 0.2, config.world.height * 1.2);
+    t.scale = clamp(t.scale, config.zoom.min, maxScale ?? config.zoom.max);
+  };
+
+  /* camera helpers */
+  const goFocus = () => {
+    activate(null);
+    camTarget.current = { ...initialCam.current };
+  };
+  const goMap = () => {
+    activate(null);
+    const scale = Math.min(
+      vp ? vp.w / config.world.width : 0.4,
+      vp ? vp.h / config.world.height : 0.4,
+    ) * 0.96;
+    camTarget.current = {
+      cx: config.world.width / 2,
+      cy: config.world.height / 2,
+      scale: clamp(scale, config.zoom.min, config.zoom.max),
+    };
+  };
+
+  /* pointer: velocity (for push), pan, and wheel zoom */
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
 
     const onMove = (e: PointerEvent) => {
-      pointerVel.current.vx = e.clientX - pointerVel.current.lx;
-      pointerVel.current.vy = e.clientY - pointerVel.current.ly;
-      pointerVel.current.lx = e.clientX;
-      pointerVel.current.ly = e.clientY;
+      const rect = el.getBoundingClientRect();
+      cursor.current.x = e.clientX - rect.left;
+      cursor.current.y = e.clientY - rect.top;
+      vel.current.vx = (e.clientX - vel.current.lx) * 0.55 + vel.current.vx * 0.45;
+      vel.current.vy = (e.clientY - vel.current.ly) * 0.55 + vel.current.vy * 0.45;
+      vel.current.lx = e.clientX;
+      vel.current.ly = e.clientY;
 
       if (drag.current.on) {
         const t = camTarget.current;
@@ -472,8 +582,9 @@ export default function Constellation({ clusters, config, basePath }: Props) {
         t.cy -= (e.clientY - drag.current.y) / s;
         drag.current.x = e.clientX;
         drag.current.y = e.clientY;
-        drag.current.moved = drag.current.moved || Math.abs(e.movementX ?? 0) + Math.abs(e.movementY ?? 0) > 2;
-        clampCamera(t, config);
+        drag.current.moved =
+          drag.current.moved || Math.abs(e.movementX ?? 0) + Math.abs(e.movementY ?? 0) > 2;
+        clampCamera(t);
       }
     };
     const onDown = (e: PointerEvent) => {
@@ -494,86 +605,235 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       el.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointerup', onUp);
     };
-  }, [config]);
+  }, []);
 
-  /* wheel zoom to cursor (non-passive) */
+  /* wheel zoom to cursor */
   useEffect(() => {
     const el = wrapRef.current;
-    if (!el) return;
+    if (!el || !vp) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const t = { ...camTarget.current };
-      const factor = Math.exp(-e.deltaY * 0.0016);
-      const next = clamp(t.scale * factor, config.zoom.min, config.zoom.max);
+      const next = clamp(t.scale * Math.exp(-e.deltaY * 0.0016), config.zoom.min, config.zoom.max);
       const rect = el.getBoundingClientRect();
       const px = e.clientX - rect.left;
       const py = e.clientY - rect.top;
-      /* keep the point under the cursor fixed */
-      const wx = t.cx + (px - vp!.w / 2) / t.scale;
-      const wy = t.cy + (py - vp!.h / 2) / t.scale;
-      t.cx = wx - (px - vp!.w / 2) / next;
-      t.cy = wy - (py - vp!.h / 2) / next;
+      const wx = t.cx + (px - vp.w / 2) / t.scale;
+      const wy = t.cy + (py - vp.h / 2) / t.scale;
+      t.cx = wx - (px - vp.w / 2) / next;
+      t.cy = wy - (py - vp.h / 2) / next;
       t.scale = next;
-      clampCamera(t, config);
+      clampCamera(t);
       camTarget.current = t;
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
   }, [config, vp]);
 
-  /* the rAF loop: camera lerp, drift, mark drag, map mode, hover geometry */
+  /* hover: camera zoom to cluster + remember where to return */
+  const activate = (id: string | null) => {
+    setActiveId((prev) => {
+      if (id && id !== prev) {
+        prevTarget.current = { ...camTarget.current };
+        const cl = clusters.find((x) => x.id === id);
+        if (cl) {
+          camTarget.current = { cx: cl.x, cy: cl.y, scale: Math.min(1.55, config.zoom.max + 0.2) };
+        }
+      } else if (!id && prev) {
+        if (prevTarget.current) camTarget.current = { ...prevTarget.current };
+      }
+      return id;
+    });
+  };
+
+  /* per-frame: splotch + info anchoring (cluster holds still while hovered) */
+  useEffect(() => {
+    activeRef.current = activeId;
+    const on = Boolean(activeId);
+    if (on) document.body.dataset.studioHover = '1';
+    else delete document.body.dataset.studioHover;
+    const cl = clusters.find((x) => x.id === activeId);
+
+    if (cl && vp) {
+      const t = camTarget.current;
+      const sx = vp.w / 2 + (cl.x - t.cx) * t.scale;
+      const sy = vp.h / 2 + (cl.y - t.cy) * t.scale;
+      const sp = splotchRef.current;
+      if (sp) {
+        /* grow from the cluster; scale chosen so the shallowest lobe covers
+           the farthest corner of the viewport */
+        const coverNeeded = Math.hypot(Math.max(sx, vp.w - sx), Math.max(sy, vp.h - sy)) * 1.06;
+        sp.setAttribute('transform', `translate(${sx.toFixed(1)} ${sy.toFixed(1)})`);
+        sp.classList.add('open');
+        requestAnimationFrame(() => {
+          sp.setAttribute('transform', `translate(${sx.toFixed(1)} ${sy.toFixed(1)}) scale(${(coverNeeded / 42).toFixed(2)})`);
+        });
+      }
+      const info = infoRef.current;
+      if (info) {
+        const placeRight = sx < vp.w * 0.58;
+        info.style.left = placeRight ? `${sx + (cl.width * t.scale) / 2 + 44}px` : '';
+        info.style.right = placeRight ? '' : `${vp.w - sx + (cl.width * t.scale) / 2 + 44}px`;
+        info.style.top = `${sy - 44}px`;
+      }
+    } else {
+      const sp = splotchRef.current;
+      if (sp) {
+        /* withdraw back into the cluster */
+        sp.classList.remove('open');
+        requestAnimationFrame(() => {
+          const t = camTarget.current;
+          const cl2 = lastActiveRef.current ? clusters.find((x) => x.id === lastActiveRef.current) : null;
+          if (cl2) {
+            const sx = (vp?.w ?? 0) / 2 + (cl2.x - t.cx) * t.scale;
+            const sy = (vp?.h ?? 0) / 2 + (cl2.y - t.cy) * t.scale;
+            sp.setAttribute('transform', `translate(${sx.toFixed(1)} ${sy.toFixed(1)}) scale(0.02)`);
+          }
+        });
+      }
+    }
+
+    return () => {
+      delete document.body.dataset.studioHover;
+    };
+  }, [activeId, clusters, vp]);
+
+  const lastActiveRef = useRef<string | null>(null);
+  useEffect(() => {
+    lastActiveRef.current = activeId;
+  }, [activeId]);
+
+  /* the animation loop */
   useEffect(() => {
     if (!vp) return;
     let raf = 0;
     let last = performance.now();
     let running = true;
+    let svx = 0;
+    let svy = 0;
+    const PUSH_R = 240;
+    const PUSH_MAX = 26;
+    const RELAX = 1.25; /* per-second exponential relax factor */
 
     const tick = (now: number) => {
       if (!running) return;
-            last = now;
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
       const t = now / 1000;
 
       /* camera easing */
       const c = cam.current;
       const tg = camTarget.current;
-      c.cx += (tg.cx - c.cx) * 0.16;
-      c.cy += (tg.cy - c.cy) * 0.16;
-      c.scale += (tg.scale - c.scale) * 0.16;
+      c.cx += (tg.cx - c.cx) * 0.12;
+      c.cy += (tg.cy - c.cy) * 0.12;
+      c.scale += (tg.scale - c.scale) * 0.12;
 
       const active = activeRef.current;
+      const map = c.scale < config.zoom.mapBelow && !active;
+      setMapOnIf(map);
 
-      /* mark layer rubber-band drag toward pointer movement */
-      const mo = markOffset.current;
-      const dragK = reduced.current ? 0 : 2.2;
-      mo.vx += (pointerVel.current.vx * dragK - mo.vx) * 0.09;
-      mo.vy += (pointerVel.current.vy * dragK - mo.vy) * 0.09;
-      pointerVel.current.vx *= 0.82;
-      pointerVel.current.vy *= 0.82;
-      mo.vx *= 0.9;
-      mo.vy *= 0.9;
-      mo.x += mo.vx * 0.02;
-      mo.y += mo.vy * 0.02;
-      mo.x = clamp(mo.x, -26, 26);
-      mo.y = clamp(mo.y, -26, 26);
-
-      const tx = vp.w / 2 - c.cx * c.scale + mo.x;
-      const ty = vp.h / 2 - c.cy * c.scale + mo.y;
-      markLayerRef.current?.setAttribute('transform', `translate(${tx} ${ty}) scale(${c.scale})`);
+      const tx = vp.w / 2 - c.cx * c.scale;
+      const ty = vp.h / 2 - c.cy * c.scale;
+      fieldRef.current?.setAttribute('transform', `translate(${tx} ${ty}) scale(${c.scale})`);
       twinkleLayerRef.current?.setAttribute('transform', `translate(${tx} ${ty}) scale(${c.scale})`);
 
-      /* map mode toggling */
-      const map = c.scale < config.zoom.mapBelow;
-      if (map !== mapMode.current) {
-        mapMode.current = map;
-        wrapRef.current?.classList.toggle('map', map);
+      const cursorWorldX = (cursor.current.x - tx) / c.scale;
+      const cursorWorldY = (cursor.current.y - ty) / c.scale;
+      const pushK = reduced.current ? 0 : 0.32;
+      const relax = Math.exp(-dt * RELAX);
+
+      /* nodes: constant drift + local cursor push */
+      for (let i = 0; i < field.nodes.length; i++) {
+        const n = field.nodes[i];
+        const el = nodeRefs.current[i];
+        if (!el) continue;
+
+        const dx =
+          Math.sin(t * ((2 * Math.PI) / n.t1) + n.p1) * n.a1 +
+          Math.sin(t * ((2 * Math.PI) / n.t2) + n.p2) * n.a2;
+        const dy =
+          Math.cos(t * ((2 * Math.PI) / (n.t1 * 0.77)) + n.p2 * 1.9) * n.a2 +
+          Math.sin(t * ((2 * Math.PI) / (n.t2 * 0.63)) + n.p1 * 0.7) * n.a1 * 0.7;
+
+        const sx = n.x + dx;
+        const sy = n.y + dy;
+
+        /* screen-space proximity to cursor */
+        const ssx = sx * c.scale + tx;
+        const ssy = sy * c.scale + ty;
+        const ddx = ssx - cursor.current.x;
+        const ddy = ssy - cursor.current.y;
+        const dist = Math.hypot(ddx, ddy);
+        if (!reduced.current && dist < PUSH_R) {
+          const prox = (1 - dist / PUSH_R) ** 2;
+          svx = vel.current.vx;
+          svy = vel.current.vy;
+          n.ox += svx * prox * pushK * dt * 34;
+          n.oy += svy * prox * pushK * dt * 34;
+          const mag = Math.hypot(n.ox, n.oy);
+          if (mag > PUSH_MAX) {
+            n.ox *= PUSH_MAX / mag;
+            n.oy *= PUSH_MAX / mag;
+          }
+        }
+        n.ox *= relax;
+        n.oy *= relax;
+
+        /* cull far-offscreen nodes */
+        if (ssx < -260 || ssx > vp.w + 260 || ssy < -260 || ssy > vp.h + 260) {
+          if (el.style.display !== 'none') el.style.display = 'none';
+          continue;
+        }
+        if (el.style.display === 'none') el.style.display = '';
+
+        el.setAttribute(
+          'transform',
+          `translate(${(sx + n.ox / c.scale).toFixed(2)} ${(sy + n.oy / c.scale).toFixed(2)}) rotate(${n.rot.toFixed(1)})`,
+        );
       }
 
-      /* clusters: drift + camera + hover geometry */
+      /* edges between drifted (and pushed) node positions */
+      for (let i = 0; i < field.edges.length; i++) {
+        const e = field.edges[i];
+        const el = edgeRefs.current[i];
+        if (!el) continue;
+        const a = field.nodes[e.a];
+        const b = field.nodes[e.b];
+        const ax = a.x + dx_of(a) + a.ox / c.scale;
+        const ay = a.y + dy_of(a) + a.oy / c.scale;
+        const bx = b.x + dx_of(b) + b.ox / c.scale;
+        const by = b.y + dy_of(b) + b.oy / c.scale;
+        const vis =
+          ax * c.scale + tx > -300 && ax * c.scale + tx < vp.w + 300 &&
+          ay * c.scale + ty > -300 && ay * c.scale + ty < vp.h + 300;
+        if (!vis) {
+          if (el.style.display !== 'none') el.style.display = 'none';
+          continue;
+        }
+        if (el.style.display === 'none') el.style.display = '';
+        if (e.broken) {
+          const mx = (ax + bx) / 2;
+          const my = (ay + by) / 2;
+          const len = Math.hypot(bx - ax, by - ay) || 1;
+          const g = Math.min(16, len * 0.24);
+          const g1x = mx - ((bx - ax) / len) * g;
+          const g1y = my - ((by - ay) / len) * g;
+          const g2x = mx + ((bx - ax) / len) * g;
+          const g2y = my + ((by - ay) / len) * g;
+          el.setAttribute(
+            'd',
+            `M${ax.toFixed(1)},${ay.toFixed(1)} L${g1x.toFixed(1)},${g1y.toFixed(1)} M${g2x.toFixed(1)},${g2y.toFixed(1)} L${bx.toFixed(1)},${by.toFixed(1)}`,
+          );
+        } else {
+          el.setAttribute('d', `M${ax.toFixed(1)},${ay.toFixed(1)} L${bx.toFixed(1)},${by.toFixed(1)}`);
+        }
+      }
+
+      /* clusters: masonry boxes + drift + push + camera */
       for (const { c: cl, phase } of layouts) {
         const el = clusterRefs.current.get(cl.id);
         if (!el) continue;
         const hovered = active === cl.id;
-        /* hovered cluster holds still so its info block stays anchored */
         const driftAmp = hovered || reduced.current ? 0 : cl.driftRadius * cl.depth * (active ? config.drift.hoverMultiplier : 1);
         const dx =
           Math.sin(t * ((2 * Math.PI) / config.drift.periodSeconds) + phase) * driftAmp +
@@ -582,260 +842,143 @@ export default function Constellation({ clusters, config, basePath }: Props) {
           Math.cos(t * ((2 * Math.PI) / (config.drift.periodSeconds * 0.77)) + phase * 2.3) * driftAmp +
           Math.sin(t * ((2 * Math.PI) / (config.drift.periodSeconds * 0.41)) + phase * 0.6) * driftAmp * 0.55;
 
-        const sx = vp.w / 2 + (cl.x + dx - c.cx) * c.scale;
-        const sy = vp.h / 2 + (cl.y + dy - c.cy) * c.scale;
-        const boxW = cl.width;
-        el.style.transform = `translate(${sx - boxW / 2}px, ${sy - boxW * 0.39}px) scale(${c.scale})`;
-
-        const label = labelRefs.current.get(cl.id);
-        if (label) {
-          label.style.left = `${sx}px`;
-          label.style.top = `${sy}px`;
+        /* cluster push — much gentler than marks */
+        const sxRaw = vp.w / 2 + (cl.x + dx - c.cx) * c.scale;
+        const syRaw = vp.h / 2 + (cl.y + dy - c.cy) * c.scale;
+        const ddx = sxRaw - cursor.current.x;
+        const ddy = syRaw - cursor.current.y;
+        const dist = Math.hypot(ddx, ddy);
+        let px = 0;
+        let py = 0;
+        if (!reduced.current && dist < PUSH_R * 1.4) {
+          const prox = (1 - dist / (PUSH_R * 1.4)) ** 2 * 0.15;
+          px = vel.current.vx * prox * 0.3;
+          py = vel.current.vy * prox * 0.3;
         }
+
+        const bw = cl.width * c.scale;
+        const bh = layouts.find((l) => l.c.id === cl.id)!.boxH * c.scale;
+        el.style.transform = `translate(${(sxRaw + px - bw / 2).toFixed(1)}px, ${(syRaw + py - bh / 2).toFixed(1)}px) scale(${c.scale})`;
       }
 
       raf = requestAnimationFrame(tick);
     };
+
+    /* drift helpers for edge endpoints (mirrors the node drift formula) */
+    const dx_of = (n: FieldNode) =>
+      Math.sin((performance.now() / 1000) * ((2 * Math.PI) / n.t1) + n.p1) * n.a1 +
+      Math.sin((performance.now() / 1000) * ((2 * Math.PI) / n.t2) + n.p2) * n.a2;
+    const dy_of = (n: FieldNode) =>
+      Math.cos((performance.now() / 1000) * ((2 * Math.PI) / (n.t1 * 0.77)) + n.p2 * 1.9) * n.a2 +
+      Math.sin((performance.now() / 1000) * ((2 * Math.PI) / (n.t2 * 0.63)) + n.p1 * 0.7) * n.a1 * 0.7;
 
     raf = requestAnimationFrame(tick);
     const onVis = () => {
-      running = !document.hidden && !reduced.current;
-      if (running) {
+      const shouldRun = !document.hidden;
+      if (shouldRun && !running) {
+        running = true;
         last = performance.now();
         raf = requestAnimationFrame(tick);
+      } else if (!shouldRun) {
+        running = false;
+        cancelAnimationFrame(raf);
       }
     };
     document.addEventListener('visibilitychange', onVis);
-    if (reduced.current) {
-      /* static render: one frame, no loop */
-      running = false;
-      raf = requestAnimationFrame(tick);
-    }
     return () => {
       running = false;
       cancelAnimationFrame(raf);
       document.removeEventListener('visibilitychange', onVis);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vp, layouts, clusters, config]);
+  }, [vp, layouts, field, clusters, config, reduced]);
 
-  /* hover state ↔ body hook (hides hint/footer) + splotch open/withdraw */
-  const lastActive = useRef<string | null>(null);
+  /* map state via React (never hand-managed class strings) */
+  const mapStateRef = useRef(false);
+  const setMapOnIf = (map: boolean) => {
+    if (map !== mapStateRef.current) {
+      mapStateRef.current = map;
+      setMapOn(map);
+    }
+  };
+
+  /* hover: hide/show plates via class; keep plates in map mode */
   useEffect(() => {
-    const prev = lastActive.current;
-    activeRef.current = activeId;
-    const on = Boolean(activeId);
-    document.body.dataset.studioHover = on ? '1' : '';
-
-    /* the splotch is positioned once per state change and CSS-animated —
-       the active cluster holds still (drift paused), so the anchor is stable */
-    const position = (clusterId: string, open: boolean) => {
-      const sp = splotchRef.current;
-      if (!sp || !vp) return;
-      const cl = clusters.find((x) => x.id === clusterId);
-      if (!cl) return;
-      const c = cam.current;
-      const sx = vp.w / 2 + (cl.x - c.cx) * c.scale;
-      const sy = vp.h / 2 + (cl.y - c.cy) * c.scale;
-      /* blob radii range ~45–135 units; scale so the SHALLOWEST lobe still
-         covers the farthest viewport corner */
-      const coverNeeded = Math.hypot(Math.max(sx, vp.w - sx), Math.max(sy, vp.h - sy)) * 1.06;
-      sp.setAttribute(
-        'transform',
-        `translate(${sx.toFixed(1)} ${sy.toFixed(1)}) scale(${open ? (coverNeeded / 42).toFixed(2) : '0.02'})`,
-      );
-      sp.classList.toggle('open', open);
-    };
-
-    if (activeId) {
-      position(activeId, true);
-      const info = infoRef.current;
-      const cl = clusters.find((x) => x.id === activeId);
-      if (info && cl && vp) {
-        const c = cam.current;
-        const sx = vp.w / 2 + (cl.x - c.cx) * c.scale;
-        const sy = vp.h / 2 + (cl.y - c.cy) * c.scale;
-        const placeRight = sx < vp.w * 0.58;
-        info.style.left = placeRight ? `${sx + (cl.width * c.scale) / 2 + 44}px` : '';
-        info.style.right = placeRight ? '' : `${vp.w - sx + (cl.width * c.scale) / 2 + 44}px`;
-        info.style.top = `${sy - 44}px`;
-      }
-    } else if (prev) position(prev, false);
-
-    lastActive.current = activeId;
-    return () => {
-      document.body.dataset.studioHover = '';
-    };
-  }, [activeId, clusters, vp]);
-
-  const activate = (id: string | null) => {
-    setActiveId(id);
-  };
-
-  const onClusterClick = (id: string) => (e: import("react").MouseEvent) => {
-    if (drag.current.moved) {
-      e.preventDefault();
-      return;
-    }
-    if (isTouch && activeId !== id) {
-      e.preventDefault();
-      activate(id);
-    }
-  };
+    if (reduced.current) return;
+  }, [reduced]);
 
   const activeCluster = clusters.find((c) => c.id === activeId) ?? null;
-  const splotchCluster = layouts.find((l) => l.c.id === activeId);
+  const splotchLayout = layouts.find((l) => l.c.id === activeId);
 
   return (
     <div
       ref={wrapRef}
-      className={'constellation' + (activeId ? ' hovered' : '')}
+      className={[
+        'constellation',
+        activeId ? 'hovered' : '',
+        mapOn ? 'map' : '',
+        isTouch ? 'touch' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       aria-label="Studio constellation"
     >
       {vp && (
         <>
-          {/* hover colour — the seeded splotch */}
           <svg className="splotch-layer" width="100%" height="100%" aria-hidden="true">
-            {splotchCluster && (
+            {splotchLayout && (
               <path
                 ref={splotchRef}
-                d={splotchCluster.blob}
-                fill={splotchCluster.c.color}
-                transform="translate(-4000 -4000) scale(0.01)"
+                d={splotchLayout.blob}
+                fill={splotchLayout.c.color}
+                transform="translate(-5000 -5000) scale(0.02)"
               />
             )}
           </svg>
 
-          {/* black / white constellation geometry */}
           <svg className="star-layer" width="100%" height="100%" aria-hidden="true">
-            <g ref={markLayerRef} transform={`translate(${vp.w / 2} ${vp.h / 2})`}>
-              {marks.lines.map((l, i) => (
+            <g ref={fieldRef} transform={`translate(${vp.w / 2} ${vp.h / 2})`}>
+              {field.edges.map((e, i) => (
                 <path
-                  key={`l${i}`}
-                  className="ln"
-                  d={l.d}
+                  key={`e${i}`}
+                  ref={(el) => {
+                    edgeRefs.current[i] = el;
+                  }}
+                  className="edge ln"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth={0.8}
-                  strokeOpacity={0.55}
+                  strokeWidth={e.dashed ? 0.7 : 0.85}
+                  strokeOpacity={e.dashed ? 0.4 : 0.6}
                   strokeLinecap="round"
-                  strokeDasharray={l.dashed ? '1 5' : undefined}
+                  strokeDasharray={e.dashed ? '1 5' : undefined}
                   vectorEffect="non-scaling-stroke"
                 />
               ))}
-              {marks.lines
-                .filter((l) => l.double)
-                .map((l, i) => (
-                  <path
-                    key={`ld${i}`}
-                    className="ln"
-                    d={l.d}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={0.8}
-                    strokeOpacity={0.25}
-                    strokeLinecap="round"
-                    vectorEffect="non-scaling-stroke"
-                    transform="translate(3 3)"
-                  />
-                ))}
-              {marks.arcs.map((a, i) => (
-                <path
-                  key={`a${i}`}
-                  d={a.d}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={0.7}
-                  strokeOpacity={0.3}
-                  vectorEffect="non-scaling-stroke"
-                />
-              ))}
-              {marks.trails.map((trail, i) => (
-                <g key={`t${i}`}>
-                  {trail.map((p, k) => (
-                    <circle key={k} cx={p.x} cy={p.y} r={p.r} fill="currentColor" opacity={0.45} />
-                  ))}
-                </g>
-              ))}
-              {marks.dots.map((d, i) => (
-                <circle key={`d${i}`} cx={d.x} cy={d.y} r={d.r} fill="currentColor" opacity={d.o} />
-              ))}
-              {marks.patches.map((p, i) => {
-                const rand = mulberry32(config.seed + i * 7);
-                const cell = [];
-                for (let k = 0; k < p.n; k++) {
-                  const a = rand() * Math.PI * 2;
-                  const rr = Math.sqrt(rand());
-                  cell.push(
-                    <circle
-                      key={k}
-                      cx={p.cx + Math.cos(a) * rr * p.rx}
-                      cy={p.cy + Math.sin(a) * rr * p.ry}
-                      r={0.5 + rand()}
-                      fill="currentColor"
-                      opacity={0.2 + rand() * 0.45}
-                    />,
-                  );
-                }
-                return <g key={`p${i}`}>{cell}</g>;
-              })}
-              {marks.dashes.map((d, i) => (
-                <line
-                  key={`dh${i}`}
-                  x1={d.x}
-                  y1={d.y}
-                  x2={d.x}
-                  y2={d.y + d.len}
-                  stroke="currentColor"
-                  strokeWidth={0.9}
-                  strokeOpacity={0.4}
-                  vectorEffect="non-scaling-stroke"
-                />
-              ))}
-              {marks.lattices.map((l, i) => {
-                const cell = [];
-                for (let r = 0; r < l.n; r++) {
-                  for (let c2 = 0; c2 < l.n; c2++) {
-                    const x = l.x + c2 * l.cell;
-                    const y = l.y + r * l.cell;
-                    cell.push(<path key={`s${r}${c2}`} d={star4(x, y, 3.4)} fill="currentColor" opacity={0.75} />);
-                    if (c2 < l.n - 1)
-                      cell.push(
-                        <line key={`h${r}${c2}`} x1={x} y1={y} x2={x + l.cell} y2={y} stroke="currentColor" strokeWidth={0.5} strokeOpacity={0.35} vectorEffect="non-scaling-stroke" />,
-                      );
-                    if (r < l.n - 1)
-                      cell.push(
-                        <line key={`v${r}${c2}`} x1={x} y1={y} x2={x} y2={y + l.cell} stroke="currentColor" strokeWidth={0.5} strokeOpacity={0.35} vectorEffect="non-scaling-stroke" />,
-                      );
-                  }
-                }
-                return (
-                  <g key={`lat${i}`} transform={`rotate(${l.rot} ${l.x} ${l.y})`}>
-                    {cell}
-                  </g>
-                );
-              })}
-              {marks.orbits.map((o, i) => (
-                <g key={`o${i}`} transform={`rotate(${o.rot} ${o.x} ${o.y})`}>
-                  <ellipse cx={o.x} cy={o.y} rx={o.rx} ry={o.ry} fill="none" stroke="currentColor" strokeWidth={0.7} strokeOpacity={0.5} vectorEffect="non-scaling-stroke" />
-                  <circle cx={o.x + o.rx} cy={o.y} r={1.6} fill="currentColor" />
-                  <path d={star4(o.x, o.y, 5)} fill="currentColor" opacity={0.8} />
-                </g>
-              ))}
-              {marks.circles.map((c, i) => (
-                <circle key={`c${i}`} cx={c.x} cy={c.y} r={c.r} fill="none" stroke="currentColor" strokeWidth={0.8} strokeOpacity={0.5} vectorEffect="non-scaling-stroke" />
-              ))}
-              {marks.stars.map((s, i) => (
-                <g key={`s${i}`} className="pulse">
-                  {s.parts.map((p, k) => (
-                    <path key={k} d={p.d} fill="currentColor" transform={`rotate(${p.rot.toFixed(1)} ${s.x} ${s.y})`} />
+              {field.nodes.map((n, i) => (
+                <g
+                  key={`n${i}`}
+                  ref={(el) => {
+                    nodeRefs.current[i] = el;
+                  }}
+                >
+                  {n.kind === 'dot' ? (
+                    <circle r={n.size} fill="currentColor" opacity={0.85} />
+                  ) : n.kind === 'star4' ? (
+                    <path d={star4Path(n.size)} fill="currentColor" />
+                  ) : (
+                    <g>
+                      <path d={star4Path(n.size)} fill="currentColor" />
+                      <path d={star4Path(n.size * 0.6)} fill="currentColor" transform="rotate(45)" />
+                    </g>
+                  )}
+                  {n.burst?.map((b, k) => (
+                    <circle key={k} cx={b.dx} cy={b.dy} r={b.r} fill="currentColor" opacity={0.55} />
                   ))}
                 </g>
               ))}
             </g>
           </svg>
 
-          {/* pointillist spawn/despawn layer — visible only on hover */}
           <svg className="twinkle-layer" width="100%" height="100%" aria-hidden="true">
             <g ref={twinkleLayerRef} transform={`translate(${vp.w / 2} ${vp.h / 2})`}>
               {twinkles.map((d, i) => (
@@ -852,8 +995,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
             </g>
           </svg>
 
-          {/* clusters */}
-          {layouts.map(({ c, slots }) => (
+          {layouts.map(({ c, slots, boxH }) => (
             <a
               key={c.id}
               ref={(el) => {
@@ -864,65 +1006,65 @@ export default function Constellation({ clusters, config, basePath }: Props) {
               className={[
                 'constellation-cluster',
                 activeId === c.id ? 'active' : '',
-                Boolean(activeId) && activeId !== c.id ? 'dimmed' : '',
+                activeId && activeId !== c.id ? 'dimmed' : '',
               ]
                 .filter(Boolean)
                 .join(' ')}
               aria-label={`${c.title} — ${c.projectCount} projects`}
-              style={{ width: c.width, height: c.width * 0.78 }}
+              style={{ width: c.width, height: boxH * c.width }}
               onPointerEnter={() => !isTouch && activate(c.id)}
               onPointerLeave={() => !isTouch && activeId === c.id && activate(null)}
               onFocus={() => activate(c.id)}
               onBlur={() => activeId === c.id && activate(null)}
-              onClick={onClusterClick(c.id)}
+              onClick={(e) => {
+                if (drag.current.moved) {
+                  e.preventDefault();
+                  return;
+                }
+                if (isTouch && activeId !== c.id) {
+                  e.preventDefault();
+                  activate(c.id);
+                }
+              }}
             >
-              <span className="cluster-inner">
-                {c.images.map((im, i) => {
-                  const slot = slots[i % slots.length];
-                  return (
-                    <img
-                      key={i}
-                      src={im.src}
-                      alt={`${c.title} — preview ${i + 1}`}
-                      width={im.w}
-                      height={im.h}
-                      loading={i === 0 ? 'eager' : 'lazy'}
-                      style={
-                        {
-                          left: `${(slot.x * 100).toFixed(2)}%`,
-                          top: `${(slot.y * 100).toFixed(2)}%`,
-                          width: `${(slot.w * 100).toFixed(2)}%`,
-                          zIndex: slot.z,
-                          '--sx': `${(slot.sx * 26).toFixed(1)}px`,
-                          '--sy': `${(slot.sy * 26).toFixed(1)}px`,
-                        } as import('react').CSSProperties
-                      }
-                    />
-                  );
-                })}
-              </span>
+              {c.images.map((im, i) => {
+                const slot = slots[i % slots.length];
+                return (
+                  <img
+                    key={i}
+                    src={im.src}
+                    alt={`${c.title} — preview ${i + 1}`}
+                    width={im.w}
+                    height={im.h}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    style={{
+                      left: `${(slot.x * 100).toFixed(2)}%`,
+                      top: `${(slot.y * 100).toFixed(2)}%`,
+                      width: `${(slot.w * 100).toFixed(2)}%`,
+                      zIndex: i + 1,
+                    }}
+                  />
+                );
+              })}
+              <span className="plate">{c.title}</span>
             </a>
           ))}
 
-          {/* map-mode titles (screen space, readable when zoomed out) */}
-          {layouts.map(({ c }) => (
-            <span
-              key={`m${c.id}`}
-              ref={(el) => {
-                if (el) labelRefs.current.set(c.id, el);
-                else labelRefs.current.delete(c.id);
-              }}
-              className="map-label"
-              aria-hidden="true"
-            >
-              {c.title}
-            </span>
-          ))}
+          <div className="view-controls">
+            <button type="button" onClick={goFocus}>
+              focus
+            </button>
+            <span aria-hidden="true">·</span>
+            <button type="button" onClick={goMap} aria-pressed={mapOn}>
+              map
+            </button>
+          </div>
 
-          {/* cluster info (hover/focus) */}
           {activeCluster && (
             <div ref={infoRef} className="cluster-info">
-              <p className="ci-kicker">● cluster {String(clusters.findIndex((x) => x.id === activeCluster.id) + 1).padStart(2, '0')}</p>
+              <p className="ci-kicker">
+                ● cluster {String(clusters.findIndex((x) => x.id === activeCluster.id) + 1).padStart(2, '0')}
+              </p>
               <h2 className="ci-title">{activeCluster.title}</h2>
               <p className="ci-desc">{activeCluster.hoverDescription}</p>
               <p className="ci-meta">{activeCluster.projectCount} projects</p>
@@ -935,10 +1077,4 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       )}
     </div>
   );
-}
-
-function clampCamera(t: { cx: number; cy: number; scale: number }, config: CConfig) {
-  t.cx = clamp(t.cx, -config.world.width * 0.15, config.world.width * 1.15);
-  t.cy = clamp(t.cy, -config.world.height * 0.15, config.world.height * 1.15);
-  t.scale = clamp(t.scale, config.zoom.min, config.zoom.max);
 }
