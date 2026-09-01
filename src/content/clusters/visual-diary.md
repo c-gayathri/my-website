@@ -6,8 +6,8 @@ hoverDescription: A running diary of tastes, tears and weather — documentation
 hoverColor: '#ff7a00'
 featured: true
 desktop:
-  x: 600
-  y: 1150
+  x: 700
+  y: 890
   width: 430
   driftRadius: 11
   depth: 1.1

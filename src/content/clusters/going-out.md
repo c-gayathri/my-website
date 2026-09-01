@@ -6,8 +6,8 @@ hoverDescription: Work for the hours when the lights go down — disco, neon, gl
 hoverColor: '#ff2e88'
 featured: true
 desktop:
-  x: 1700
-  y: 1050
+  x: 1400
+  y: 890
   width: 340
   driftRadius: 10
   depth: 1

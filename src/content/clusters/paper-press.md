@@ -6,7 +6,7 @@ hoverDescription: Small printed things — zine pages, matchbooks, paper that wa
 hoverColor: '#7a2bff'
 featured: false
 desktop:
-  x: 1100
+  x: 1050
   y: 1500
   width: 360
   driftRadius: 9

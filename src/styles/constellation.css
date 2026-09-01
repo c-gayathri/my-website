@@ -1,0 +1,405 @@
+/*
+ * Constellation styles. Imported ONLY by /studio (index.astro) — the island
+ * renders children that these selectors must reach, so the rules are global.
+ */
+
+.constellation {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--s-bg);
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.constellation.grabbing {
+  cursor: grabbing;
+}
+
+.star-layer,
+.twinkle-layer,
+.splotch-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.star-layer {
+  color: var(--s-ink);
+  transition: color 0.45s ease;
+}
+
+.twinkle-layer {
+  color: #fff;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.splotch-layer {
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
+}
+
+.splotch-layer path {
+  opacity: 0;
+  transition:
+    transform 0.72s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease;
+  will-change: transform;
+}
+
+.splotch-layer path.open {
+  opacity: 1;
+}
+
+/* hovered state: geometry turns white, lines shimmer, stars pulse */
+.constellation.hovered {
+  cursor: pointer;
+}
+
+.constellation.hovered .star-layer {
+  color: #fff;
+}
+
+.constellation.hovered .star-layer path.ln {
+  stroke-dasharray: 5 9;
+  animation: line-shimmer 2.4s linear infinite;
+}
+
+@keyframes line-shimmer {
+  to {
+    stroke-dashoffset: -56;
+  }
+}
+
+.constellation.hovered .star-layer g.pulse {
+  animation: star-pulse 2.2s ease-in-out infinite alternate;
+}
+
+.constellation.hovered .star-layer g.pulse:nth-child(3n) {
+  animation-delay: -0.9s;
+}
+
+.constellation.hovered .star-layer g.pulse:nth-child(4n) {
+  animation-delay: -1.5s;
+}
+
+@keyframes star-pulse {
+  from {
+    opacity: 0.72;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* pointillist spawn/despawn */
+.twinkle-layer .tw {
+  opacity: 0;
+  animation-name: twinkle-blink;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: paused;
+}
+
+.constellation.hovered .twinkle-layer .tw {
+  animation-play-state: running;
+}
+
+@keyframes twinkle-blink {
+  0% {
+    opacity: 0;
+  }
+  4% {
+    opacity: 0.95;
+  }
+  16% {
+    opacity: 0.85;
+  }
+  22% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* clusters */
+.constellation-cluster {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  /* origin at the top-left corner so the translate centres the collage
+     exactly on the computed anchor at every zoom */
+  transform-origin: 0 0;
+  transition: opacity 0.45s ease;
+  will-change: transform;
+}
+
+.constellation-cluster.dimmed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.constellation-cluster.active {
+  z-index: 5;
+}
+
+.constellation-cluster img {
+  position: absolute;
+  height: auto;
+  display: block;
+  box-shadow: 0 2px 16px rgba(20, 18, 10, 0.09);
+}
+
+/* title plate — constant screen size at every zoom (counter-scaled via
+   --ic set per frame), visible at rest and in map view, gone while hovering */
+.constellation-cluster .plate {
+  pointer-events: auto;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--ic, 1));
+  transform-origin: 50% 50%;
+  z-index: 30;
+  background: var(--s-bg);
+  color: var(--s-ink);
+  font-family: var(--s-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  padding: 5px 11px;
+  white-space: nowrap;
+  transition: opacity 0.4s ease;
+}
+
+.constellation.hovered .constellation-cluster .plate {
+  pointer-events: auto;
+  opacity: 0;
+}
+
+/* map mode — zoomed out: images fade, title plates remain */
+.constellation.map .constellation-cluster img {
+  opacity: 0;
+}
+
+.constellation.map .constellation-cluster.active img {
+  opacity: 1;
+}
+
+/* map margins dissolve */
+.constellation.map .star-layer {
+  -webkit-mask-image: radial-gradient(115% 115% at 50% 50%, #000 52%, transparent 88%);
+  mask-image: radial-gradient(115% 115% at 50% 50%, #000 52%, transparent 88%);
+  opacity: 0.65;
+}
+
+.constellation.map .twinkle-layer {
+  opacity: 0;
+}
+
+/* view controls — focus / map, bottom-right, one horizontal row, no box.
+   z-index above the footer strip so the buttons stay clickable. */
+.view-controls {
+  position: absolute;
+  right: clamp(14px, 2vw, 30px);
+  bottom: 18px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 22px;
+  z-index: 20;
+}
+
+body[data-studio-hover] .view-controls {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.view-controls button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--s-grey);
+}
+
+.view-controls button:hover,
+.view-controls button[aria-pressed='true'] {
+  color: var(--s-ink);
+}
+
+.view-controls svg {
+  width: 12px;
+  height: 12px;
+}
+
+.view-controls span {
+  font-family: var(--s-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+/* cluster info block (anchored to the active cluster) */
+.cluster-info {
+  position: absolute;
+  z-index: 8;
+  color: #fff;
+  max-width: 360px;
+  pointer-events: none;
+  animation: info-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* marks breathe: slow rotation + gentle size pulse */
+.constellation .breathe {
+  transform-origin: 0 0;
+  animation: mark-breathe 9s ease-in-out infinite alternate;
+}
+
+@keyframes mark-breathe {
+  from {
+    transform: rotate(-3deg) scale(0.95);
+  }
+  to {
+    transform: rotate(4deg) scale(1.07);
+  }
+}
+
+@keyframes info-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.cluster-info .ci-kicker {
+  font-family: var(--s-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  margin: 0 0 10px;
+  opacity: 0.85;
+}
+
+.cluster-info .ci-title {
+  font-family: var(--s-serif);
+  font-weight: 500;
+  font-size: clamp(30px, 3.4vw, 46px);
+  line-height: 1.02;
+  margin: 0 0 12px;
+}
+
+.cluster-info .ci-desc {
+  font-family: var(--s-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  margin: 0 0 14px;
+  opacity: 0.95;
+  max-width: 40ch;
+}
+
+.cluster-info .ci-meta {
+  font-family: var(--s-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  margin: 0 0 14px;
+}
+
+/* subtle instruction instead of a link the pointer can never reach */
+.cluster-info .ci-hint {
+  font-family: var(--s-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  margin: 0;
+  max-width: 30ch;
+}
+
+/* the hover colour reaches the whole studio chrome, header included.
+   --s-hover-bg is set on <body> the moment a cluster activates; the
+   background switches with the same easing as the splotch, so the header
+   washes to colour as the blob covers the canvas below it. */
+body[data-studio-hover] .studio,
+body[data-studio-hover] .constellation {
+  background-color: var(--s-hover-bg, var(--s-bg));
+}
+
+.studio,
+.constellation {
+  transition: background-color 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* hover: the studio chrome steps back */
+body[data-studio-hover] .studio-nav a,
+body[data-studio-hover] .studio-nav .name,
+body[data-studio-hover] .studio-nav .tagline {
+  color: #fff;
+}
+
+.studio-full .studio-footer {
+  background: var(--s-bg);
+  transition: background 0.4s ease;
+}
+
+body[data-studio-hover] .studio-full .studio-footer {
+  background: transparent;
+}
+
+body[data-studio-hover] .studio-footer,
+body[data-studio-hover] .hint {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.studio-footer,
+.hint {
+  transition: opacity 0.4s ease;
+}
+
+/* hover star cluster — the loud little constellation beside the collage */
+.hover-star-cluster {
+  color: #fff;
+}
+
+.hover-star-cluster .loud {
+  transform-origin: 0 0;
+  animation: hover-star-twinkle 0.9s ease-in-out infinite alternate;
+}
+
+.hover-star-cluster .loud:nth-child(2n) {
+  animation-delay: -0.3s;
+}
+
+.hover-star-cluster .loud:nth-child(3n) {
+  animation-delay: -0.6s;
+}
+
+@keyframes hover-star-twinkle {
+  from {
+    opacity: 0.15;
+    transform: scale(0.75);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .constellation *,
+  .constellation,
+  .studio {
+    transition: none !important;
+    animation: none !important;
+  }
+}

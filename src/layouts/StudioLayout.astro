@@ -23,6 +23,8 @@ interface Props {
   slim?: boolean;
   /** inner section pages: title shown topmost in the header */
   section?: string;
+  /** constellation hint text, shown beside the STUDIO. wordmark */
+  hint?: string;
 }
 
 const {
@@ -31,6 +33,7 @@ const {
   fullBleed = false,
   slim = false,
   section,
+  hint,
 } = Astro.props;
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
@@ -47,7 +50,10 @@ const elsewhere = Object.entries(externalLinks).filter(
     </main>
 
     <footer class:list={['studio-footer', { 'footer-canvas': fullBleed }]}>
-      <a class="footer-wordmark s-link" href={`${base}/studio/`}>STUDIO<span class="dot">.</span></a>
+      <div class="footer-left">
+        <a class="footer-wordmark s-link" href={`${base}/studio/`}>STUDIO<span class="dot">.</span></a>
+        {hint && <span class="hint s-meta">{hint}</span>}
+      </div>
       <div class="elsewhere">
         <span class="s-meta">elsewhere</span>
         {
@@ -109,6 +115,13 @@ const elsewhere = Object.entries(externalLinks).filter(
     justify-content: space-between;
     gap: 20px;
     padding: 20px clamp(24px, 4vw, 72px) 26px;
+  }
+
+  .footer-left {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    flex-wrap: wrap;
   }
 
   .footer-wordmark {

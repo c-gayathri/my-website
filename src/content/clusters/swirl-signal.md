@@ -6,8 +6,8 @@ hoverDescription: Pattern studies that repeat until they break — colour, noise
 hoverColor: '#ff2e88'
 featured: true
 desktop:
-  x: 1150
-  y: 420
+  x: 1050
+  y: 280
   width: 440
   driftRadius: 12
   depth: 1

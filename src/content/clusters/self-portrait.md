@@ -6,8 +6,8 @@ hoverDescription: Faces as arguments with the self — halftone, watercolour, sm
 hoverColor: '#2438ff'
 featured: true
 desktop:
-  x: 520
-  y: 420
+  x: 350
+  y: 280
   width: 420
   driftRadius: 10
   depth: 1.2

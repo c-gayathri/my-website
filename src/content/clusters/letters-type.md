@@ -6,8 +6,8 @@ hoverDescription: Words that refuse to stay flat — drawn letters, zine pages, 
 hoverColor: '#00b34a'
 featured: true
 desktop:
-  x: 1650
-  y: 700
+  x: 2100
+  y: 890
   width: 380
   driftRadius: 10
   depth: 0.9

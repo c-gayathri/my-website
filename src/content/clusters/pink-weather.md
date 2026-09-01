@@ -6,8 +6,8 @@ hoverDescription: Skies, wires and weather — photographs of absolutely nothing
 hoverColor: '#2438ff'
 featured: false
 desktop:
-  x: 150
-  y: 1560
+  x: 350
+  y: 1500
   width: 340
   driftRadius: 8
   depth: 0.7

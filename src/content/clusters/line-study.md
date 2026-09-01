@@ -6,8 +6,8 @@ hoverDescription: Quiet line work — figures, petals and geometry, drawn withou
 hoverColor: '#7a2bff'
 featured: false
 desktop:
-  x: 2130
-  y: 340
+  x: 1750
+  y: 280
   width: 360
   driftRadius: 9
   depth: 0.8

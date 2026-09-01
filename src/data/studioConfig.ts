@@ -16,7 +16,8 @@ export const studioConfig = {
 
   // Camera bounds. Below `mapBelow` the map mode kicks in:
   // images fade out and screen-space titles remain readable.
-  zoom: { min: 0.34, max: 1.4, mapBelow: 0.5 },
+  // mapBelow is refined at runtime from the authored cluster spread.
+  zoom: { min: 0.22, max: 1.4, mapBelow: 0.45 },
 
   // Ambient drift. Deterministic per cluster; positions always return to
   // their authored anchor. Amplified while a cluster is hovered.
