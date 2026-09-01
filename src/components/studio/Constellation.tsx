@@ -330,10 +330,13 @@ function buildField(clusters: CCluster[], config: CConfig): Field {
   return { nodes, edges };
 }
 
-/* ── centre masonry for cluster images ────────────────────────────────────
-   No overlap; gaps; organised around the centre with seeded asymmetry. */
+/* ── scattered collage for cluster images ────────────────────────────────
+   Organic, not columns: images grow outward from the cluster centre in
+   seeded order, largest first, with a uniform gap between every image.
+   No overlap ever; the whole group is re-centred so the title plate sits
+   over the middle. */
 
-type MasonSlot = { x: number; y: number; w: number };
+type MasonSlot = { x: number; y: number; w: number; h: number };
 
 function masonryLayout(
   count: number,
@@ -341,54 +344,122 @@ function masonryLayout(
   seedStr: string,
 ): { slots: MasonSlot[]; height: number } {
   const rand = mulberry32(hashStr(seedStr));
-  const gap = 0.05;
-  const cols = count <= 1 ? 1 : count <= 4 ? 2 : 3;
+  const margin = 0.026; /* uniform padding, fraction of cluster width */
   const slots: MasonSlot[] = [];
+  const rects: Array<[number, number, number, number]> = [];
 
-  const colX: number[] = [];
-  const colW: number[] = [];
-  if (cols === 1) {
-    colW.push(0.68);
-    colX.push(0.16);
-  } else if (cols === 2) {
-    const w1 = 0.42 + rand() * 0.05;
-    colW.push(w1, 1 - w1 - gap);
-    colX.push(0.02 + (rand() - 0.5) * 0.02, w1 + gap - (rand() - 0.5) * 0.02);
-  } else {
-    const w = (1 - 2 * gap) / 3;
-    colW.push(w, w, w);
-    colX.push(0.01 + gap / 2, w + gap * 1.5, 2 * w + gap * 2.5);
+  const overlaps = (x0: number, y0: number, x1: number, y1: number) => {
+    for (const r of rects) {
+      if (x0 < r[2] && r[0] < x1 && y0 < r[3] && r[1] < y1) return true;
+    }
+    return false;
+  };
+
+  /* sized seeded, placed largest-first */
+  const sized = Array.from({ length: count }, (_, i) => {
+    const w = 0.18 + rand() * 0.22;
+    const aspect = clamp(aspects[i] ?? 1.25, 0.55, 2.0);
+    return { i, w, h: w * aspect };
+  }).sort((a, b) => b.w * b.h - a.w * a.h);
+
+  const maxR = 1.05;
+  for (const s of sized) {
+    let placed = false;
+    for (let band = 0; band < 8 && !placed; band++) {
+      const R = 0.18 + (band * (maxR - 0.18)) / 8;
+      for (let t = 0; t < 36 && !placed; t++) {
+        const a = rand() * Math.PI * 2;
+        const rr = R * (0.15 + rand() * 0.85);
+        const px = 0.5 + Math.cos(a) * rr;
+        const py = 0.5 + Math.sin(a) * rr;
+        const x0 = px - s.w / 2 - margin / 2;
+        const y0 = py - s.h / 2 - margin / 2;
+        const x1 = px + s.w / 2 + margin / 2;
+        const y1 = py + s.h / 2 + margin / 2;
+        if (overlaps(x0, y0, x1, y1)) continue;
+        if (x0 < -0.06 || x1 > 1.06 || y0 < -0.06 || y1 > 1.6) continue;
+        rects.push([x0, y0, x1, y1]);
+        slots[s.i] = { x: px - s.w / 2, y: py - s.h / 2, w: s.w, h: s.h };
+        placed = true;
+      }
+    }
+    if (!placed) {
+      /* fallback (rare): against the centroid */
+      const x0 = 0.5 - s.w / 2 - margin / 2;
+      const y0 = 0.5 - s.h / 2 - margin / 2;
+      const x1 = 0.5 + s.w / 2 + margin / 2;
+      const y1 = 0.5 + s.h / 2 + margin / 2;
+      rects.push([x0, y0, x1, y1]);
+      slots[s.i] = { x: 0.5 - s.w / 2, y: 0.5 - s.h / 2, w: s.w, h: s.h };
+    }
   }
 
-  const colY = new Array(cols).fill(0);
-  /* seeded assignment order for asymmetry */
-  const order = Array.from({ length: count }, (_, i) => i);
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
+  /* re-centre the whole group so its middle lands on the cluster anchor */
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const s of slots) {
+    x0 = Math.min(x0, s.x);
+    y0 = Math.min(y0, s.y);
+    x1 = Math.max(x1, s.x + s.w);
+    y1 = Math.max(y1, s.y + s.h);
+  }
+  const w = x1 - x0;
+  const h = y1 - y0;
+  const cx = x0 + w / 2;
+  const cy = y0 + h / 2;
+  for (const s of slots) {
+    s.x -= cx - 0.5;
+    s.y -= cy - 0.5;
   }
 
-  let height = 0;
-  for (const idx of order) {
-    let col = 0;
-    for (let k = 1; k < cols; k++) if (colY[k] < colY[col] - 0.02) col = k;
-    const aspect = aspects[idx] ?? 1.25;
-    const w = clamp(colW[col] * (0.92 + rand() * 0.14), 0.2, 0.55);
-    const h = w * clamp(aspect, 0.6, 2.1);
-    slots[idx] = {
-      x: colX[col] + (colW[col] - w) / 2 + (rand() - 0.5) * 0.02,
-      y: colY[col],
-      w,
-    };
-    colY[col] += h + gap;
-    height = Math.max(height, colY[col]);
+  return { slots, height: h };
+}
+
+/* ── hover star cluster ───────────────────────────────────────────────────
+   A single small constellation of stars near the collage, visible only
+   while that cluster is hovered. Same vocabulary as the field (star4/star8
+   marks + short dashed segments) but with a much louder twinkle. */
+
+type HoverStar = {
+  x: number;
+  y: number;
+  kind: 'star4' | 'star8';
+  size: number;
+  rot: number;
+  delay: number;
+  dur: number;
+};
+
+type HoverStars = { nodes: HoverStar[]; edges: Array<[number, number]> };
+
+function hoverStarsFor(c: CCluster, boxH: number): HoverStars {
+  const rand = mulberry32(hashStr(c.id + ':hoverstars'));
+  const cw = c.width;
+  const ch = boxH * c.width;
+  /* anchor just outside one seeded corner of the collage */
+  const corner = Math.floor(rand() * 4);
+  const sideX = corner === 0 || corner === 2 ? 1 : -1;
+  const sideY = corner === 0 || corner === 1 ? -1 : 1;
+  const ax = sideX * (cw * 0.52 + 36 + rand() * 30);
+  const ay = sideY * (ch * 0.52 + 26 + rand() * 24);
+  const n = 6 + Math.floor(rand() * 3);
+  const nodes: HoverStar[] = [];
+  for (let k = 0; k < n; k++) {
+    nodes.push({
+      x: ax + (rand() - 0.5) * 150,
+      y: ay + (rand() - 0.5) * 110,
+      kind: rand() < 0.7 ? 'star4' : 'star8',
+      size: 3.5 + rand() * 6.5,
+      rot: rand() * 180,
+      delay: rand() * 0.9,
+      dur: 0.75 + rand() * 0.4,
+    });
   }
-
-  /* centre columns vertically as a group around the cluster middle */
-  const yOffset = -height / 2;
-  for (const s of slots) s.y += yOffset;
-
-  return { slots, height: height + gap };
+  const edges: Array<[number, number]> = [];
+  for (let k = 1; k < n; k++) edges.push([k - 1, k]);
+  return { nodes, edges };
 }
 
 /* ── hover splotch ───────────────────────────────────────────────────────── */
@@ -445,6 +516,14 @@ export default function Constellation({ clusters, config, basePath }: Props) {
   const splotchRef = useRef<SVGPathElement>(null);
   const infoRef = useRef<HTMLDivElement>(null);
   const clusterRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const hoverStarRefs = useRef<Map<string, SVGGElement>>(new Map());
+
+  /* hover state machine: enter dwell, exit dwell, exit cooldown */
+  const enterRef = useRef<{ id: string | null; since: number }>({ id: null, since: 0 });
+  const exitSinceRef = useRef(0);
+  const cooldownUntilRef = useRef(0);
+  const mapBelowRef = useRef(config.zoom.mapBelow);
+  const mapFitRef = useRef(0.4);
 
   const [vp, setVp] = useState<{ w: number; h: number } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -470,10 +549,35 @@ export default function Constellation({ clusters, config, basePath }: Props) {
           c.images.map((im) => im.h / im.w),
           c.id,
         );
-        return { c, slots: m.slots, boxH: m.height, blob: blobPath(c.id), phase: hashStr(c.id) % 1000 };
+        return {
+          c,
+          slots: m.slots,
+          boxH: m.height,
+          blob: blobPath(c.id),
+          phase: hashStr(c.id) % 1000,
+          stars: hoverStarsFor(c, m.height),
+        };
       }),
     [clusters],
   );
+
+  /* authored world spread of the collages (for the map framing) */
+  const spread = useMemo(() => {
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    for (const l of layouts) {
+      const halfW = l.c.width / 2;
+      const halfH = (l.boxH * l.c.width) / 2;
+      x0 = Math.min(x0, l.c.x - halfW);
+      y0 = Math.min(y0, l.c.y - halfH);
+      x1 = Math.max(x1, l.c.x + halfW);
+      y1 = Math.max(y1, l.c.y + halfH);
+    }
+    const pad = 150;
+    return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
+  }, [layouts]);
 
   const field = useMemo(() => buildField(clusters, config), [clusters, config]);
   const twinkles = useMemo(() => twinkleDots(config), [config]);
@@ -499,6 +603,20 @@ export default function Constellation({ clusters, config, basePath }: Props) {
     return () => ro.disconnect();
   }, []);
 
+  /* map framing: scale that fits the whole authored spread, and the zoom
+     below which map mode (titles only) takes over — always above the fit,
+     always below the rest view */
+  useEffect(() => {
+    if (!vp) return;
+    const fit = clamp(
+      Math.min(vp.w / (spread.x1 - spread.x0), vp.h / (spread.y1 - spread.y0)) * 0.94,
+      config.zoom.min,
+      config.zoom.max,
+    );
+    mapFitRef.current = fit;
+    mapBelowRef.current = Math.max(fit * 1.08, 0.26);
+  }, [vp, spread, config]);
+
   /* initial camera: frame the featured clusters */
   useEffect(() => {
     if (!vp) return;
@@ -516,9 +634,12 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       : { x0: 0, y0: 0, x1: config.world.width, y1: config.world.height };
     const cx = (box.x0 + box.x1) / 2;
     const cy = (box.y0 + box.y1) / 2;
+    /* never rest below the map threshold (mostly binds on narrow windows
+       where the featured spread ≈ the whole world) */
+    const floor = Math.max(config.zoom.min, mapBelowRef.current * 1.03);
     const scale = clamp(
       Math.min(vp.w / (box.x1 - box.x0), vp.h / (box.y1 - box.y0)) * 0.94,
-      config.zoom.min,
+      floor,
       1.1,
     );
     cam.current = { cx, cy, scale };
@@ -526,12 +647,11 @@ export default function Constellation({ clusters, config, basePath }: Props) {
     initialCam.current = { cx, cy, scale };
     /* debug/preview: /studio/?view=map jumps to the full-map framing */
     if (new URLSearchParams(window.location.search).get('view') === 'map') {
-      const s = clamp(
-        Math.min(vp.w / config.world.width, vp.h / config.world.height) * 0.96,
-        config.zoom.min,
-        config.zoom.max,
-      );
-      cam.current = { cx: config.world.width / 2, cy: config.world.height / 2, scale: s };
+      cam.current = {
+        cx: (spread.x0 + spread.x1) / 2,
+        cy: (spread.y0 + spread.y1) / 2,
+        scale: mapFitRef.current,
+      };
       camTarget.current = { ...cam.current };
       setMapOnIf(true);
     }
@@ -551,14 +671,10 @@ export default function Constellation({ clusters, config, basePath }: Props) {
   };
   const goMap = () => {
     activate(null);
-    const scale = Math.min(
-      vp ? vp.w / config.world.width : 0.4,
-      vp ? vp.h / config.world.height : 0.4,
-    ) * 0.96;
     camTarget.current = {
-      cx: config.world.width / 2,
-      cy: config.world.height / 2,
-      scale: clamp(scale, config.zoom.min, config.zoom.max),
+      cx: (spread.x0 + spread.x1) / 2,
+      cy: (spread.y0 + spread.y1) / 2,
+      scale: mapFitRef.current * 0.97,
     };
   };
 
@@ -632,14 +748,36 @@ export default function Constellation({ clusters, config, basePath }: Props) {
     return () => el.removeEventListener('wheel', onWheel);
   }, [config, vp]);
 
-  /* hover: camera zoom to cluster + remember where to return */
+  /* hover: camera zoom to cluster + remember where to return.
+     Hover zoom keeps the collage at roughly 1/6 of the viewport area
+     (capped smaller so hover regions never crowd neighbours). */
+  const hoverScaleFor = (cl: CCluster) => {
+    const l = layouts.find((x) => x.c.id === cl.id);
+    const worldArea = l ? cl.width * (l.boxH * cl.width) : cl.width * cl.width;
+    const byArea = Math.sqrt((vp ? vp.w * vp.h : 1_200_000) / (6 * worldArea));
+    return clamp(byArea, 0.55, 0.78);
+  };
+
   const activate = (id: string | null) => {
     setActiveId((prev) => {
       if (id && id !== prev) {
         prevTarget.current = { ...camTarget.current };
         const cl = clusters.find((x) => x.id === id);
-        if (cl) {
-          camTarget.current = { cx: cl.x, cy: cl.y, scale: Math.min(1.55, config.zoom.max + 0.2) };
+        if (cl && vp) {
+          const s = hoverScaleFor(cl);
+          const l = layouts.find((x) => x.c.id === cl.id);
+          const cw = (cl.width * s) / 2;
+          const ch = (l ? l.boxH * cl.width * s : cw) / 2;
+          /* anchor the zoom to the pointer (clamped so the collage stays
+             fully on-screen) — the collage grows in place under the cursor
+             instead of drifting to the viewport centre */
+          const px = pointerSeen.current ? clamp(cursor.current.x, cw, vp.w - cw) : vp.w / 2;
+          const py = pointerSeen.current ? clamp(cursor.current.y, ch, vp.h - ch) : vp.h / 2;
+          camTarget.current = {
+            cx: cl.x - (px - vp.w / 2) / s,
+            cy: cl.y - (py - vp.h / 2) / s,
+            scale: s,
+          };
         }
       } else if (!id && prev) {
         if (prevTarget.current) camTarget.current = { ...prevTarget.current };
@@ -655,6 +793,11 @@ export default function Constellation({ clusters, config, basePath }: Props) {
     if (on) document.body.dataset.studioHover = '1';
     else delete document.body.dataset.studioHover;
     const cl = clusters.find((x) => x.id === activeId);
+
+    /* the hover colour fills the page chrome (header included) via a CSS
+       variable read by .studio/.constellation background transitions */
+    if (cl) document.body.style.setProperty('--s-hover-bg', cl.color);
+    else document.body.style.removeProperty('--s-hover-bg');
 
     if (cl && vp) {
       const t = camTarget.current;
@@ -698,6 +841,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
 
     return () => {
       delete document.body.dataset.studioHover;
+      document.body.style.removeProperty('--s-hover-bg');
     };
   }, [activeId, clusters, vp]);
 
@@ -732,21 +876,66 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       c.scale += (tg.scale - c.scale) * 0.12;
 
       const active = activeRef.current;
-      const map = c.scale < config.zoom.mapBelow && !active;
+      const map = c.scale < mapBelowRef.current && !active;
       setMapOnIf(map);
 
-      /* hover hysteresis: stay active until the pointer leaves a generous
-         radius around the cluster (the enter side is handled by imagery
-         hit-testing, so boundary crossing never flickers) */
-      if (active && pointerSeen.current) {
-        const acl = clusters.find((x) => x.id === active);
-        if (acl) {
-          const halfDiag = Math.hypot(acl.width, acl.width * 0.78) / 2;
-          const threshold = halfDiag * c.scale * 1.7 + 70;
-          const sx = vp.w / 2 + (acl.x - c.cx) * c.scale;
-          const sy = vp.h / 2 + (acl.y - c.cy) * c.scale;
-          const d = Math.hypot(cursor.current.x - sx, cursor.current.y - sy);
-          if (d > threshold) activate(null);
+      /* cluster drift at this instant — frozen entirely while hovered */
+      const driftOf = (cl: CCluster, phase: number) => {
+        const amp = active || reduced.current ? 0 : cl.driftRadius * cl.depth;
+        return {
+          dx:
+            Math.sin(t * ((2 * Math.PI) / config.drift.periodSeconds) + phase) * amp +
+            Math.sin(t * ((2 * Math.PI) / (config.drift.periodSeconds * 0.53)) + phase * 1.7) * amp * 0.6,
+          dy:
+            Math.cos(t * ((2 * Math.PI) / (config.drift.periodSeconds * 0.77)) + phase * 2.3) * amp +
+            Math.sin(t * ((2 * Math.PI) / (config.drift.periodSeconds * 0.41)) + phase * 0.6) * amp * 0.55,
+        };
+      };
+
+      /* hover state machine (pointer-driven only; touch uses clicks).
+         Enter = inside a cluster's collage bbox for ≥150ms.
+         Exit  = outside the active bbox for ≥220ms, zero margin.
+         A 1.5s cooldown after exit prevents a straight handoff from
+         bouncing straight into the next cluster. All-or-nothing: a single
+         frame across the edge never completes either transition. */
+      if (!isTouch && pointerSeen.current) {
+        const pnow = performance.now();
+        let inside: string | null = null;
+        for (const l of layouts) {
+          const d = driftOf(l.c, l.phase);
+          const sx = vp.w / 2 + (l.c.x + d.dx - c.cx) * c.scale;
+          const sy = vp.h / 2 + (l.c.y + d.dy - c.cy) * c.scale;
+          const hw = (l.c.width / 2) * c.scale;
+          const hh = ((l.boxH * l.c.width) / 2) * c.scale;
+          if (
+            Math.abs(cursor.current.x - sx) <= hw &&
+            Math.abs(cursor.current.y - sy) <= hh
+          ) {
+            inside = l.c.id;
+            break;
+          }
+        }
+
+        if (active) {
+          if (inside === active) {
+            exitSinceRef.current = 0;
+          } else if (!exitSinceRef.current) {
+            exitSinceRef.current = pnow;
+          } else if (pnow - exitSinceRef.current >= 220) {
+            exitSinceRef.current = 0;
+            cooldownUntilRef.current = pnow + 1500;
+            activate(null);
+          }
+        } else if (inside) {
+          if (enterRef.current.id !== inside) {
+            enterRef.current = { id: inside, since: pnow };
+          }
+          if (pnow - enterRef.current.since >= 150 && pnow >= cooldownUntilRef.current) {
+            enterRef.current = { id: null, since: 0 };
+            activate(inside);
+          }
+        } else {
+          enterRef.current = { id: null, since: 0 };
         }
       }
 
@@ -845,18 +1034,13 @@ export default function Constellation({ clusters, config, basePath }: Props) {
         }
       }
 
-      /* clusters: masonry boxes + drift + push + camera */
+      /* clusters: masonry boxes + drift + push + camera.
+         All drift freezes while any cluster is hovered, so the constellation
+         returns to exactly the same place when the hover ends. */
       for (const { c: cl, phase } of layouts) {
         const el = clusterRefs.current.get(cl.id);
         if (!el) continue;
-        const hovered = active === cl.id;
-        const driftAmp = hovered || reduced.current ? 0 : cl.driftRadius * cl.depth * (active ? config.drift.hoverMultiplier : 1);
-        const dx =
-          Math.sin(t * ((2 * Math.PI) / config.drift.periodSeconds) + phase) * driftAmp +
-          Math.sin(t * ((2 * Math.PI) / (config.drift.periodSeconds * 0.53)) + phase * 1.7) * driftAmp * 0.6;
-        const dy =
-          Math.cos(t * ((2 * Math.PI) / (config.drift.periodSeconds * 0.77)) + phase * 2.3) * driftAmp +
-          Math.sin(t * ((2 * Math.PI) / (config.drift.periodSeconds * 0.41)) + phase * 0.6) * driftAmp * 0.55;
+        const { dx, dy } = driftOf(cl, phase);
 
         /* cluster push — much gentler than marks */
         const sxRaw = vp.w / 2 + (cl.x + dx - c.cx) * c.scale;
@@ -873,8 +1057,22 @@ export default function Constellation({ clusters, config, basePath }: Props) {
         }
 
         const bw = cl.width * c.scale;
-        const bh = layouts.find((l) => l.c.id === cl.id)!.boxH * c.scale;
+        const bh = layouts.find((l) => l.c.id === cl.id)!.boxH * cl.width * c.scale;
         el.style.transform = `translate(${(sxRaw + px - bw / 2).toFixed(1)}px, ${(syRaw + py - bh / 2).toFixed(1)}px) scale(${c.scale})`;
+        /* plate counter-scale → constant screen size at every zoom */
+        el.style.setProperty('--ic', (1 / c.scale).toFixed(3));
+
+        /* hover star cluster rides with its collage */
+        const hs = hoverStarRefs.current.get(cl.id);
+        if (hs) {
+          const show = active === cl.id;
+          hs.setAttribute(
+            'transform',
+            `translate(${(sxRaw + px).toFixed(1)} ${(syRaw + py).toFixed(1)}) scale(${c.scale.toFixed(4)})`,
+          );
+          if (show && hs.style.display === 'none') hs.style.display = '';
+          else if (!show && hs.style.display !== 'none') hs.style.display = 'none';
+        }
       }
 
       raf = requestAnimationFrame(tick);
@@ -1001,6 +1199,60 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                 </g>
               ))}
             </g>
+
+            {/* hover star cluster — the loud little constellation that rides
+                beside the active collage (positioned each frame) */}
+            {layouts.map(({ c, stars }) => (
+              <g
+                key={`hs${c.id}`}
+                data-cluster={c.id}
+                className="hover-star-cluster"
+                ref={(el) => {
+                  if (el) hoverStarRefs.current.set(c.id, el);
+                  else hoverStarRefs.current.delete(c.id);
+                }}
+                style={{ display: 'none' }}
+              >
+                {stars.edges.map((e, i) => {
+                  const a = stars.nodes[e[0]];
+                  const b = stars.nodes[e[1]];
+                  return (
+                    <path
+                      key={`e${i}`}
+                      d={`M${a.x.toFixed(1)},${a.y.toFixed(1)} L${b.x.toFixed(1)},${b.y.toFixed(1)}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={0.8}
+                      strokeOpacity={0.55}
+                      strokeDasharray="2 6"
+                      strokeLinecap="round"
+                    />
+                  );
+                })}
+                {stars.nodes.map((s, i) => (
+                  <g key={i}>
+                    <g transform={`translate(${s.x.toFixed(1)} ${s.y.toFixed(1)}) rotate(${s.rot.toFixed(1)})`}>
+                      <g
+                        className="loud"
+                        style={{
+                          animationDelay: `${s.delay.toFixed(2)}s`,
+                          animationDuration: `${s.dur.toFixed(2)}s`,
+                        }}
+                      >
+                        {s.kind === 'star4' ? (
+                          <path d={star4Path(s.size)} fill="currentColor" />
+                        ) : (
+                          <g>
+                            <path d={star4Path(s.size)} fill="currentColor" />
+                            <path d={star4Path(s.size * 0.6)} fill="currentColor" transform="rotate(45)" />
+                          </g>
+                        )}
+                      </g>
+                    </g>
+                  </g>
+                ))}
+              </g>
+            ))}
           </svg>
 
           <svg className="twinkle-layer" width="100%" height="100%" aria-hidden="true">
@@ -1036,7 +1288,6 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                 .join(' ')}
               aria-label={`${c.title} — ${c.projectCount} projects`}
               style={{ width: c.width, height: boxH * c.width, pointerEvents: 'none' }}
-              onPointerEnter={() => !isTouch && activate(c.id)}
               onFocus={() => activate(c.id)}
               onBlur={() => activeId === c.id && activate(null)}
               onClick={(e) => {
@@ -1103,9 +1354,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
               <h2 className="ci-title">{activeCluster.title}</h2>
               <p className="ci-desc">{activeCluster.hoverDescription}</p>
               <p className="ci-meta">{activeCluster.projectCount} projects</p>
-              <a className="ci-link" href={`${basePath}/studio/clusters/${activeCluster.slug}/`}>
-                → view cluster
-              </a>
+              <p className="ci-hint">click on the cluster to view the projects in the cluster</p>
             </div>
           )}
         </>
