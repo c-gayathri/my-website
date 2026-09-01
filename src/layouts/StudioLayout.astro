@@ -21,6 +21,8 @@ interface Props {
   fullBleed?: boolean;
   /** detail pages: one-line header */
   slim?: boolean;
+  /** keep the page frame at least as tall as the available viewport */
+  viewportFit?: boolean;
   /** inner section pages: title shown topmost in the header */
   section?: string;
   /** constellation hint text, shown beside the STUDIO. wordmark */
@@ -37,14 +39,17 @@ const {
 } = Astro.props;
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const route = Astro.url.pathname.replace(base, '').replace(/\/+$/, '');
+const viewportFit = Astro.props.viewportFit ?? (route === '/studio/about' || route === '/studio/index');
+const detail = slim || (!fullBleed && !section);
 const elsewhere = Object.entries(externalLinks).filter(
   ([key, href]) => key !== 'research' && href,
 );
 ---
 
 <BaseLayout title={title} description={description}>
-  <div class:list={['studio', { 'studio-full': fullBleed }]}>
-    <StudioNav variant={slim ? 'slim' : 'full'} section={section} />
+  <div class:list={['studio', { 'studio-full': fullBleed, 'studio-detail': detail, 'studio-viewport-fit': viewportFit }]}>
+    <StudioNav variant={fullBleed ? 'full' : 'compact'} section={section} />
     <main class:list={['studio-main', { 's-page': !fullBleed }]}>
       <slot />
     </main>
@@ -65,16 +70,33 @@ const elsewhere = Object.entries(externalLinks).filter(
         }
         <a class="s-link" href={`${base}${externalLinks.research}`} target="_blank">research ↗</a>
       </div>
-      {!fullBleed && <span class="s-meta">© {new Date().getFullYear()} {studioConfig.name}</span>}
+      <span class="footer-right s-meta" aria-hidden={fullBleed ? 'true' : undefined}>
+        {!fullBleed && <>© {new Date().getFullYear()} {studioConfig.name}</>}
+      </span>
     </footer>
   </div>
 </BaseLayout>
 
 <style>
   .studio {
+    --studio-gutter: clamp(24px, 4vw, 72px);
+    --studio-footer-height: 72px;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .studio-detail {
+    --studio-gutter: clamp(20px, 2.5vw, 48px);
+  }
+
+  .studio-main {
+    padding-bottom: calc(var(--studio-footer-height) + env(safe-area-inset-bottom));
+  }
+
+  .studio-viewport-fit .studio-main {
+    flex: 1;
   }
 
   /* full-bleed pages: the canvas owns the viewport; the footer overlays it */
@@ -90,38 +112,40 @@ const elsewhere = Object.entries(externalLinks).filter(
     min-height: 0;
     display: flex;
     flex-direction: column;
+    padding-bottom: 0;
   }
 
   .studio-full .studio-main > :global(*) {
     flex: 1;
   }
 
-  .studio-full .studio-footer {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 10;
-  }
-
   /* full-bleed pages manage their own frame */
   .studio-main.s-page {
     padding-top: 12px;
+    padding-bottom: calc(var(--studio-footer-height) + 32px + env(safe-area-inset-bottom));
   }
 
   .studio-footer {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
     gap: 20px;
-    padding: 20px clamp(24px, 4vw, 72px) 26px;
+    min-height: calc(var(--studio-footer-height) + env(safe-area-inset-bottom));
+    padding: 14px var(--studio-gutter) calc(14px + env(safe-area-inset-bottom));
+    background: var(--s-bg);
+    border-top: 1px solid var(--s-line);
   }
 
   .footer-left {
     display: flex;
     align-items: baseline;
     gap: 18px;
-    flex-wrap: wrap;
+    min-width: 0;
   }
 
   .footer-wordmark {
@@ -139,8 +163,36 @@ const elsewhere = Object.entries(externalLinks).filter(
     display: flex;
     align-items: baseline;
     gap: 20px;
-    flex-wrap: wrap;
-    margin-left: auto;
-    margin-right: auto;
+    justify-self: center;
+    white-space: nowrap;
+  }
+
+  .footer-right {
+    justify-self: end;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 760px) {
+    .studio {
+      --studio-footer-height: 132px;
+      min-height: 100svh;
+    }
+
+    .studio-main,
+    .studio-main.s-page {
+      padding-bottom: calc(var(--studio-footer-height) + 24px + env(safe-area-inset-bottom));
+    }
+
+    .studio-footer {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding-top: 18px;
+    }
+
+    .elsewhere,
+    .footer-right {
+      justify-self: start;
+      white-space: normal;
+    }
   }
 </style>

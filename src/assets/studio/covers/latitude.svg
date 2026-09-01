@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="540" viewBox="0 0 360 540">
+  <rect width="360" height="540" fill="#57c6dc"/><circle cx="180" cy="290" r="116" fill="#ffe36a"/><path d="M64 290h232" stroke="#e64441" stroke-width="14"/>
+  <text x="30" y="85" font-family="Georgia,serif" font-size="51" fill="#173353">Latitude</text>
+  <text x="30" y="493" font-family="Menlo,monospace" font-size="14" letter-spacing="2" fill="#173353">NICK CRANE</text>
+</svg>

@@ -28,6 +28,30 @@ const img = d.thumbnail ?? d.hero;
 const { Content } = await render(project);
 const isModular = d.pageType === 'mdx';
 const videoSrc = d.videoSrc ? `${base}${d.videoSrc}` : undefined;
+
+function youtubeEmbedUrl(value: string): string {
+  const url = new URL(value);
+  const host = url.hostname.replace(/^www\./, '');
+  let id: string | null = null;
+
+  if (host === 'youtu.be') {
+    id = url.pathname.split('/').filter(Boolean)[0] ?? null;
+  } else if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
+    const parts = url.pathname.split('/').filter(Boolean);
+    id = url.pathname === '/watch' ? url.searchParams.get('v') : parts[1] ?? null;
+  }
+
+  if (!id || !/^[A-Za-z0-9_-]{11}$/.test(id)) {
+    throw new Error(`Invalid YouTube URL in project "${d.title}": ${value}`);
+  }
+
+  return `https://www.youtube-nocookie.com/embed/${id}`;
+}
+
+const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
+  src: youtubeEmbedUrl(url),
+  title: d.youtubeUrls.length > 1 ? `${d.title} — video ${index + 1}` : `${d.title} — video`,
+}));
 ---
 
 <StudioLayout title={`${d.title} — Studio`} slim>
@@ -103,7 +127,7 @@ const videoSrc = d.videoSrc ? `${base}${d.videoSrc}` : undefined;
             )}
           </blockquote>
         ) : videoSrc ? (
-          <video src={videoSrc} poster={d.videoPoster?.src} controls />
+          <video src={videoSrc} poster={d.videoPoster?.src} controls preload="metadata" />
         ) : (
           img && (
             <img
@@ -115,6 +139,25 @@ const videoSrc = d.videoSrc ? `${base}${d.videoSrc}` : undefined;
               fetchpriority="high"
             />
           )
+        )
+      }
+
+      {
+        youtubeEmbeds.length > 0 && (
+          <div class="youtube-list">
+            {youtubeEmbeds.map((video) => (
+              <div class="youtube-embed">
+                <iframe
+                  src={video.src}
+                  title={video.title}
+                  loading="lazy"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  allow="encrypted-media; picture-in-picture; web-share"
+                  allowfullscreen
+                />
+              </div>
+            ))}
+          </div>
         )
       }
 
@@ -140,11 +183,15 @@ const videoSrc = d.videoSrc ? `${base}${d.videoSrc}` : undefined;
 <style>
   .project {
     display: grid;
-    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-    gap: clamp(32px, 4.5vw, 80px);
+    grid-template-columns: minmax(220px, 280px) minmax(0, 860px);
+    gap: clamp(28px, 4vw, 64px);
     align-items: stretch;
-    min-height: calc(100dvh - 120px);
-    padding-bottom: 48px;
+    justify-content: center;
+    width: 100%;
+    max-width: 1220px;
+    min-height: min(760px, calc(100dvh - 120px));
+    margin: 0 auto;
+    padding-bottom: 32px;
   }
 
   /* left rail */
@@ -271,6 +318,35 @@ const videoSrc = d.videoSrc ? `${base}${d.videoSrc}` : undefined;
     box-shadow: 0 3px 30px rgba(20, 18, 10, 0.13);
   }
 
+  .youtube-list {
+    display: grid;
+    gap: 18px;
+    width: 100%;
+    max-width: 860px;
+    margin: 18px auto 0;
+  }
+
+  .youtube-list:first-child {
+    margin-top: 0;
+  }
+
+  .youtube-embed {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #111;
+    box-shadow: 0 3px 30px rgba(20, 18, 10, 0.13);
+  }
+
+  .youtube-embed iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
   /* size: full opts into a larger, scrollable presentation */
   .size-full .stage > img,
   .size-full .stage > video {
@@ -338,10 +414,11 @@ const videoSrc = d.videoSrc ? `${base}${d.videoSrc}` : undefined;
     max-height: 26vh;
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 820px) {
     .project {
       grid-template-columns: 1fr;
       min-height: 0;
+      gap: 28px;
     }
 
     .rail {
@@ -353,7 +430,7 @@ const videoSrc = d.videoSrc ? `${base}${d.videoSrc}` : undefined;
     }
 
     .stage {
-      padding-top: 8px;
+      padding: 0;
     }
 
     .stage > img,

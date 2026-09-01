@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="540" viewBox="0 0 360 540">
+  <rect width="360" height="540" fill="#f3ead7"/><circle cx="180" cy="285" r="104" fill="#111"/><circle cx="180" cy="285" r="42" fill="#ef4b43"/>
+  <text x="32" y="72" font-family="Georgia,serif" font-size="37" fill="#111">Camera Lucida</text>
+  <text x="32" y="500" font-family="Menlo,monospace" font-size="14" letter-spacing="2" fill="#111">ROLAND BARTHES</text>
+</svg>

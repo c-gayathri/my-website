@@ -1,7 +1,6 @@
 ---
-// One writing entry — a reading page. Checkpoint 2: readable default.
-// Layout variants (essay / poem / fragment) are refined in checkpoint 7.
 import { getCollection, render } from 'astro:content';
+import ConstellationFragment from '../../../components/studio/ConstellationFragment.astro';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
 import { studioBlocks } from '../../../components/studio/blocks';
@@ -22,17 +21,27 @@ const fmt = (dt: Date) =>
   [String(dt.getDate()).padStart(2, '0'), String(dt.getMonth() + 1).padStart(2, '0'), String(dt.getFullYear()).slice(2)].join(' / ');
 ---
 
-<StudioLayout title={`${d.title ?? studioConfig.writingLabel} — ${studioConfig.name}`}>
+<StudioLayout title={`${d.title ?? studioConfig.writingLabel} — ${studioConfig.name}`} slim>
   <article class:list={['reading', `layout-${d.pageLayout}`]}>
-    <nav class="crumbs" aria-label="Breadcrumb">
-      <a class="s-link" href={`${base}/studio/writing/`}>← {studioConfig.writingLabel}</a>
-    </nav>
-
-    <header>
-      {d.preview?.showDate !== false && <span class="s-meta">{fmt(d.date)}</span>}
-      {d.preview?.showType !== false && <span class="s-meta">{d.type}</span>}
-      {d.title && <h1>{d.title}</h1>}
-    </header>
+    <div class="detail-head">
+      <div class="head-copy">
+        <nav class="crumbs" aria-label="Breadcrumb">
+          <a class="s-link" href={`${base}/studio/writing/`}>← all writing</a>
+        </nav>
+        <header>
+          <div class="entry-meta">
+            {d.preview?.showDate !== false && <span class="s-meta">{fmt(d.date)}</span>}
+            {d.preview?.showType !== false && <span class="s-meta">{d.type}</span>}
+          </div>
+          {d.title && <h1>{d.title}</h1>}
+        </header>
+      </div>
+      <ConstellationFragment
+        class="detail-fragment"
+        seed={`writing:${entry.id}`}
+        variant={d.type === 'essay' ? 'big-plus-one' : 'big'}
+      />
+    </div>
 
     {d.image && <img class="lead" src={d.image.src} alt={d.title ?? ''} width={d.image.width} height={d.image.height} loading="eager" />}
 
@@ -57,39 +66,61 @@ const fmt = (dt: Date) =>
 
 <style>
   .reading {
-    max-width: 680px;
+    max-width: 760px;
     margin: 0 auto;
   }
 
+  .detail-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px;
+    gap: 24px;
+    min-height: 150px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--s-line);
+  }
+
+  .head-copy {
+    align-self: start;
+  }
+
   .crumbs {
-    margin-bottom: 8px;
+    margin: 2px 0 18px;
   }
 
   .crumbs a {
     color: var(--s-grey);
   }
 
-  header .s-meta {
-    display: inline-block;
-    margin-right: 18px;
+  .entry-meta {
+    display: flex;
+    gap: 18px;
+    align-items: baseline;
+  }
+
+  :global(.detail-fragment) {
+    display: block;
+    width: 150px;
+    height: 150px;
+    color: var(--s-ink);
   }
 
   h1 {
     font-family: var(--s-serif);
     font-weight: 500;
-    font-size: clamp(36px, 4.6vw, 54px);
-    line-height: 1.05;
-    margin: 10px 0 0;
+    max-width: 14ch;
+    margin: 6px 0 0;
+    font-size: clamp(34px, 4.2vw, 49px);
+    line-height: 1;
   }
 
   .lead {
     width: 100%;
     height: auto;
-    margin-top: 30px;
+    margin-top: 28px;
   }
 
   .prose {
-    margin-top: 34px;
+    margin-top: 30px;
   }
 
   /* essay: readable serif column */
@@ -142,5 +173,40 @@ const fmt = (dt: Date) =>
     flex-direction: column;
     gap: 6px;
     align-items: flex-start;
+  }
+
+  @media (max-width: 760px) {
+    .reading {
+      max-width: 680px;
+    }
+
+    .detail-head {
+      display: block;
+      min-height: 0;
+      padding-bottom: 16px;
+    }
+
+    :global(.detail-fragment) {
+      display: none;
+    }
+
+    h1 {
+      font-size: clamp(32px, 10vw, 43px);
+    }
+
+    .lead,
+    .prose {
+      margin-top: 24px;
+    }
+
+    .layout-essay .prose {
+      font-size: 18px;
+      line-height: 1.68;
+    }
+
+    .layout-poem .prose,
+    .layout-fragment .prose {
+      padding-top: 10px;
+    }
   }
 </style>

@@ -74,7 +74,7 @@
   width: 100%; /* flex parents + auto margins would otherwise shrink-to-fit */
   max-width: 1680px;
   margin: 0 auto;
-  padding: 24px clamp(24px, 4vw, 88px) 120px;
+  padding: 24px var(--studio-gutter) 32px;
 }
 
 .studio .s-page-title {

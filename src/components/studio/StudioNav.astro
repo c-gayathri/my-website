@@ -5,11 +5,11 @@
 import { studioConfig } from '../../data/studioConfig';
 
 interface Props {
-  variant?: string;
+  variant?: 'full' | 'compact';
   section?: string;
 }
 
-const { section } = Astro.props;
+const { variant = 'compact', section } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const path = Astro.url.pathname.replace(/\/+$/, '');
 
@@ -25,15 +25,15 @@ const isActive = (item: (typeof navItems)[number]) =>
   item.exact ? path === item.href : path === item.href || path.startsWith(item.href);
 ---
 
-<header class="studio-nav">
+<header class:list={['studio-nav', `nav-${variant}`]}>
   <div class="nav-left">
-    {section ? (
+    {variant === 'compact' && section ? (
       <span class="section-title">{section}</span>
     ) : (
       <a class="name" href={base + '/studio/'}>{studioConfig.name}</a>
     )}
-    {section && <a class="name-small s-meta" href={base + '/studio/'}>{studioConfig.name}</a>}
-    {section ? null : <span class="tagline">{studioConfig.tagline}</span>}
+    {variant === 'compact' && section && <a class="name-small s-meta" href={base + '/studio/'}>{studioConfig.name}</a>}
+    {variant === 'full' && <span class="tagline">{studioConfig.tagline}</span>}
   </div>
 
   <nav class="nav-right" aria-label="Studio">
@@ -55,7 +55,9 @@ const isActive = (item: (typeof navItems)[number]) =>
     align-items: baseline;
     justify-content: space-between;
     gap: 24px;
-    padding: 24px clamp(24px, 4vw, 72px) 0;
+    position: relative;
+    z-index: 30;
+    padding: 24px var(--studio-gutter) 0;
   }
 
   .nav-left {
@@ -80,6 +82,19 @@ const isActive = (item: (typeof navItems)[number]) =>
     font-size: clamp(30px, 3.2vw, 44px);
     color: var(--s-ink);
     line-height: 1;
+  }
+
+  .nav-compact {
+    padding-top: 18px;
+  }
+
+  .nav-compact .section-title,
+  .nav-compact .name {
+    font-size: clamp(22px, 2vw, 28px);
+  }
+
+  .nav-compact .nav-left {
+    gap: 14px;
   }
 
   .name-small {

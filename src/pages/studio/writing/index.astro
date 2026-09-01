@@ -1,165 +1,107 @@
 ---
-// Writing pad index.
-// Desktop: a spatial, scattered composition — deterministic placements from
-// preview.desktop overrides, else seeded defaults (layoutSeed shuffles them).
-// Mobile: the ordered stack.
 import { getCollection } from 'astro:content';
-import StudioLayout from '../../../layouts/StudioLayout.astro';
+import ConstellationFragment from '../../../components/studio/ConstellationFragment.astro';
 import { studioConfig } from '../../../data/studioConfig';
+import StudioLayout from '../../../layouts/StudioLayout.astro';
 
 const entries = (await getCollection('writing')).sort((a, b) => {
-  const fa = a.data.preview?.featured ? 1 : 0;
-  const fb = b.data.preview?.featured ? 1 : 0;
-  if (fa !== fb) return fb - fa;
+  const featuredA = a.data.preview?.featured ? 1 : 0;
+  const featuredB = b.data.preview?.featured ? 1 : 0;
+  if (featuredA !== featuredB) return featuredB - featuredA;
   return b.data.date.valueOf() - a.data.date.valueOf();
 });
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 
-const fmt = (d: Date) =>
-  [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), String(d.getFullYear()).slice(2)].join(' / ');
+const formatDate = (date: Date) =>
+  [
+    String(date.getDate()).padStart(2, '0'),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getFullYear()).slice(2),
+  ].join(' / ');
 
-/* deterministic seeded placement (same composition every build) */
 function mulberry32(seed: number) {
-  let a = seed >>> 0;
+  let value = seed >>> 0;
   return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    value |= 0;
+    value = (value + 0x6d2b79f5) | 0;
+    let result = Math.imul(value ^ (value >>> 15), 1 | value);
+    result = (result + Math.imul(result ^ (result >>> 7), 61 | result)) ^ result;
+    return ((result ^ (result >>> 14)) >>> 0) / 4294967296;
   };
 }
 
-const rand = mulberry32(studioConfig.layoutSeed * 2654435761);
-const COLUMN_X = [3, 36, 66];
+const clamp = (value: number, low: number, high: number) =>
+  Math.min(high, Math.max(low, value));
+const random = mulberry32(studioConfig.layoutSeed * 2654435761);
+const columns = [2, 36, 68];
+const placed = entries.map((entry, index) => {
+  const manual = entry.data.preview?.desktop;
+  const substantial = entry.data.type === 'essay' || entry.data.gallery.length > 0;
+  const row = Math.floor(index / 3);
 
-const placed = entries.map((e, i) => {
-  const manual = e.data.preview?.desktop;
-  const isBig = e.data.type === 'essay' || e.data.gallery.length > 0;
-  const width = manual?.width ?? (isBig ? 30 : 23);
-  /* rows of ~three entries share a height band, slightly staggered */
-  const row = Math.floor(i / 3);
-  const x = manual?.x ?? clamp(COLUMN_X[i % 3] + (rand() - 0.5) * 7, 1, 74);
-  const y = manual?.y ?? clamp(row * 26 + (rand() - 0.5) * 5 + (i % 3) * 2, 0, 92);
-  return { e, x, y, width };
+  return {
+    entry,
+    x: manual?.x ?? clamp(columns[index % 3] + (random() - 0.5) * 6, 1, 76),
+    y: manual?.y ?? clamp(row * 27 + (random() - 0.5) * 4 + (index % 3) * 2, 0, 90),
+    width: manual?.width ?? (substantial ? 29 : 23),
+    mobileOrder: entry.data.preview?.mobile?.order ?? index,
+  };
 });
-
-function clamp(v: number, lo: number, hi: number) {
-  return Math.min(hi, Math.max(lo, v));
-}
-
-const canvasH = Math.max(Math.ceil(placed.length / 3) * 430 + 320, 900);
-
-/* decorative field — fixed-pixel sparkles positioned by percentage, so
-   shapes never stretch. Sprinkled star clusters + stardust. */
-const markRand = mulberry32(studioConfig.layoutSeed + 11);
-const sparklePath = (s: number) => {
-  const v = s;
-  const h = s * 0.55;
-  const k = s * 0.1;
-  return `M10,${10 - v} Q${10 + k},${10 - k} ${10 + h},10 Q${10 + k},${10 + k} 10,${10 + v} Q${10 - k},${10 + k} ${10 - h},10 Q${10 - k},${10 - k} 10,${10 - v} Z`;
-};
-
-type DecoMark = {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  svg: string;
-};
-
-const deco: DecoMark[] = [];
-for (let i = 0; i < 9; i++) {
-  const s = 9 + markRand() * 13;
-  deco.push({
-    x: 2 + markRand() * 94,
-    y: 2 + markRand() * 92,
-    w: s * 2,
-    h: s * 2,
-    svg: `<path d="${sparklePath(s)}" fill="var(--s-ink)" opacity="0.75"/>`,
-  });
-}
-for (let g = 0; g < 5; g++) {
-  /* small random star clusters joined by dashed segments */
-  const gx = 4 + markRand() * 86;
-  const gy = 6 + markRand() * 82;
-  const n = 2 + Math.floor(markRand() * 3);
-  const pts: Array<[number, number, number]> = [];
-  for (let k = 0; k <= n; k++) {
-    pts.push([
-      (markRand() - 0.5) * 90,
-      (markRand() - 0.5) * 64,
-      3 + markRand() * 5.5,
-    ]);
-  }
-  const w = 150;
-  const h = 110;
-  let svg = '';
-  for (let k = 1; k < pts.length; k++) {
-    svg += `<line x1="${pts[k - 1][0] + 10}" y1="${pts[k - 1][1] + 10}" x2="${pts[k][0] + 10}" y2="${pts[k][1] + 10}" stroke="var(--s-ink)" stroke-opacity="0.4" stroke-dasharray="1 3" stroke-width="0.8"/>`;
-  }
-  for (const [dx, dy, s] of pts) {
-    svg += `<path d="${sparklePath(s)}" transform="translate(${dx} ${dy})" fill="var(--s-ink)" opacity="0.8"/>`;
-  }
-  deco.push({ x: gx, y: gy, w, h, svg });
-}
-for (let i = 0; i < 24; i++) {
-  const r = 1.2 + markRand() * 1.6;
-  deco.push({
-    x: 2 + markRand() * 95,
-    y: 2 + markRand() * 94,
-    w: r * 2,
-    h: r * 2,
-    svg: `<circle cx="${r}" cy="${r}" r="${r}" fill="var(--s-ink)" opacity="${0.2 + markRand() * 0.4}"/>`,
-  });
-}
+const canvasHeight = Math.max(Math.ceil(placed.length / 3) * 420 + 260, 860);
 ---
 
-<StudioLayout title={studioConfig.writingLabel + ' — ' + studioConfig.name} section={studioConfig.writingLabel}>
-  <p class="s-meta" style="margin-top: 26px">{entries.length} entries</p>
+<StudioLayout title={`${studioConfig.writingLabel} — ${studioConfig.name}`} section={studioConfig.writingLabel}>
+  <header class="pad-intro">
+    <p class="s-meta">{entries.length} entries / poems, essays, fragments</p>
+    <p class="intro-note">Loose pages, kept in the order they arrived.</p>
+  </header>
 
-  <div class="canvas" style={`--canvas-h: ${canvasH}px`}>
-    {
-      deco.map((m, i) => (
-        <svg
-          class="deco-mark"
-          style={`left: ${m.x}%; top: ${m.y}%;`}
-          width={m.w}
-          height={m.h}
-          viewBox="0 0 20 20"
-          aria-hidden="true"
-          set:html={m.svg}
-        />
-      ))
-    }
+  <div class="canvas" style={`--canvas-height: ${canvasHeight}px`}>
+    <ConstellationFragment
+      class="index-fragment fragment-one"
+      seed={`writing-pad:${studioConfig.layoutSeed}:one`}
+      variant="big-plus-one"
+    />
+    <ConstellationFragment
+      class="index-fragment fragment-two"
+      seed={`writing-pad:${studioConfig.layoutSeed}:two`}
+      variant="big"
+    />
+    <ConstellationFragment
+      class="index-fragment fragment-three"
+      seed={`writing-pad:${studioConfig.layoutSeed}:three`}
+      variant="big-plus-two"
+    />
 
     {
-      placed.map(({ e, x, y, width }) => {
-        const img = e.data.image ?? e.data.gallery[0];
-        const isImageText = Boolean(img) || e.data.preview?.variant === 'image-text';
+      placed.map(({ entry, x, y, width, mobileOrder }) => {
+        const image = entry.data.image ?? entry.data.gallery[0];
+        const variant = entry.data.preview?.variant ?? 'title-excerpt';
         return (
           <a
-            class="entry"
-            href={`${base}/studio/writing/${e.id}/`}
-            style={`--x: ${x}%; --y: ${y}%; --w: ${width}%`}
+            class:list={['entry', `entry-${variant}`, { featured: entry.data.preview?.featured }]}
+            href={`${base}/studio/writing/${entry.id}/`}
+            style={`--x: ${x}%; --y: ${y}%; --entry-width: ${width}%; --mobile-order: ${mobileOrder}`}
           >
-            {e.data.preview?.showDate !== false && (
-              <span class="s-meta date">{fmt(e.data.date)}</span>
-            )}
-            {e.data.preview?.showType !== false && <span class="s-meta type">{e.data.type}</span>}
-            {img && (
+            <span class="entry-meta">
+              {entry.data.preview?.showDate !== false && (
+                <span class="s-meta">{formatDate(entry.data.date)}</span>
+              )}
+              {entry.data.preview?.showType !== false && <span class="s-meta">{entry.data.type}</span>}
+            </span>
+            {image && (
               <img
                 class="thumb"
-                src={img.src}
-                alt={e.data.title ?? ''}
-                width={img.width}
-                height={img.height}
+                src={image.src}
+                alt=""
+                width={image.width}
+                height={image.height}
                 loading="lazy"
               />
             )}
-            {e.data.title && <h2>{e.data.title}</h2>}
-            {e.data.excerpt && <p class="excerpt">{e.data.excerpt}</p>}
-            <span class="go" aria-hidden="true">↗</span>
+            {entry.data.title && <h2>{entry.data.title}</h2>}
+            {entry.data.excerpt && variant !== 'minimal' && <p class="excerpt">{entry.data.excerpt}</p>}
+            <span class="read-mark" aria-hidden="true">↗</span>
           </a>
         );
       })
@@ -168,108 +110,167 @@ for (let i = 0; i < 24; i++) {
 </StudioLayout>
 
 <style>
-  .writing-head {
+  .pad-intro {
     display: flex;
     align-items: baseline;
-    gap: 26px;
+    justify-content: space-between;
+    gap: 24px;
+    margin-top: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--s-line);
   }
 
-  .writing-head p {
-    margin: 40px 0 0;
+  .pad-intro p {
+    margin: 0;
   }
 
-  /* desktop: spatial canvas */
-  @media (min-width: 900px) {
-    .canvas {
-      position: relative;
-      height: var(--canvas-h);
-    }
-
-    .deco-mark {
-      position: absolute;
-      overflow: visible;
-      pointer-events: none;
-    }
-
-    .entry {
-      position: absolute;
-      left: var(--x);
-      top: var(--y);
-      width: var(--w);
-    }
+  .intro-note {
+    font-family: var(--s-serif);
+    font-size: 17px;
   }
 
-  /* mobile: ordered stack */
+  .canvas {
+    display: flex;
+    flex-direction: column;
+    margin-top: 22px;
+  }
+
+  :global(.index-fragment) {
+    display: none;
+  }
+
   .entry {
     position: relative;
+    order: var(--mobile-order);
     display: block;
-    text-decoration: none;
+    width: 100%;
     color: inherit;
-    margin: 0 0 56px;
-    max-width: 560px;
-    background: var(--s-bg);
-    padding: 6px 10px 10px;
-    margin-left: -10px;
+    text-decoration: none;
+    padding: 0 34px 28px 0;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--s-line);
   }
 
-  @media (min-width: 900px) {
-    .entry {
-      margin-left: 0;
-      padding-left: 0;
-    }
-  }
-
-  .date,
-  .type {
-    display: inline-block;
-    margin-right: 18px;
+  .entry-meta {
+    display: flex;
+    gap: 18px;
+    align-items: baseline;
   }
 
   .thumb {
-    width: 100%;
-    max-width: 300px;
-    height: auto;
     display: block;
-    margin: 12px 0 4px;
+    width: min(100%, 300px);
+    height: auto;
+    margin: 12px 0 5px;
   }
 
   h2 {
+    max-width: 15ch;
+    margin: 7px 0 0;
     font-family: var(--s-serif);
+    font-size: clamp(27px, 3vw, 37px);
     font-weight: 500;
-    font-size: clamp(26px, 3vw, 36px);
-    line-height: 1.12;
-    margin: 8px 0 0;
+    line-height: 1.05;
   }
 
   .excerpt {
-    font-family: var(--s-mono);
-    font-size: 12.5px;
-    line-height: 1.7;
+    max-width: 43ch;
+    margin: 9px 0 0;
     color: var(--s-grey);
-    margin: 10px 0 0;
-    max-width: 44ch;
+    font-family: var(--s-mono);
+    font-size: 11.5px;
+    line-height: 1.65;
   }
 
-  .go {
+  .entry-fragment .excerpt {
+    max-width: 30ch;
+    font-family: var(--s-serif);
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .read-mark {
     position: absolute;
-    right: 10px;
-    bottom: 8px;
-    font-size: 20px;
-    color: var(--s-ink);
-  }
-
-  @media (min-width: 900px) {
-    .entry {
-      position: absolute;
-      left: var(--x);
-      top: var(--y);
-      width: var(--w);
-    }
+    right: 2px;
+    bottom: 27px;
+    font-family: var(--s-mono);
+    font-size: 14px;
   }
 
   .entry:hover h2 {
     text-decoration: underline;
-    text-underline-offset: 4px;
     text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+  }
+
+  @media (min-width: 900px) {
+    .canvas {
+      position: relative;
+      display: block;
+      height: var(--canvas-height);
+      margin-top: 0;
+    }
+
+    .entry {
+      position: absolute;
+      z-index: 2;
+      left: var(--x);
+      top: var(--y);
+      width: var(--entry-width);
+      min-width: 210px;
+      max-width: 430px;
+      margin: 0;
+      padding: 5px 22px 10px 0;
+      border: 0;
+      background: var(--s-bg);
+    }
+
+    .entry.featured h2 {
+      font-size: clamp(32px, 3.2vw, 43px);
+    }
+
+    .read-mark {
+      right: 0;
+      bottom: 8px;
+    }
+
+    :global(.index-fragment) {
+      position: absolute;
+      z-index: 1;
+      display: block;
+      color: var(--s-ink);
+      pointer-events: none;
+    }
+
+    :global(.fragment-one) {
+      top: 16%;
+      left: 25%;
+      width: 150px;
+      height: 150px;
+    }
+
+    :global(.fragment-two) {
+      top: 48%;
+      right: 4%;
+      width: 118px;
+      height: 118px;
+    }
+
+    :global(.fragment-three) {
+      bottom: 5%;
+      left: 43%;
+      width: 168px;
+      height: 168px;
+    }
+  }
+
+  @media (max-width: 899px) {
+    .pad-intro {
+      display: block;
+    }
+
+    .intro-note {
+      margin-top: 7px !important;
+    }
   }
 </style>

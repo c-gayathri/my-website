@@ -6,12 +6,17 @@ import { getCollection } from 'astro:content';
 import { getImage } from 'astro:assets';
 import StudioLayout from '../../layouts/StudioLayout.astro';
 import Constellation from '../../components/studio/Constellation';
-import { studioConfig } from '../../data/studioConfig';
+import { generateClusterAnchors, studioConfig } from '../../data/studioConfig';
 import '../../styles/constellation.css';
 
 const clusters = await getCollection('clusters');
 const projects = await getCollection('projects');
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const generatedAnchors = generateClusterAnchors(clusters.map((cluster) => ({
+  id: cluster.id,
+  title: cluster.data.title,
+  description: cluster.data.description,
+})));
 
 function hashStr(s: string): number {
   let h = 2166136261;
@@ -24,26 +29,47 @@ function hashStr(s: string): number {
 
 const data = await Promise.all(
   clusters.map(async (c) => {
-    const projs = projects.filter((p) => p.data.clusters.includes(c.id));
-    const imgs = projs
-      .flatMap((p) => [p.data.thumbnail ?? p.data.hero, ...(p.data.gallery ?? [])])
-      .filter((im): im is NonNullable<typeof im> => Boolean(im))
-      .slice(0, 7);
+    const projs = projects.filter((p) => p.data.clusters.includes(c.id)).sort((a, b) => a.id.localeCompare(b.id));
+    type ProjectImage = NonNullable<(typeof projs)[number]['data']['hero']>;
+    const primaries = projs.flatMap((project) => {
+      const image = project.data.thumbnail ?? project.data.hero ?? project.data.videoPoster ?? project.data.gallery[0];
+      return image ? [{ projectId: project.id, image: image as ProjectImage }] : [];
+    });
+    const galleryDetails = projs.flatMap((project) =>
+      project.data.gallery.map((image) => ({ projectId: project.id, image: image as ProjectImage })),
+    );
+    const seen = new Set<string>();
+    const imgs: Array<{ projectId: string; image: ProjectImage }> = [];
+    for (const candidate of [...primaries, ...galleryDetails]) {
+      if (seen.has(candidate.image.src)) continue;
+      seen.add(candidate.image.src);
+      imgs.push(candidate);
+      if (imgs.length === 7) break;
+    }
     const images = await Promise.all(
-      imgs.map(async (im) => {
-        const g = await getImage({ src: im, width: 640 });
-        return { src: g.src, w: im.width, h: im.height };
+      imgs.map(async ({ projectId, image }) => {
+        const g = await getImage({ src: image, width: 640 });
+        return { src: g.src, w: image.width, h: image.height, projectId };
       }),
     );
+    const generated = generatedAnchors[c.id];
+    const legacyOverride = c.data.desktop;
+    const normalizedOverride = c.data.generatedThenOverrideable;
     return {
       id: c.id,
       slug: c.id,
       title: c.data.title,
-      x: c.data.desktop.x,
-      y: c.data.desktop.y,
-      width: c.data.desktop.width,
-      driftRadius: c.data.desktop.driftRadius,
-      depth: c.data.desktop.depth,
+      x: normalizedOverride?.x !== undefined
+        ? normalizedOverride.x * studioConfig.world.width
+        : legacyOverride?.x ?? generated.x,
+      y: normalizedOverride?.y !== undefined
+        ? normalizedOverride.y * studioConfig.world.height
+        : legacyOverride?.y ?? generated.y,
+      width: normalizedOverride?.width !== undefined
+        ? normalizedOverride.width * studioConfig.world.width
+        : legacyOverride?.width ?? generated.width * 1.4,
+      driftRadius: legacyOverride?.driftRadius ?? 10,
+      depth: legacyOverride?.depth ?? 1,
       color:
         c.data.hoverColor ??
         studioConfig.palette[hashStr(c.id) % studioConfig.palette.length],
@@ -51,7 +77,6 @@ const data = await Promise.all(
       hoverDescription: c.data.hoverDescription ?? c.data.description,
       featured: c.data.featured,
       images,
-      connections: c.data.connections,
     };
   }),
 );

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="540" viewBox="0 0 360 540">
+  <rect width="360" height="540" fill="#c9f0e2"/><path d="M0 370Q90 290 185 360T360 330V540H0z" fill="#106c5a"/><circle cx="280" cy="205" r="55" fill="#fb6e56"/>
+  <text x="28" y="72" font-family="Georgia,serif" font-size="31" fill="#123d38"><tspan x="28">Islands of</tspan><tspan x="28" dy="35">Abandonment</tspan></text>
+  <text x="28" y="493" font-family="Menlo,monospace" font-size="14" letter-spacing="2" fill="#fff">CAL FLYN</text>
+</svg>

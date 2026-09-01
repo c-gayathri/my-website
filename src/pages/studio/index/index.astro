@@ -1,11 +1,8 @@
 ---
-// The Index — practical directory, laid out like the reference mockup:
-// big serif title, numbered sections, view-all links, heterogeneous previews.
-// Search arrives in a later checkpoint.
 import { getCollection } from 'astro:content';
+import { getImage } from 'astro:assets';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
-import { externalLinks } from '../../../data/externalLinks';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const clusters = await getCollection('clusters');
@@ -13,142 +10,357 @@ const projects = (await getCollection('projects')).sort((a, b) => b.data.year - 
 const writing = (await getCollection('writing')).sort(
   (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
 );
-const books = await getCollection('books');
-const year = 2026;
-const yearBooks = books
-  .filter((b) => b.data.yearRead === year)
-  .sort((a, b) => (b.data.featured ? 1 : 0) - (a.data.featured ? 1 : 0));
-const goal = (studioConfig.readingChallenge as Record<number, { goal: number }>)[year]?.goal ?? 12;
-const featuredBook = yearBooks.find((b) => b.data.featured) ?? yearBooks[0];
+const books = (await getCollection('books')).sort((a, b) => {
+  if (a.data.yearRead !== b.data.yearRead) return b.data.yearRead - a.data.yearRead;
+  return Number(Boolean(b.data.featured)) - Number(Boolean(a.data.featured));
+});
 
-const elsewhere = Object.entries(externalLinks).filter(([key, href]) => key !== 'research' && href);
-const fmt = (d: Date) =>
-  [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), String(d.getFullYear()).slice(2)].join(' / ');
+const projectMedia = (project: (typeof projects)[number]) =>
+  project.data.thumbnail ?? project.data.hero ?? project.data.videoPoster ?? project.data.gallery[0];
+
+const clusterItems = await Promise.all(
+  clusters.map(async (cluster) => {
+    const related = projects.filter((project) => project.data.clusters.includes(cluster.id));
+    const media = related.map(projectMedia).find(Boolean);
+    const preview = media ? await getImage({ src: media, width: 112 }) : undefined;
+    return { cluster, count: related.length, preview };
+  }),
+);
+
+const projectItems = await Promise.all(
+  projects.slice(0, 5).map(async (project) => {
+    const media = projectMedia(project);
+    return {
+      project,
+      preview: media ? await getImage({ src: media, width: 144 }) : undefined,
+    };
+  }),
+);
+
+const writingItems = await Promise.all(
+  writing.slice(0, 4).map(async (entry) => {
+    const media = entry.data.image ?? entry.data.gallery[0];
+    return {
+      entry,
+      preview: media ? await getImage({ src: media, width: 112 }) : undefined,
+    };
+  }),
+);
+
+const readingItems = await Promise.all(
+  books.slice(0, 4).map(async (book) => ({
+    book,
+    cover: await getImage({ src: book.data.cover, width: 80 }),
+  })),
+);
+
+const sectionLink = (href: string) => `${base}${href}`;
+const formatDate = (date: Date) =>
+  date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
 ---
 
-<StudioLayout title={studioConfig.indexLabel + ' — ' + studioConfig.name} section={studioConfig.indexLabel}>
-    <h1>{studioConfig.indexLabel}</h1>
-    <p class="s-meta kicker">all clusters / projects / writings / reading</p>
-    <svg class="deco" viewBox="0 0 600 90" aria-hidden="true" preserveAspectRatio="none">
-      <path d="M10 70 L90 30 L150 52 L260 14 L370 44 L470 10 L590 40" fill="none" stroke="var(--s-ink)" stroke-opacity="0.5" stroke-dasharray="1 4"/>
-      {[[10,70],[90,30],[150,52],[260,14],[370,44],[470,10],[590,40]].map(([x,y],i) => (
-        <circle cx={x} cy={y} r={i % 3 === 0 ? 2 : 1.2} fill="var(--s-ink)"/>
-      ))}
-    </svg>
-  </div>
-
-  <section>
-    <header class="sec-head">
-      <span class="sec-num">01</span>
-      <span class="sec-title s-meta">clusters</span>
-      <a class="view-all s-meta" href={`${base}/studio/`}>view all →</a>
-    </header>
-    <div class="cluster-row">
-      {
-        clusters.map((c, i) => (
-          <a class="cluster-cell" href={`${base}/studio/clusters/${c.id}/`}>
-            <span class="num s-meta">{String(i + 1).padStart(2, '0')}.</span>
-            <h2>{c.data.title}</h2>
-            <p class="s-meta desc">{c.data.description}</p>
-            <span class="s-meta count">
-              {projects.filter((p) => p.data.clusters.includes(c.id)).length} projects →
+<StudioLayout
+  title={`${studioConfig.indexLabel} — ${studioConfig.name}`}
+  section={studioConfig.indexLabel}
+  viewportFit
+>
+  <div class="directory">
+    <section class="panel clusters-panel" aria-labelledby="clusters-heading">
+      <header class="panel-head">
+        <div>
+          <span class="number s-meta">01</span>
+          <h1 id="clusters-heading">Clusters</h1>
+        </div>
+        <a class="all-link s-meta" href={sectionLink('/studio/')}>view all <span aria-hidden="true">↗</span></a>
+      </header>
+      <div class="cluster-grid">
+        {clusterItems.map(({ cluster, count, preview }) => (
+          <a class="cluster" href={sectionLink(`/studio/clusters/${cluster.id}/`)}>
+            {preview && <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="eager" />}
+            <span class="cluster-copy">
+              <strong>{cluster.data.title}</strong>
+              <small class="s-meta">{count} {count === 1 ? 'project' : 'projects'}</small>
             </span>
           </a>
-        ))
-      }
-    </div>
-  </section>
-
-  <section>
-    <header class="sec-head">
-      <span class="sec-num">02</span>
-      <span class="sec-title s-meta">projects</span>
-    </header>
-    <div class="project-row">
-      {
-        projects.slice(0, 5).map((p, i) => {
-          const img = p.data.thumbnail ?? p.data.hero ?? p.data.videoPoster ?? p.data.gallery[0];
-          return (
-            <a class="proj-cell" href={`${base}/studio/projects/${p.id}/`}>
-              <span class="num s-meta">{String(i + 1).padStart(2, '0')}.</span>
-              <h2>{p.data.title}</h2>
-              <span class="s-meta type">{p.data.types[0] ?? 'work'}</span>
-              {img && (
-                <img
-                  src={img.src}
-                  alt={p.data.title}
-                  width={img.width}
-                  height={img.height}
-                  loading="lazy"
-                  style={p.data.previewType === 'text' ? 'display:none' : undefined}
-                />
-              )}
-              {p.data.previewType === 'text' && (
-                <p class="s-meta excerpt">“{p.data.textExcerpt ?? p.data.summary}”</p>
-              )}
-              <span class="s-meta go">→</span>
-            </a>
-          );
-        })
-      }
-    </div>
-  </section>
-
-  <div class="two-col">
-    <section>
-      <header class="sec-head">
-        <span class="sec-num">03</span>
-        <span class="sec-title s-meta">{studioConfig.writingLabel.toLowerCase()}</span>
-        <a class="view-all s-meta" href={`${base}/studio/writing/`}>view all →</a>
-      </header>
-      <div class="writing-row">
-        {
-          writing.slice(0, 4).map((w, i) => (
-            <a class="writing-cell" href={`${base}/studio/writing/${w.id}/`}>
-              <span class="num s-meta">{String(i + 1).padStart(2, '0')}.</span>
-              <h2>{w.data.title ?? w.id.replace(/-/g, ' ')}</h2>
-              <span class="s-meta type">{w.data.type}</span>
-              {w.data.excerpt && <p class="s-meta excerpt">{w.data.excerpt}</p>}
-              <span class="s-meta date">{fmt(w.data.date)}</span>
-              <span class="s-meta go">→</span>
-            </a>
-          ))
-        }
+        ))}
       </div>
     </section>
 
-    <section>
-      <header class="sec-head">
-        <span class="sec-num">04</span>
-        <span class="sec-title s-meta">{studioConfig.bookshelfLabel.toLowerCase()} / reading</span>
-        <a class="view-all s-meta" href={`${base}/studio/bookshelf/`}>view all →</a>
-      </header>
-      <div class="book-row">
-        <div class="challenge">
-          <h2>{year} reading challenge</h2>
-          <p class="challenge-num">
-            <span class="big">{yearBooks.length}</span>
-            <span class="s-meta"> / {goal} books</span>
-          </p>
-          <div class="bar"><div class="fill" style={`width: ${Math.min(100, (yearBooks.length / goal) * 100)}%`} /></div>
-          <p class="s-meta past">past years →</p>
+    <section class="panel projects-panel" aria-labelledby="projects-heading">
+      <header class="panel-head">
+        <div>
+          <span class="number s-meta">02</span>
+          <h2 id="projects-heading">Projects</h2>
         </div>
-        {
-          featuredBook && (
-            <a class="featured-book" href={`${base}/studio/bookshelf/${featuredBook.id}/`}>
-              <img src={featuredBook.data.cover.src} alt={`${featuredBook.data.title}, ${featuredBook.data.author}`} width={featuredBook.data.cover.width} height={featuredBook.data.cover.height} loading="lazy" />
-              <div class="fb-info">
-                <h2>{featuredBook.data.title}</h2>
-                <p class="s-meta">{featuredBook.data.author}</p>
-                <p class="s-meta">{featuredBook.data.rating ? `★ ${featuredBook.data.rating} / 5` : ''}</p>
-                <span class="s-meta go">→</span>
-              </div>
-            </a>
-          )
-        }
+        <a class="all-link s-meta" href={sectionLink('/studio/')}>view all <span aria-hidden="true">↗</span></a>
+      </header>
+      <div class="rows project-rows">
+        {projectItems.map(({ project, preview }, index) => (
+          <a class="project-row" href={sectionLink(`/studio/projects/${project.id}/`)}>
+            <span class="row-index s-meta">{String(index + 1).padStart(2, '0')}</span>
+            {preview ? (
+              <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="eager" />
+            ) : <span class="image-placeholder" aria-hidden="true" />}
+            <span class="row-title">{project.data.title}</span>
+            <span class="row-detail s-meta">{project.data.types[0] ?? 'work'}</span>
+            <time class="s-meta">{project.data.year}</time>
+            <span aria-hidden="true">→</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="panel writing-panel" aria-labelledby="writing-heading">
+      <header class="panel-head">
+        <div>
+          <span class="number s-meta">03</span>
+          <h2 id="writing-heading">{studioConfig.writingLabel}</h2>
+        </div>
+        <a class="all-link s-meta" href={sectionLink('/studio/writing/')}>view all <span aria-hidden="true">↗</span></a>
+      </header>
+      <div class="writing-grid">
+        {writingItems.map(({ entry, preview }) => (
+          <a class="writing-card" href={sectionLink(`/studio/writing/${entry.id}/`)}>
+            {preview && <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="lazy" />}
+            <span class="writing-copy">
+              <span class="s-meta">{entry.data.type} · {formatDate(entry.data.date)}</span>
+              <strong>{entry.data.title ?? entry.id.replace(/-/g, ' ')}</strong>
+              {entry.data.excerpt && <small>{entry.data.excerpt}</small>}
+            </span>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="panel reading-panel" aria-labelledby="reading-heading">
+      <header class="panel-head">
+        <div>
+          <span class="number s-meta">04</span>
+          <h2 id="reading-heading">Reading</h2>
+        </div>
+        <a class="all-link s-meta" href={sectionLink('/studio/bookshelf/')}>view all <span aria-hidden="true">↗</span></a>
+      </header>
+      <div class="book-grid">
+        {readingItems.map(({ book, cover }) => (
+          <a class="book" href={sectionLink(`/studio/bookshelf/${book.id}/`)}>
+            <img src={cover.src} alt="" width={cover.attributes.width} height={cover.attributes.height} loading="lazy" />
+            <span>
+              <strong>{book.data.title}</strong>
+              <small class="s-meta">{book.data.author}</small>
+            </span>
+          </a>
+        ))}
       </div>
     </section>
   </div>
 </StudioLayout>
 
 <style>
+  .directory {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.18fr);
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: clamp(18px, 2.2vw, 34px);
+    height: min(590px, calc(100dvh - 150px));
+    min-height: 470px;
+    padding: 8px 0 12px;
+  }
+
+  .panel {
+    min-width: 0;
+    overflow: hidden;
+    border-top: 1px solid var(--s-ink);
+  }
+
+  .panel-head,
+  .panel-head > div {
+    display: flex;
+    align-items: baseline;
+  }
+
+  .panel-head {
+    justify-content: space-between;
+    gap: 20px;
+    min-height: 48px;
+    padding: 8px 0 7px;
+    border-bottom: 1px solid var(--s-line);
+  }
+
+  .panel-head > div { gap: 12px; }
+  .number { color: var(--s-faint); }
+
+  h1, h2 {
+    margin: 0;
+    font-family: var(--s-serif);
+    font-size: clamp(23px, 2vw, 30px);
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .all-link {
+    color: var(--s-ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .all-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .cluster-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cluster {
+    display: flex;
+    min-width: 0;
+    height: 58px;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid var(--s-line);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .cluster img {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+    object-fit: cover;
+    filter: saturate(.82);
+  }
+
+  .cluster-copy, .book > span, .writing-copy { min-width: 0; }
+  .cluster strong, .cluster small, .book strong, .book small { display: block; }
+  .cluster strong {
+    overflow: hidden;
+    font-family: var(--s-serif);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.05;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cluster small { margin-top: 3px; font-size: 9px; }
+  .cluster:hover strong, .row-title:hover { text-decoration: underline; }
+
+  .rows { display: grid; }
+  .project-row {
+    display: grid;
+    grid-template-columns: 24px 48px minmax(120px, 1fr) minmax(64px, .5fr) 40px 16px;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    border-bottom: 1px solid var(--s-line);
+    color: inherit;
+    text-decoration: none;
+  }
+  .project-row img, .image-placeholder {
+    display: block;
+    width: 48px;
+    height: 32px;
+    object-fit: cover;
+    background: var(--s-line);
+  }
+  .row-title {
+    overflow: hidden;
+    font-family: var(--s-serif);
+    font-size: 17px;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .row-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .writing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 18px;
+  }
+  .writing-card {
+    display: flex;
+    min-width: 0;
+    height: 86px;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--s-line);
+    color: inherit;
+    text-decoration: none;
+  }
+  .writing-card img {
+    width: 58px;
+    height: 68px;
+    flex: 0 0 auto;
+    object-fit: cover;
+  }
+  .writing-copy { display: flex; flex-direction: column; }
+  .writing-copy strong {
+    margin-top: 4px;
+    font-family: var(--s-serif);
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.05;
+  }
+  .writing-copy small {
+    display: -webkit-box;
+    overflow: hidden;
+    margin-top: 4px;
+    color: var(--s-grey);
+    font-family: var(--s-mono);
+    font-size: 9px;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .writing-card:hover strong, .book:hover strong { text-decoration: underline; }
+
+  .book-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    padding-top: 12px;
+  }
+  .book { color: inherit; text-decoration: none; min-width: 0; }
+  .book img {
+    display: block;
+    width: auto;
+    height: 105px;
+    max-width: 100%;
+    margin-bottom: 7px;
+    object-fit: contain;
+    object-position: left bottom;
+    box-shadow: 0 2px 8px rgba(26, 25, 21, .12);
+  }
+  .book strong {
+    overflow: hidden;
+    font-family: var(--s-serif);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.05;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .book small {
+    overflow: hidden;
+    margin-top: 3px;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 1000px) {
+    .directory { grid-template-columns: 1fr; height: auto; min-height: 0; }
+    .panel { overflow: visible; }
+  }
+
+  @media (max-width: 620px) {
+    .directory { gap: 32px; padding-top: 18px; }
+    .cluster-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .project-row { grid-template-columns: 20px 48px minmax(0, 1fr) 34px 14px; }
+    .project-row .row-detail { display: none; }
+    .writing-grid { grid-template-columns: 1fr; }
+    .writing-card { height: auto; min-height: 86px; }
+    .book-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }
+    .book img { height: 140px; }
+  }
+</style>

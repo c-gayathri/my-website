@@ -35,59 +35,56 @@ projects/[slug], writing + writing/[slug] (stable route; display label
 bookshelf/[slug] (reviews), index (directory; search not built yet),
 about.astro. Nav labels + About item: StudioNav.astro navItems.
 
-## What is working (committed at 6c7f176, NOT pushed — awaiting user approval)
+## What is working (local only; authoritative reference commit ca3f8a7)
 
-- Constellation: authored 9-cluster layout on a 3-3-3 lattice (min pairwise
-  distance ≈ 700 world units; positions in cluster frontmatter
-  desktop.x/y/width/driftRadius/depth), scattered seeded collages (no
-  overlap, uniform padding, re-centred under the title plate), node-based
-  marks with constant drift, cursor push physics, hover = camera zoom +
-  white field + loud twinkle + anchored info block + blob splotch, title
-  plates at constant screen size (counter-scaled via --ic per frame), map
-  mode fits the whole spread with titles only, focus/map controls,
-  keyboard/touch/reduced-motion support.
+- The research homepage remains untouched.
+- The constellation uses the authoritative 220-285-mark generated geometry
+  from `src/lib/studio/constellationPrimitives.ts`. Production and the math
+  lab share the same component vocabulary, endpoint-star rules, dispersed
+  swarms, glints and local variants.
+- Nine collage anchors are deterministic and collision-aware by default;
+  normalized frontmatter overrides can replace generated x/y/width values.
+  Collages use compact, non-overlapping seeded masonry with one dominant
+  image and project-aware source deduplication.
+- Desktop focus frames five featured collages at readable scale; map mode
+  retains the full world. Mobile focus opens on one readable featured
+  collage and permits a lower map zoom for the narrow viewport.
+- Existing camera, drift, cursor push, dwell/cooldown, hover zoom, splotch,
+  twinkle and reduced-motion behavior is preserved. Touch uses first tap to
+  reveal/activate and second tap to navigate.
+- Studio navigation has full and compact variants. The footer is fixed at
+  every viewport width with content clearance; Index and About use
+  viewport-fit layouts while long routes scroll behind the fixed chrome.
+- Cluster pages use compact responsive masonry with one dominant project,
+  bounded media, related writing, and desktop-only local constellations.
+- Project pages use a bounded meta-rail/stage composition and support local
+  video, image, gallery, modular MDX, and optional responsive privacy-mode
+  YouTube embeds through `youtubeUrls`.
+- Writing uses a sparse three-column editorial scatter on desktop and a
+  ruled ordered list on mobile. Detail pages retain essay/poem/fragment
+  layouts and use desktop-only local constellation fragments.
+- Bookshelf contains 36 clearly marked sample books across three horizontal
+  rows. Covers are shown at rest; only entries with Markdown reviews show
+  `reviewed`; hover/focus/touch reveals a palette metadata panel. Touch uses
+  first tap to reveal and second tap to navigate.
+- Index is a one-screen representative directory with previews and view-all
+  links. About is viewport-fit with internally scrollable demo News,
+  Elsewhere links, and expandable influences.
 
-- Hover interaction model (rewritten): ENTER = pointer inside the collage
-  bbox ≥150 ms; EXIT = outside the bbox ≥220 ms, zero margin; all-or-nothing
-  (a single frame across an edge completes neither transition). A 1.5 s
-  cooldown after any exit blocks other clusters, so a straight handoff into
-  the next collage cannot fire; if the pointer is still parked on a cluster
-  when the cooldown expires, that cluster activates. The hover zoom anchors
-  to the pointer (clamped so the collage stays on-screen) — the collage
-  grows in place under the cursor instead of drifting to the viewport
-  centre; collage size is capped at ~1/6 of the viewport area. All cluster
-  drift is frozen while hovered, so the constellation returns exactly to
-  where it was. A hover star cluster (loud twinkle) rides beside the active
-  collage. The hover colour fills the whole page chrome (header included)
-  via --s-hover-bg + a background transition matched to the splotch timing.
+## Known issues / validation
 
-- Cluster pages: one-screen asymmetric cards mixing projects and related
-  writing. Project pages: simple (meta rail + viewport-fit artwork,
-  prev/next), modular MDX (blocks on the grid), custom (registry stub).
-- Writing pad: desktop scatter (seeded, featured pinned), ordered mobile
-  stack; reading pages with essay/poem/fragment/mixed layouts; MDX blocks
-  available in writing via Content components.
-- Bookshelf: challenge rail + cover grid + featured review pane (persistent
-  on featured, hover on others), recommended shelf, fixed footer.
-- Index: numbered one-glance directory. About page: photo, statement,
-  education/skills, news, elsewhere, influences.
-- 15 sample books with generated SVG covers; 9 sample clusters/projects
-  built from the user's images in src/assets/studio/sample/.
-
-## Known issues / broken
-
-- Map/focus controls were previously unclickable: the footer strip
-  (z-index 10) covered them (z-index 9). Fixed by z-index 20.
-- Two pre-existing rendering bugs fixed: the cluster translate used
-  `bh = boxH * scale` instead of `boxH * width * scale` (collages rendered
-  ~75 px low), and `transform-origin: 50% 50%` shifted the rendered collage
-  off the camera math at low zoom — both made exact hit-testing impossible;
-  the origin is now `0 0` and the bbox test is pixel-exact.
-- Index search is NOT built (static directory only).
-- Mobile: usable but not polished (no device testing since the hover
-  rewrite; touch still uses click-to-activate and centres the cluster).
-- Environment note: long file-writing tool calls tend to truncate; write
-  large files in small chunks.
+- `npm run check` has zero errors and five hints from unused declarations in
+  the preserved `constellation-math-lab` reference files.
+- `npm test` in `constellation-math-lab` passes all 10 tests.
+- `npm run build` generates 80 pages; `git diff --check` passes.
+- Browser validation used system Chrome at 1440x1000, 1024x768 and 390x844.
+  Tested routes had no horizontal overflow, console errors, or page errors;
+  the footer remained fixed. iPhone emulation confirmed constellation and
+  bookshelf first-tap reveal/second-tap navigation.
+- Index search remains intentionally unbuilt; the requested Index is a
+  compact representative directory.
+- YouTube schema/rendering is implemented but no sample project currently
+  supplies a `youtubeUrls` value.
 
 ## Key decisions (do not casually reverse)
 
@@ -115,18 +112,12 @@ about.astro. Nav labels + About item: StudioNav.astro navItems.
   src/assets/studio/sample/ (raw *.MOV/*.MP4 sources are gitignored;
   compressed copies in public/studio/videos/).
 
-## Next concrete steps (user-approved priorities)
+## Next concrete steps
 
-1. USER REVIEW pending: verify hover feel + the cooldown behaviour live;
-   approve pushing to main (currently NOT pushed — the live site is
-   unchanged since a5d1b4c).
-2. Touch pass: constellation click-to-activate camera anchoring on devices.
-3. Index search: build-time JSON index + small client island with
-   all/clusters/projects/writing/books filters (checkpoint 9 item).
-4. Accessibility + performance polish (checkpoint 11): focus order on the
-   constellation, video preload audit, docs refresh
-   (docs/interaction-spec.md is still to be written).
-5. Content swap-in: user replaces sample clusters/projects/writing/books
-   with real work (edit src/content/* only; no code changes needed).
-6. Custom project support: first pageType "custom" project will need a
-   registry in src/components/studio/custom/.
+1. USER REVIEW: compare the local Studio against the supplied visual
+   references and approve or request final visual adjustments.
+2. Do not push until the user explicitly approves deployment; every push to
+   main deploys the site.
+3. Replace demo books, News entries and sample project text with final
+   content by editing `src/content/*` and `src/data/studioAbout.ts`.
+4. Add `youtubeUrls` to a project when a real embed is available.

@@ -19,7 +19,7 @@ const clusters = defineCollection({
     hoverColor: z.string().optional(),
     /** featured clusters frame the view when the constellation opens */
     featured: z.boolean().default(false),
-    /** authored constellation geometry — the anchor, never randomised */
+    /** Existing world-space overrides. Generated anchors are used when absent. */
     desktop: z.object({
       x: z.number(),
       y: z.number(),
@@ -27,7 +27,16 @@ const clusters = defineCollection({
       driftRadius: z.number().default(10),
       /** parallax weight: nearer clusters drift/drag more (0.6–1.4) */
       depth: z.number().default(1),
-    }),
+    }).optional(),
+    /**
+     * Optional normalized overrides applied after deterministic generation.
+     * x/y are 0..1 anchors; width is a 0..1 fraction of world width.
+     */
+    generatedThenOverrideable: z.object({
+      x: z.number().min(0).max(1).optional(),
+      y: z.number().min(0).max(1).optional(),
+      width: z.number().min(0.05).max(0.4).optional(),
+    }).optional(),
     mobile: z
       .object({
         order: z.number().default(99),
@@ -60,6 +69,7 @@ const projects = defineCollection({
       gallery: z.array(image()).default([]),
       videoSrc: z.string().optional(),
       videoPoster: image().optional(),
+      youtubeUrls: z.array(z.string().url()).default([]),
       textExcerpt: z.string().optional(),
       /** how the individual page is built */
       pageType: z.enum(['simple', 'mdx', 'custom']).default('simple'),
@@ -128,6 +138,8 @@ const writing = defineCollection({
 const books = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/books' }),
   schema: ({ image }) => z.object({
+    /** Books in this collection are sample content until replaced by the owner. */
+    demo: z.boolean().default(true),
     title: z.string(),
     author: z.string(),
     cover: image(),

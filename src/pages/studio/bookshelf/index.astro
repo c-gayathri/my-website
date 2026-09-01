@@ -1,320 +1,237 @@
 ---
-// Bookshelf — annual reading challenges.
-// Layout: challenge rail on the left, covers on the right; the featured
-// book carries a persistent review pane; other covers reveal rating +
-// review excerpt on hover. A recommended shelf collects hand-picked books.
 import { getCollection } from 'astro:content';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
 
 const books = await getCollection('books');
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
-const years = [...new Set(books.map((b) => b.data.yearRead))].sort((a, b) => b - a);
+const years = [...new Set(books.map((book) => book.data.yearRead))].sort((a, b) => b - a);
 const challenge = studioConfig.readingChallenge as Record<number, { goal: number }>;
+const palette = ['#ff4f9a', '#ffe600', '#35ef7d', '#ff643d', '#42d7ff', '#b68cff'];
 
-const byYear = years.map((y) => {
-  const list = books
-    .filter((b) => b.data.yearRead === y)
-    .sort((a, b) => (b.data.featured ? 1 : 0) - (a.data.featured ? 1 : 0));
-  return { year: y, list, goal: challenge[y]?.goal ?? list.length };
-});
+const byYear = years.map((year) => ({
+  year,
+  goal: challenge[year]?.goal ?? books.filter((book) => book.data.yearRead === year).length,
+  list: books
+    .filter((book) => book.data.yearRead === year)
+    .sort((a, b) => (a.data.dateFinished ?? a.data.title).localeCompare(b.data.dateFinished ?? b.data.title)),
+}));
 
-const recommended = books.filter((b) => b.data.recommended);
-
-const ratingOf = (b: (typeof books)[number]) =>
-  b.data.rating != null ? `★ ${b.data.rating} / 5` : '';
+const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} / 5`;
 ---
 
 <StudioLayout title={`${studioConfig.bookshelfLabel} — ${studioConfig.name}`} section={studioConfig.bookshelfLabel}>
   <div class="bookshelf-page">
-  {
-    byYear.map(({ year, list, goal }) => {
-      const featured = list.find((b) => b.data.featured) ?? list[0];
-      const rest = list.filter((b) => b !== featured);
-      return (
-        <section class="year" id={`y${year}`}>
+    <header class="shelf-intro">
+      <p class="s-meta">sample library / {books.length} volumes</p>
+      <p>Three rows of books, notes in progress. Scroll each shelf sideways.</p>
+    </header>
+
+    {
+      byYear.map(({ year, list, goal }, yearIndex) => (
+        <section class="year" id={`y${year}`} aria-labelledby={`year-${year}`}>
           <aside class="rail">
             <p class="s-meta rail-label">reading challenge</p>
-            <p class="challenge-num">
+            <p class="challenge-num" id={`year-${year}`}>
               <span class="big">{list.length}</span>
               <span class="s-meta"> / {goal} books</span>
             </p>
-            <div class="bar">
+            <div class="bar" aria-label={`${list.length} of ${goal} books`}>
               <div class="fill" style={`width: ${Math.min(100, (list.length / goal) * 100)}%`} />
             </div>
-            <p class="s-meta past">
-              {years.map((y2) => (
-                <a class="s-link" href={`${base}/studio/bookshelf/#y${y2}`}>
-                  {y2}
-                </a>
+            <nav class="s-meta past" aria-label="Reading years">
+              {years.map((otherYear) => (
+                <a class="s-link" href={`${base}/studio/bookshelf/#y${otherYear}`}>{otherYear}</a>
               ))}
-            </p>
+            </nav>
           </aside>
 
-          <div class="covers">
-            {
-              featured && (
-                <a class="cover big" href={`${base}/studio/bookshelf/${featured.id}/`}>
-                  <img
-                    src={featured.data.cover.src}
-                    alt={`${featured.data.title}, ${featured.data.author}`}
-                    width={featured.data.cover.width}
-                    height={featured.data.cover.height}
-                    loading="lazy"
-                  />
-                  <span class="pane">
-                    <span class="s-meta stars">{ratingOf(featured)}</span>
-                    <span class="s-meta excerpt">
-                      {featured.data.excerpt ? `“${featured.data.excerpt}”` : 'review →'}
+          <div class="shelf-wrap">
+            <div class="covers" aria-label={`${year} books`}>
+              {list.map((book, bookIndex) => {
+                const hasReview = Boolean(book.body?.trim());
+                const color = palette[(yearIndex * 3 + bookIndex) % palette.length];
+                return (
+                  <a
+                    class="book-card"
+                    href={`${base}/studio/bookshelf/${book.id}/`}
+                    style={`--card-color: ${color}`}
+                    data-book-card
+                  >
+                    <img
+                      src={book.data.cover.src}
+                      alt={`${book.data.title} by ${book.data.author}`}
+                      width={book.data.cover.width}
+                      height={book.data.cover.height}
+                      loading="lazy"
+                    />
+                    {hasReview && <span class="reviewed s-meta">reviewed</span>}
+                    <span class="overlay">
+                      <span class="title">{book.data.title}</span>
+                      <span class="author">{book.data.author}</span>
+                      <span class="meta s-meta">
+                        {ratingOf(book.data.rating)}<br />
+                        {book.data.dateFinished ?? book.data.yearRead}
+                      </span>
+                      <span class="status s-meta">
+                        {hasReview
+                          ? book.data.excerpt ?? 'review available →'
+                          : 'review not written yet →'}
+                      </span>
                     </span>
-                    <span class="s-meta date">{featured.data.dateFinished}</span>
-                  </span>
-                </a>
-              )
-            }
-            {
-              rest.map((b) => (
-                <a class="cover" href={`${base}/studio/bookshelf/${b.id}/`}>
-                  <img
-                    src={b.data.cover.src}
-                    alt={`${b.data.title}, ${b.data.author}`}
-                    width={b.data.cover.width}
-                    height={b.data.cover.height}
-                    loading="lazy"
-                  />
-                  <span class="pane">
-                    <span class="s-meta stars">{ratingOf(b)}</span>
-                    <span class="s-meta excerpt">
-                      {b.data.excerpt ? `“${b.data.excerpt}”` : `${b.data.title} — review →`}
-                    </span>
-                  </span>
-                  {b.data.recommended && <span class="s-meta rec">recommended</span>}
-                </a>
-              ))
-            }
+                  </a>
+                );
+              })}
+            </div>
           </div>
         </section>
-      );
-    })
-  }
-
-  {
-    recommended.length > 0 && (
-      <section class="reco">
-        <header class="sec-head">
-          <span class="sec-title s-meta">recommended</span>
-          <span class="s-meta hint">hand-picked, would lend to friends</span>
-        </header>
-        <div class="covers small">
-          {
-            recommended.map((b) => (
-              <a class="cover" href={`${base}/studio/bookshelf/${b.id}/`}>
-                <img
-                  src={b.data.cover.src}
-                  alt={`${b.data.title}, ${b.data.author}`}
-                  width={b.data.cover.width}
-                  height={b.data.cover.height}
-                  loading="lazy"
-                />
-              </a>
-            ))
-          }
-        </div>
-      </section>
-    )
-  }
+      ))
+    }
   </div>
 </StudioLayout>
 
+<script>
+  const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)');
+  const cards = [...document.querySelectorAll<HTMLElement>('[data-book-card]')];
+
+  document.addEventListener('click', (event) => {
+    if (!coarsePointer.matches) return;
+    const card = (event.target as Element).closest<HTMLElement>('[data-book-card]');
+
+    if (!card) {
+      cards.forEach((item) => item.removeAttribute('data-revealed'));
+      return;
+    }
+
+    if (!card.hasAttribute('data-revealed')) {
+      event.preventDefault();
+      cards.forEach((item) => item.toggleAttribute('data-revealed', item === card));
+    }
+  });
+</script>
+
 <style>
   .bookshelf-page {
-    padding-bottom: 130px;
+    padding-bottom: 150px;
   }
 
-  section.year {
-    margin-top: 34px;
-    display: grid;
-    grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
-    gap: clamp(28px, 4vw, 72px);
-    align-items: start;
-  }
-
-  .rail-label {
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--s-ink);
-  }
-
-  .challenge-num {
-    margin: 14px 0 0;
-  }
-
-  .challenge-num .big {
-    font-family: var(--s-serif);
-    font-size: 56px;
-    line-height: 1;
-  }
-
-  .bar {
-    width: 200px;
-    height: 5px;
-    border: 1px solid var(--s-ink);
-    margin-top: 14px;
-  }
-
-  .fill {
-    height: 100%;
-    background: var(--s-ink);
-  }
-
-  .past {
-    margin-top: 16px;
+  .shelf-intro {
     display: flex;
-    gap: 12px;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    margin: 18px 0 30px;
+    border-bottom: 1px solid var(--s-line);
+    padding-bottom: 12px;
+  }
+
+  .shelf-intro p { margin: 0; }
+  .shelf-intro p:last-child { font-family: var(--s-serif); font-size: 18px; }
+
+  .year {
+    display: grid;
+    grid-template-columns: clamp(180px, 18vw, 250px) minmax(0, 1fr);
+    gap: clamp(24px, 4vw, 64px);
+    align-items: start;
+    margin-top: 38px;
+  }
+
+  .rail { position: sticky; left: 0; padding-top: 3px; }
+  .rail-label { color: var(--s-ink); letter-spacing: 0.16em; text-transform: uppercase; }
+  .challenge-num { margin: 12px 0 0; }
+  .challenge-num .big { font-family: var(--s-serif); font-size: 52px; line-height: 1; }
+  .bar { width: min(100%, 190px); height: 5px; border: 1px solid var(--s-ink); margin-top: 13px; }
+  .fill { height: 100%; background: var(--s-ink); }
+  .past { display: flex; gap: 12px; margin-top: 15px; }
+
+  .shelf-wrap {
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-color: var(--s-ink) var(--s-line);
+    scrollbar-width: thin;
+    padding: 3px 3px 16px;
   }
 
   .covers {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 26px;
-    align-items: flex-start;
+    display: grid;
+    grid-template-rows: repeat(3, 202px);
+    grid-auto-flow: column;
+    grid-auto-columns: 126px;
+    gap: 18px 16px;
+    width: max-content;
   }
 
-  .cover {
-    display: block;
+  .book-card {
     position: relative;
-    text-decoration: none;
-  }
-
-  .cover img {
-    height: 185px;
-    width: auto;
     display: block;
-    box-shadow: 0 3px 18px rgba(20, 18, 10, 0.13);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    width: 126px;
+    height: 189px;
+    color: #16130f;
+    text-decoration: none;
+    overflow: hidden;
+    box-shadow: 0 3px 13px rgba(20, 18, 10, 0.16);
+    isolation: isolate;
   }
 
-  .cover.big {
-    display: flex;
-    gap: 16px;
-    background: transparent;
-    border: none;
+  .book-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+  .reviewed {
+    position: absolute;
+    top: 7px;
+    right: 0;
+    z-index: 4;
+    padding: 3px 6px 3px 7px;
+    color: var(--s-bg);
+    background: rgba(18, 17, 14, 0.86);
+    font-size: 8px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
-  .cover.big img {
-    height: 260px;
-  }
-
-  .cover.big .pane {
-    position: static;
-    inset: auto;
-    width: 200px;
-    padding: 0;
-    background: transparent;
-  }
-
-  .cover:hover img {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(20, 18, 10, 0.2);
-  }
-
-  /* review pane: persistent on the featured book, on hover for the rest */
-  .pane {
+  .overlay {
     position: absolute;
     inset: 0;
-    background: rgba(250, 249, 246, 0.96);
+    z-index: 3;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 10px;
-    padding: 16px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
+    padding: 14px 12px;
+    background: var(--card-color);
+    transform: translateY(101%);
+    transition: transform 220ms cubic-bezier(0.22, 0.75, 0.28, 1);
   }
 
-  .cover.big .pane {
-    opacity: 1;
+  .book-card:hover .overlay,
+  .book-card:focus-visible .overlay,
+  .book-card[data-revealed] .overlay { transform: translateY(0); }
+
+  .title { font-family: var(--s-serif); font-size: 21px; font-weight: 600; line-height: 0.98; }
+  .author { margin-top: 7px; font-family: var(--s-mono); font-size: 9px; line-height: 1.35; }
+  .meta { margin-top: 13px; color: currentColor; font-size: 8px; line-height: 1.55; }
+  .status { margin-top: auto; color: currentColor; font-size: 8px; line-height: 1.45; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .overlay { transition: none; }
   }
 
-  .cover:hover .pane {
-    opacity: 1;
-  }
-
-  .stars {
-    color: var(--s-ink);
-    font-size: 12px;
-  }
-
-  .excerpt {
-    line-height: 1.6;
-  }
-
-  .rec {
-    position: absolute;
-    left: 0;
-    bottom: -22px;
-    color: var(--s-grey);
-  }
-
-  /* recommended shelf */
-  .reco {
-    margin-top: 72px;
-  }
-
-  .sec-head {
-    display: flex;
-    align-items: baseline;
-    gap: 18px;
-    border-bottom: 1px solid var(--s-line);
-    padding-bottom: 10px;
-  }
-
-  .sec-title {
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--s-ink);
-  }
-
-  .hint {
-    color: var(--s-faint);
-  }
-
-  .covers.small img {
-    height: 150px;
-  }
-
-  /* fixed footer on this page only */
-  .studio-footer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--s-bg);
-    border-top: 1px solid var(--s-line);
-    z-index: 20;
-  }
-
-  @media (max-width: 820px) {
-    section.year {
-      grid-template-columns: 1fr;
-    }
-
-    .pane {
-      opacity: 1;
-    }
+  @media (max-width: 700px) {
+    .shelf-intro { display: block; }
+    .shelf-intro p:last-child { margin-top: 8px; }
+    .year { grid-template-columns: 1fr; gap: 18px; margin-top: 34px; }
+    .rail { position: static; }
+    .covers { grid-template-rows: repeat(2, 184px); grid-auto-columns: 114px; }
+    .book-card { width: 114px; height: 171px; }
   }
 </style>
 
 <style is:global>
-  /* fixed footer for the bookshelf (page content adds matching padding) */
   .studio-footer {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
-    background: var(--s-bg);
-    border-top: 1px solid var(--s-line);
     z-index: 20;
+    border-top: 1px solid var(--s-line);
+    background: var(--s-bg);
   }
 </style>

@@ -20,8 +20,16 @@
  * Debug: /studio/?hover=<cluster-id> forces the hover state.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  GLOBAL_VIEWBOX,
+  generateGlobalConstellation,
+  generateLocalConstellation,
+  glintPath,
+  ornamentPoints,
+  type GlyphName,
+} from '../../lib/studio/constellationPrimitives';
 
-export type CImage = { src: string; w: number; h: number };
+export type CImage = { src: string; w: number; h: number; projectId: string };
 
 export type CCluster = {
   id: string;
@@ -37,7 +45,6 @@ export type CCluster = {
   hoverDescription: string;
   featured: boolean;
   images: CImage[];
-  connections: string[];
 };
 
 export type CConfig = {
@@ -77,20 +84,6 @@ function hashStr(s: string): number {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/* ── star shapes (drawn at origin; positioned via transform) ────────────── */
-
-function star4Path(size: number): string {
-  const v = size;
-  const h = size * 0.55;
-  const k = size * 0.1;
-  return (
-    `M0,${-v} Q${k},${-k} ${h},0` +
-    ` Q${k},${k} 0,${v}` +
-    ` Q${-k},${k} ${-h},0` +
-    ` Q${-k},${-k} 0,${-v} Z`
-  );
-}
-
 /* ── the field: nodes + edges ──────────────────────────────────────────────
    Every node drifts on its own two sines forever. Edges join current node
    positions, so lines move too. Lines route through intermediate stars and
@@ -99,16 +92,16 @@ function star4Path(size: number): string {
 type FieldNode = {
   x: number;
   y: number;
-  kind: 'star4' | 'star8' | 'dot';
+  glyph: GlyphName | 'ornament';
   size: number;
-  rot: number;
+  tips: readonly number[];
+  render: boolean;
   t1: number;
   t2: number;
   p1: number;
   p2: number;
   a1: number;
   a2: number;
-  burst?: Array<{ dx: number; dy: number; r: number }>;
   /* runtime displacement (cursor drag) */
   ox: number;
   oy: number;
@@ -125,16 +118,19 @@ function makeNode(
   rand: () => number,
   x: number,
   y: number,
-  kind: FieldNode['kind'],
+  glyph: FieldNode['glyph'],
   size: number,
   amp: number,
+  tips: readonly number[] = [1, 1, 1, 1],
+  render = true,
 ): FieldNode {
   return {
     x,
     y,
-    kind,
+    glyph,
     size,
-    rot: rand() * 180,
+    tips,
+    render,
     t1: 9 + rand() * 11,
     t2: 5 + rand() * 6,
     p1: rand() * Math.PI * 2,
@@ -146,186 +142,50 @@ function makeNode(
   };
 }
 
-function buildField(clusters: CCluster[], config: CConfig): Field {
-  const rand = mulberry32(config.seed);
+function buildField(config: CConfig): Field {
+  const model = generateGlobalConstellation(`studio-home:${config.seed}`);
+  const rand = mulberry32(hashStr(`${model.seed}:motion`));
   const W = config.world.width;
   const H = config.world.height;
   const nodes: FieldNode[] = [];
   const edges: FieldEdge[] = [];
 
-  /* hub nodes beside each cluster anchor (edge endpoints) */
-  const hubOf = new Map<string, number[]>();
-  for (const c of clusters) {
-    const ids: number[] = [];
-    for (let k = 0; k < 2; k++) {
-      nodes.push(
-        makeNode(
-          rand,
-          c.x + (rand() - 0.5) * c.width * 1.1,
-          c.y + (rand() - 0.5) * c.width * 0.8,
-          'dot',
-          1.6 + rand() * 1.2,
-          2.4,
-        ),
-      );
-      ids.push(nodes.length - 1);
-    }
-    hubOf.set(c.id, ids);
-  }
+  const visibleEdges = model.logicalEdges.filter((edge) => edge.visible);
+  const visibleNodeIds = new Set(visibleEdges.flatMap((edge) => [edge.from, edge.to]));
+  const endpoints = new Map(
+    model.stars.filter((star) => star.endpoint).map((star) => [`${star.componentId}:${star.x}:${star.y}`, star]),
+  );
+  const nodeIndexes = new Map<string, number>();
+  const markScale = W / GLOBAL_VIEWBOX.width;
 
-  /* free sparkles — statement + small, wider rotation range */
-  for (let i = 0; i < 34; i++) {
-    const statement = rand() < 0.3;
-    nodes.push(
-      makeNode(
-        rand,
-        rand() * W,
-        rand() * H,
-        rand() < 0.55 ? 'star4' : 'star8',
-        statement ? 10 + rand() * 9 : 3.5 + rand() * 5,
-        2.2 + rand() * 2.4,
-      ),
-    );
-  }
-
-  /* scattered stardust */
-  for (let i = 0; i < 78; i++) {
-    nodes.push(makeNode(rand, rand() * W, rand() * H, 'dot', 0.6 + rand() * 1.3, 1.2 + rand() * 2));
-  }
-
-  /* star clusters — small constellations of mixed sparkles */
-  for (let g = 0; g < 9; g++) {
-    const gx = rand() * W;
-    const gy = rand() * H;
-    const n = 3 + Math.floor(rand() * 4);
-    const anchor = nodes.length;
-    for (let k = 0; k < n; k++) {
-      nodes.push(
-        makeNode(
-          rand,
-          gx + (rand() - 0.5) * 120,
-          gy + (rand() - 0.5) * 90,
-          rand() < 0.7 ? 'star4' : 'star8',
-          3 + rand() * 7,
-          1.8 + rand() * 2,
-        ),
-      );
-    }
-    /* join the group with short segments */
-    for (let k = 1; k < n; k++) {
-      edges.push({ a: anchor + k - 1, b: anchor + k, dashed: rand() < 0.4, broken: false });
-    }
-  }
-
-  /* pointillist bursts — a node ringed by decaying stardust */
-  for (let i = 0; i < 9; i++) {
-    const node = makeNode(
+  for (const node of model.nodes) {
+    const endpoint = endpoints.get(`${node.componentId}:${node.x}:${node.y}`);
+    nodeIndexes.set(node.id, nodes.length);
+    nodes.push(makeNode(
       rand,
-      rand() * W,
-      rand() * H,
-      rand() < 0.5 ? 'star4' : 'dot',
-      3 + rand() * 5,
-      2 + rand() * 2,
-    );
-    const burst: Array<{ dx: number; dy: number; r: number }> = [];
-    const n = 14 + Math.floor(rand() * 14);
-    for (let k = 0; k < n; k++) {
-      const a = rand() * Math.PI * 2;
-      const rr = 12 + Math.pow(rand(), 0.6) * 34;
-      burst.push({ dx: Math.cos(a) * rr, dy: Math.sin(a) * rr, r: 0.4 + rand() * 1 });
-    }
-    node.burst = burst;
-    nodes.push(node);
+      node.x * W,
+      node.y * H,
+      endpoint?.glyph ?? 'dot',
+      (endpoint?.sizePx ?? 1.2) * markScale,
+      1.2 + rand() * 2,
+      endpoint?.tips,
+      Boolean(endpoint) || !visibleNodeIds.has(node.id),
+    ));
   }
-
-  /* margin dust — sparse fill beyond the world, for the map view */
-  const M = 620;
-  for (let i = 0; i < 64; i++) {
-    const side = rand();
-    let x: number;
-    let y: number;
-    if (side < 0.25) {
-      x = -M + rand() * (W + 2 * M);
-      y = -M + rand() * M;
-    } else if (side < 0.5) {
-      x = -M + rand() * (W + 2 * M);
-      y = H + rand() * M;
-    } else if (side < 0.75) {
-      x = -M + rand() * M;
-      y = rand() * H;
-    } else {
-      x = W + rand() * M;
-      y = rand() * H;
-    }
-    nodes.push(makeNode(rand, x, y, 'dot', 0.5 + rand() * 1, 1 + rand() * 1.6));
+  for (const edge of visibleEdges) {
+    edges.push({
+      a: nodeIndexes.get(edge.from)!,
+      b: nodeIndexes.get(edge.to)!,
+      dashed: edge.style === 'dotted',
+      broken: false,
+    });
   }
-
-  /* semantic edges route through drifting waypoint stars — no direct beams.
-     each connection becomes a zigzag of 3–4 short segments with breaks. */
-  const seen = new Set<string>();
-  for (const c of clusters) {
-    for (const t of c.connections) {
-      const key = [c.id, t].sort().join('~');
-      if (seen.has(key) || !hubOf.has(t)) continue;
-      seen.add(key);
-      const aHub = hubOf.get(c.id)![0];
-      const bHub = hubOf.get(t)![1];
-      const dashed = rand() < 0.3;
-      const a = nodes[aHub];
-      const b = nodes[bHub];
-      const ddx = b.x - a.x;
-      const ddy = b.y - a.y;
-      const len = Math.hypot(ddx, ddy) || 1;
-      const nx = -ddy / len;
-      const ny = ddx / len;
-      const chain = [aHub];
-      for (let k = 1; k <= 2; k++) {
-        const t2 = k / 3 + (rand() - 0.5) * 0.16;
-        const off = (rand() - 0.5) * 2 * (60 + rand() * 90);
-        nodes.push(
-          makeNode(rand, a.x + ddx * t2 + nx * off, a.y + ddy * t2 + ny * off, 'dot', 1.3 + rand(), 2),
-        );
-        chain.push(nodes.length - 1);
-      }
-      chain.push(bHub);
-      for (let k = 0; k < chain.length - 1; k++) {
-        edges.push({
-          a: chain[k],
-          b: chain[k + 1],
-          dashed: dashed && rand() < 0.7,
-          broken: false,
-        });
-      }
-    }
+  for (const star of model.stars.filter((item) => !item.endpoint)) {
+    nodes.push(makeNode(rand, star.x * W, star.y * H, star.glyph, star.sizePx * markScale, 1.2 + rand() * 2.2, star.tips));
   }
-
-  /* atmospheric chains — connect nearby free stars, never across the map */
-  const freeStarIdx = nodes
-    .map((n, i) => ({ n, i }))
-    .filter(({ n, i }) => i >= 18 && i < 42 && n.kind !== 'dot')
-    .map(({ i }) => i);
-  for (let i = 0; i < freeStarIdx.length - 1 && i < 9; i++) {
-    const a = freeStarIdx[i];
-    const b = freeStarIdx[i + 1];
-    if (Math.hypot(nodes[a].x - nodes[b].x, nodes[a].y - nodes[b].y) < 560) {
-      edges.push({ a, b, dashed: rand() < 0.45, broken: false });
-    }
+  for (const ornament of model.ornaments) {
+    nodes.push(makeNode(rand, ornament.x * W, ornament.y * H, 'ornament', ornament.sizePx * markScale, 1.8 + rand() * 2));
   }
-
-  /* stardust clustered along semantic lines */
-  const lineDustStart = nodes.length;
-  for (const e of edges.slice(0, 16)) {
-    const a = nodes[e.a];
-    const b = nodes[e.b];
-    const n = 4 + Math.floor(rand() * 7);
-    for (let k = 0; k < n; k++) {
-      const t = rand();
-      const px = a.x + (b.x - a.x) * t + (rand() - 0.5) * 56;
-      const py = a.y + (b.y - a.y) * t + (rand() - 0.5) * 56;
-      nodes.push(makeNode(rand, px, py, 'dot', 0.5 + rand() * 1.1, 1 + rand() * 1.4));
-    }
-  }
-  void lineDustStart;
 
   return { nodes, edges };
 }
@@ -342,79 +202,66 @@ function masonryLayout(
   count: number,
   aspects: number[],
   seedStr: string,
-): { slots: MasonSlot[]; height: number } {
+): { slots: MasonSlot[]; width: number; height: number } {
   const rand = mulberry32(hashStr(seedStr));
-  const margin = 0.026; /* uniform padding, fraction of cluster width */
+  const gap = 0.026;
   const slots: MasonSlot[] = [];
-  const rects: Array<[number, number, number, number]> = [];
+  if (!count) return { slots, width: 0, height: 0 };
 
-  const overlaps = (x0: number, y0: number, x1: number, y1: number) => {
-    for (const r of rects) {
-      if (x0 < r[2] && r[0] < x1 && y0 < r[3] && r[1] < y1) return true;
-    }
-    return false;
-  };
-
-  /* sized seeded, placed largest-first */
   const sized = Array.from({ length: count }, (_, i) => {
-    const w = 0.18 + rand() * 0.22;
+    const w = i === 0 ? 0.5 : 0.18 + rand() * 0.1;
     const aspect = clamp(aspects[i] ?? 1.25, 0.55, 2.0);
     return { i, w, h: w * aspect };
-  }).sort((a, b) => b.w * b.h - a.w * a.h);
+  });
+  slots[0] = { x: 0, y: 0, w: sized[0].w, h: sized[0].h };
 
-  const maxR = 1.05;
-  for (const s of sized) {
-    let placed = false;
-    for (let band = 0; band < 8 && !placed; band++) {
-      const R = 0.18 + (band * (maxR - 0.18)) / 8;
-      for (let t = 0; t < 36 && !placed; t++) {
-        const a = rand() * Math.PI * 2;
-        const rr = R * (0.15 + rand() * 0.85);
-        const px = 0.5 + Math.cos(a) * rr;
-        const py = 0.5 + Math.sin(a) * rr;
-        const x0 = px - s.w / 2 - margin / 2;
-        const y0 = py - s.h / 2 - margin / 2;
-        const x1 = px + s.w / 2 + margin / 2;
-        const y1 = py + s.h / 2 + margin / 2;
-        if (overlaps(x0, y0, x1, y1)) continue;
-        if (x0 < -0.06 || x1 > 1.06 || y0 < -0.06 || y1 > 1.6) continue;
-        rects.push([x0, y0, x1, y1]);
-        slots[s.i] = { x: px - s.w / 2, y: py - s.h / 2, w: s.w, h: s.h };
-        placed = true;
+  const overlaps = (candidate: MasonSlot) => slots.some((slot) => slot
+    && candidate.x < slot.x + slot.w + gap
+    && candidate.x + candidate.w + gap > slot.x
+    && candidate.y < slot.y + slot.h + gap
+    && candidate.y + candidate.h + gap > slot.y);
+  const boundsFor = (candidate?: MasonSlot) => {
+    const all = candidate ? [...slots.filter(Boolean), candidate] : slots.filter(Boolean);
+    const x0 = Math.min(...all.map((slot) => slot.x));
+    const y0 = Math.min(...all.map((slot) => slot.y));
+    const x1 = Math.max(...all.map((slot) => slot.x + slot.w));
+    const y1 = Math.max(...all.map((slot) => slot.y + slot.h));
+    return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
+  };
+
+  for (const image of sized.slice(1)) {
+    const candidates: MasonSlot[] = [];
+    for (const slot of slots.filter(Boolean)) {
+      const ys = [slot.y, slot.y + (slot.h - image.h) / 2, slot.y + slot.h - image.h];
+      const xs = [slot.x, slot.x + (slot.w - image.w) / 2, slot.x + slot.w - image.w];
+      for (const y of ys) {
+        candidates.push({ x: slot.x - gap - image.w, y, w: image.w, h: image.h });
+        candidates.push({ x: slot.x + slot.w + gap, y, w: image.w, h: image.h });
+      }
+      for (const x of xs) {
+        candidates.push({ x, y: slot.y - gap - image.h, w: image.w, h: image.h });
+        candidates.push({ x, y: slot.y + slot.h + gap, w: image.w, h: image.h });
       }
     }
-    if (!placed) {
-      /* fallback (rare): against the centroid */
-      const x0 = 0.5 - s.w / 2 - margin / 2;
-      const y0 = 0.5 - s.h / 2 - margin / 2;
-      const x1 = 0.5 + s.w / 2 + margin / 2;
-      const y1 = 0.5 + s.h / 2 + margin / 2;
-      rects.push([x0, y0, x1, y1]);
-      slots[s.i] = { x: 0.5 - s.w / 2, y: 0.5 - s.h / 2, w: s.w, h: s.h };
-    }
+    const valid = candidates.filter((candidate) => !overlaps(candidate));
+    valid.sort((a, b) => {
+      const ab = boundsFor(a);
+      const bb = boundsFor(b);
+      const area = ab.w * ab.h - bb.w * bb.h;
+      return area || Math.abs(ab.w - ab.h) - Math.abs(bb.w - bb.h) || a.x - b.x || a.y - b.y;
+    });
+    slots[image.i] = valid[0];
   }
 
-  /* re-centre the whole group so its middle lands on the cluster anchor */
-  let x0 = Infinity;
-  let y0 = Infinity;
-  let x1 = -Infinity;
-  let y1 = -Infinity;
-  for (const s of slots) {
-    x0 = Math.min(x0, s.x);
-    y0 = Math.min(y0, s.y);
-    x1 = Math.max(x1, s.x + s.w);
-    y1 = Math.max(y1, s.y + s.h);
+  const measured = boundsFor();
+  const scale = Math.min(1, 1 / measured.w, 1 / measured.h);
+  for (const slot of slots) {
+    slot.x = (slot.x - measured.x0) * scale;
+    slot.y = (slot.y - measured.y0) * scale;
+    slot.w *= scale;
+    slot.h *= scale;
   }
-  const w = x1 - x0;
-  const h = y1 - y0;
-  const cx = x0 + w / 2;
-  const cy = y0 + h / 2;
-  for (const s of slots) {
-    s.x -= cx - 0.5;
-    s.y -= cy - 0.5;
-  }
-
-  return { slots, height: h };
+  return { slots, width: measured.w * scale, height: measured.h * scale };
 }
 
 /* ── hover star cluster ───────────────────────────────────────────────────
@@ -425,9 +272,9 @@ function masonryLayout(
 type HoverStar = {
   x: number;
   y: number;
-  kind: 'star4' | 'star8';
+  glyph: GlyphName | 'ornament';
   size: number;
-  rot: number;
+  tips: readonly number[];
   delay: number;
   dur: number;
 };
@@ -435,7 +282,8 @@ type HoverStar = {
 type HoverStars = { nodes: HoverStar[]; edges: Array<[number, number]> };
 
 function hoverStarsFor(c: CCluster, boxH: number): HoverStars {
-  const rand = mulberry32(hashStr(c.id + ':hoverstars'));
+  const model = generateLocalConstellation(c.id, 'big-plus-two');
+  const rand = mulberry32(hashStr(c.id + ':hover-motion'));
   const cw = c.width;
   const ch = boxH * c.width;
   /* anchor just outside one seeded corner of the collage */
@@ -444,22 +292,68 @@ function hoverStarsFor(c: CCluster, boxH: number): HoverStars {
   const sideY = corner === 0 || corner === 1 ? -1 : 1;
   const ax = sideX * (cw * 0.52 + 36 + rand() * 30);
   const ay = sideY * (ch * 0.52 + 26 + rand() * 24);
-  const n = 6 + Math.floor(rand() * 3);
+  const box = model.layout.fragBBox!;
+  const scale = 0.34;
   const nodes: HoverStar[] = [];
-  for (let k = 0; k < n; k++) {
+  const nodeIndexes = new Map<string, number>();
+  const visible = model.logicalEdges.filter((edge) => edge.visible);
+  const visibleIds = new Set(visible.flatMap((edge) => [edge.from, edge.to]));
+  const endpoints = new Map(model.stars.filter((star) => star.endpoint).map((star) => [`${star.componentId}:${star.x}:${star.y}`, star]));
+  const point = (x: number, y: number) => ({ x: ax + (x - box.cx) * scale, y: ay + (y - box.cy) * scale });
+  for (const node of model.nodes) {
+    const endpoint = endpoints.get(`${node.componentId}:${node.x}:${node.y}`);
+    if (!endpoint && visibleIds.has(node.id)) {
+      nodeIndexes.set(node.id, -1);
+      continue;
+    }
+    const p = point(node.x, node.y);
+    nodeIndexes.set(node.id, nodes.length);
     nodes.push({
-      x: ax + (rand() - 0.5) * 150,
-      y: ay + (rand() - 0.5) * 110,
-      kind: rand() < 0.7 ? 'star4' : 'star8',
-      size: 3.5 + rand() * 6.5,
-      rot: rand() * 180,
+      ...p,
+      glyph: endpoint?.glyph ?? 'dot',
+      size: (endpoint?.sizePx ?? 1.2) * 1.7,
+      tips: endpoint?.tips ?? [1, 1, 1, 1],
       delay: rand() * 0.9,
       dur: 0.75 + rand() * 0.4,
     });
   }
-  const edges: Array<[number, number]> = [];
-  for (let k = 1; k < n; k++) edges.push([k - 1, k]);
+  const edges = visible.map((edge) => {
+    const from = model.nodes.find((node) => node.id === edge.from)!;
+    const to = model.nodes.find((node) => node.id === edge.to)!;
+    let a = nodeIndexes.get(edge.from)!;
+    let b = nodeIndexes.get(edge.to)!;
+    if (a < 0) {
+      const p = point(from.x, from.y);
+      a = nodes.push({ ...p, glyph: 'dot', size: 0, tips: [1, 1, 1, 1], delay: 0, dur: 1 }) - 1;
+      nodeIndexes.set(edge.from, a);
+    }
+    if (b < 0) {
+      const p = point(to.x, to.y);
+      b = nodes.push({ ...p, glyph: 'dot', size: 0, tips: [1, 1, 1, 1], delay: 0, dur: 1 }) - 1;
+      nodeIndexes.set(edge.to, b);
+    }
+    return [a, b] as [number, number];
+  });
+  for (const star of model.stars.filter((item) => !item.endpoint)) {
+    const p = point(star.x, star.y);
+    nodes.push({ ...p, glyph: star.glyph, size: star.sizePx * 1.7, tips: star.tips, delay: rand() * 0.9, dur: 0.75 + rand() * 0.4 });
+  }
+  for (const ornament of model.ornaments) {
+    const p = point(ornament.x, ornament.y);
+    nodes.push({ ...p, glyph: 'ornament', size: ornament.sizePx * 1.7, tips: [1, 1, 1, 1], delay: rand() * 0.9, dur: 0.75 + rand() * 0.4 });
+  }
   return { nodes, edges };
+}
+
+function glyphMark(glyph: FieldNode['glyph'], size: number, tips: readonly number[]) {
+  if (size <= 0) return null;
+  if (glyph === 'dot') return <circle r={size} fill="currentColor" opacity={0.85} />;
+  if (glyph === 'cross') {
+    const arm = size * 1.15;
+    return <path d={`M ${-arm} 0 L ${arm} 0 M 0 ${-arm} L 0 ${arm}`} fill="none" stroke="currentColor" strokeWidth={size * 0.5} strokeLinecap="round" />;
+  }
+  if (glyph === 'ornament') return <polygon points={ornamentPoints(0, 0, size)} fill="currentColor" />;
+  return <path d={glintPath(0, 0, size, glyph, tips)} fill="currentColor" />;
 }
 
 /* ── hover splotch ───────────────────────────────────────────────────────── */
@@ -540,6 +434,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
   const cursor = useRef({ x: -9999, y: -9999 });
   const pointerSeen = useRef(false);
   const activeRef = useRef<string | null>(null);
+  const touchArmedRef = useRef<string | null>(null);
 
   const layouts = useMemo(
     () =>
@@ -552,6 +447,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
         return {
           c,
           slots: m.slots,
+          boxW: m.width,
           boxH: m.height,
           blob: blobPath(c.id),
           phase: hashStr(c.id) % 1000,
@@ -563,12 +459,12 @@ export default function Constellation({ clusters, config, basePath }: Props) {
 
   /* authored world spread of the collages (for the map framing) */
   const spread = useMemo(() => {
-    let x0 = Infinity;
-    let y0 = Infinity;
-    let x1 = -Infinity;
-    let y1 = -Infinity;
+    let x0 = 0;
+    let y0 = 0;
+    let x1 = config.world.width;
+    let y1 = config.world.height;
     for (const l of layouts) {
-      const halfW = l.c.width / 2;
+      const halfW = (l.boxW * l.c.width) / 2;
       const halfH = (l.boxH * l.c.width) / 2;
       x0 = Math.min(x0, l.c.x - halfW);
       y0 = Math.min(y0, l.c.y - halfH);
@@ -577,10 +473,30 @@ export default function Constellation({ clusters, config, basePath }: Props) {
     }
     const pad = 150;
     return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
+  }, [layouts, config.world]);
+
+  const focusSpread = useMemo(() => {
+    const featured = layouts.filter((layout) => layout.c.featured);
+    const focusLayouts = featured.length ? featured : layouts;
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    for (const layout of focusLayouts) {
+      const halfW = (layout.boxW * layout.c.width) / 2;
+      const halfH = (layout.boxH * layout.c.width) / 2;
+      x0 = Math.min(x0, layout.c.x - halfW);
+      y0 = Math.min(y0, layout.c.y - halfH);
+      x1 = Math.max(x1, layout.c.x + halfW);
+      y1 = Math.max(y1, layout.c.y + halfH);
+    }
+    const pad = 100;
+    return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
   }, [layouts]);
 
-  const field = useMemo(() => buildField(clusters, config), [clusters, config]);
+  const field = useMemo(() => buildField(config), [config]);
   const twinkles = useMemo(() => twinkleDots(config), [config]);
+  const minScale = vp && vp.w <= 760 ? 0.1 : config.zoom.min;
   const nodeRefs = useRef<Array<SVGGElement | null>>([]);
   const edgeRefs = useRef<Array<SVGPathElement | null>>([]);
 
@@ -610,36 +526,32 @@ export default function Constellation({ clusters, config, basePath }: Props) {
     if (!vp) return;
     const fit = clamp(
       Math.min(vp.w / (spread.x1 - spread.x0), vp.h / (spread.y1 - spread.y0)) * 0.94,
-      config.zoom.min,
+      minScale,
       config.zoom.max,
     );
     mapFitRef.current = fit;
-    mapBelowRef.current = Math.max(fit * 1.08, 0.26);
-  }, [vp, spread, config]);
+    mapBelowRef.current = fit * 0.99;
+  }, [vp, spread, config, minScale]);
 
-  /* initial camera: frame the featured clusters */
+  /* Focus frames the featured work; map mode retains the complete world. */
   useEffect(() => {
     if (!vp) return;
-    const featured = clusters.filter((c) => c.featured);
-    const box = featured.length
-      ? featured.reduce(
-          (acc, c) => ({
-            x0: Math.min(acc.x0, c.x - c.width),
-            y0: Math.min(acc.y0, c.y - c.width * 0.55),
-            x1: Math.max(acc.x1, c.x + c.width),
-            y1: Math.max(acc.y1, c.y + c.width * 0.55),
-          }),
-          { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity },
-        )
-      : { x0: 0, y0: 0, x1: config.world.width, y1: config.world.height };
+    const mobileFocus = vp.w <= 760
+      ? layouts.find((layout) => layout.c.featured) ?? layouts[0]
+      : null;
+    const box = mobileFocus
+      ? {
+          x0: mobileFocus.c.x - (mobileFocus.boxW * mobileFocus.c.width) / 2 - 100,
+          y0: mobileFocus.c.y - (mobileFocus.boxH * mobileFocus.c.width) / 2 - 100,
+          x1: mobileFocus.c.x + (mobileFocus.boxW * mobileFocus.c.width) / 2 + 100,
+          y1: mobileFocus.c.y + (mobileFocus.boxH * mobileFocus.c.width) / 2 + 100,
+        }
+      : focusSpread;
     const cx = (box.x0 + box.x1) / 2;
     const cy = (box.y0 + box.y1) / 2;
-    /* never rest below the map threshold (mostly binds on narrow windows
-       where the featured spread ≈ the whole world) */
-    const floor = Math.max(config.zoom.min, mapBelowRef.current * 1.03);
     const scale = clamp(
       Math.min(vp.w / (box.x1 - box.x0), vp.h / (box.y1 - box.y0)) * 0.94,
-      floor,
+      minScale,
       1.1,
     );
     cam.current = { cx, cy, scale };
@@ -656,12 +568,12 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       setMapOnIf(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vp]);
+  }, [vp, focusSpread, spread, layouts, minScale]);
 
   const clampCamera = (t: { cx: number; cy: number; scale: number }, maxScale?: number) => {
     t.cx = clamp(t.cx, -config.world.width * 0.2, config.world.width * 1.2);
     t.cy = clamp(t.cy, -config.world.height * 0.2, config.world.height * 1.2);
-    t.scale = clamp(t.scale, config.zoom.min, maxScale ?? config.zoom.max);
+    t.scale = clamp(t.scale, minScale, maxScale ?? config.zoom.max);
   };
 
   /* camera helpers */
@@ -674,7 +586,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
     camTarget.current = {
       cx: (spread.x0 + spread.x1) / 2,
       cy: (spread.y0 + spread.y1) / 2,
-      scale: mapFitRef.current * 0.97,
+      scale: mapFitRef.current * 0.96,
     };
   };
 
@@ -732,7 +644,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const t = { ...camTarget.current };
-      const next = clamp(t.scale * Math.exp(-e.deltaY * 0.0016), config.zoom.min, config.zoom.max);
+      const next = clamp(t.scale * Math.exp(-e.deltaY * 0.0016), minScale, config.zoom.max);
       const rect = el.getBoundingClientRect();
       const px = e.clientX - rect.left;
       const py = e.clientY - rect.top;
@@ -753,7 +665,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
      (capped smaller so hover regions never crowd neighbours). */
   const hoverScaleFor = (cl: CCluster) => {
     const l = layouts.find((x) => x.c.id === cl.id);
-    const worldArea = l ? cl.width * (l.boxH * cl.width) : cl.width * cl.width;
+    const worldArea = l ? (l.boxW * cl.width) * (l.boxH * cl.width) : cl.width * cl.width;
     const byArea = Math.sqrt((vp ? vp.w * vp.h : 1_200_000) / (6 * worldArea));
     return clamp(byArea, 0.55, 0.78);
   };
@@ -766,7 +678,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
         if (cl && vp) {
           const s = hoverScaleFor(cl);
           const l = layouts.find((x) => x.c.id === cl.id);
-          const cw = (cl.width * s) / 2;
+          const cw = ((l?.boxW ?? 1) * cl.width * s) / 2;
           const ch = (l ? l.boxH * cl.width * s : cw) / 2;
           /* anchor the zoom to the pointer (clamped so the collage stays
              fully on-screen) — the collage grows in place under the cursor
@@ -905,7 +817,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
           const d = driftOf(l.c, l.phase);
           const sx = vp.w / 2 + (l.c.x + d.dx - c.cx) * c.scale;
           const sy = vp.h / 2 + (l.c.y + d.dy - c.cy) * c.scale;
-          const hw = (l.c.width / 2) * c.scale;
+          const hw = ((l.boxW * l.c.width) / 2) * c.scale;
           const hh = ((l.boxH * l.c.width) / 2) * c.scale;
           if (
             Math.abs(cursor.current.x - sx) <= hw &&
@@ -993,7 +905,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
 
         el.setAttribute(
           'transform',
-          `translate(${(sx + n.ox / c.scale).toFixed(2)} ${(sy + n.oy / c.scale).toFixed(2)}) rotate(${n.rot.toFixed(1)})`,
+          `translate(${(sx + n.ox / c.scale).toFixed(2)} ${(sy + n.oy / c.scale).toFixed(2)})`,
         );
       }
 
@@ -1056,8 +968,9 @@ export default function Constellation({ clusters, config, basePath }: Props) {
           py = vel.current.vy * prox * 0.3;
         }
 
-        const bw = cl.width * c.scale;
-        const bh = layouts.find((l) => l.c.id === cl.id)!.boxH * cl.width * c.scale;
+        const layout = layouts.find((l) => l.c.id === cl.id)!;
+        const bw = layout.boxW * cl.width * c.scale;
+        const bh = layout.boxH * cl.width * c.scale;
         el.style.transform = `translate(${(sxRaw + px - bw / 2).toFixed(1)}px, ${(syRaw + py - bh / 2).toFixed(1)}px) scale(${c.scale})`;
         /* plate counter-scale → constant screen size at every zoom */
         el.style.setProperty('--ic', (1 / c.scale).toFixed(3));
@@ -1182,19 +1095,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                       animationDuration: (n.t2 * 1.7).toFixed(2) + 's',
                     }}
                   >
-                  {n.kind === 'dot' ? (
-                    <circle r={n.size} fill="currentColor" opacity={0.85} />
-                  ) : n.kind === 'star4' ? (
-                    <path d={star4Path(n.size)} fill="currentColor" />
-                  ) : (
-                    <g>
-                      <path d={star4Path(n.size)} fill="currentColor" />
-                      <path d={star4Path(n.size * 0.6)} fill="currentColor" transform="rotate(45)" />
-                    </g>
-                  )}
-                  {n.burst?.map((b, k) => (
-                    <circle key={k} cx={b.dx} cy={b.dy} r={b.r} fill="currentColor" opacity={0.55} />
-                  ))}
+                  {n.render ? glyphMark(n.glyph, n.size, n.tips) : null}
                   </g>
                 </g>
               ))}
@@ -1231,7 +1132,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                 })}
                 {stars.nodes.map((s, i) => (
                   <g key={i}>
-                    <g transform={`translate(${s.x.toFixed(1)} ${s.y.toFixed(1)}) rotate(${s.rot.toFixed(1)})`}>
+                    <g transform={`translate(${s.x.toFixed(1)} ${s.y.toFixed(1)})`}>
                       <g
                         className="loud"
                         style={{
@@ -1239,14 +1140,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                           animationDuration: `${s.dur.toFixed(2)}s`,
                         }}
                       >
-                        {s.kind === 'star4' ? (
-                          <path d={star4Path(s.size)} fill="currentColor" />
-                        ) : (
-                          <g>
-                            <path d={star4Path(s.size)} fill="currentColor" />
-                            <path d={star4Path(s.size * 0.6)} fill="currentColor" transform="rotate(45)" />
-                          </g>
-                        )}
+                        {glyphMark(s.glyph, s.size, s.tips)}
                       </g>
                     </g>
                   </g>
@@ -1271,7 +1165,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
             </g>
           </svg>
 
-          {layouts.map(({ c, slots, boxH }) => (
+          {layouts.map(({ c, slots, boxW, boxH }) => (
             <a
               key={c.id}
               ref={(el) => {
@@ -1287,7 +1181,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                 .filter(Boolean)
                 .join(' ')}
               aria-label={`${c.title} — ${c.projectCount} projects`}
-              style={{ width: c.width, height: boxH * c.width, pointerEvents: 'none' }}
+              style={{ width: boxW * c.width, height: boxH * c.width, pointerEvents: 'none' }}
               onFocus={() => activate(c.id)}
               onBlur={() => activeId === c.id && activate(null)}
               onClick={(e) => {
@@ -1295,9 +1189,14 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                   e.preventDefault();
                   return;
                 }
-                if (isTouch && activeId !== c.id) {
-                  e.preventDefault();
-                  activate(c.id);
+                if (isTouch) {
+                  if (touchArmedRef.current !== c.id) {
+                    e.preventDefault();
+                    touchArmedRef.current = c.id;
+                    activate(c.id);
+                  } else {
+                    touchArmedRef.current = null;
+                  }
                 }
               }}
             >
@@ -1306,15 +1205,16 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                 return (
                   <img
                     key={i}
+                    data-project={im.projectId}
                     src={im.src}
                     alt={`${c.title} — preview ${i + 1}`}
                     width={im.w}
                     height={im.h}
                     loading={i === 0 ? 'eager' : 'lazy'}
                     style={{
-                      left: `${(slot.x * 100).toFixed(2)}%`,
-                      top: `${(slot.y * 100).toFixed(2)}%`,
-                      width: `${(slot.w * 100).toFixed(2)}%`,
+                      left: `${((slot.x / boxW) * 100).toFixed(2)}%`,
+                      top: `${((slot.y / boxH) * 100).toFixed(2)}%`,
+                      width: `${((slot.w / boxW) * 100).toFixed(2)}%`,
                       zIndex: i + 1,
                       pointerEvents: 'auto',
                     }}

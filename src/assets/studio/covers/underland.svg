@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="540" viewBox="0 0 360 540">
+  <rect width="360" height="540" fill="#131f24"/><path d="M0 240Q85 175 180 240T360 240V540H0z" fill="#794d38"/><path d="M0 340Q100 270 190 345T360 325" fill="none" stroke="#d5a849" stroke-width="17"/>
+  <text x="28" y="89" font-family="Georgia,serif" font-size="49" fill="#f0e6cb">Underland</text>
+  <text x="28" y="493" font-family="Menlo,monospace" font-size="13" letter-spacing="1.5" fill="#f0e6cb">ROBERT MACFARLANE</text>
+</svg>

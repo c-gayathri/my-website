@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="540" viewBox="0 0 360 540">
+  <rect width="360" height="540" fill="#d9c8ff"/><path d="M24 24h312v492H24z" fill="none" stroke="#332658" stroke-width="2"/><path d="M40 300h280M40 318h220M40 336h270" stroke="#ff4f71" stroke-width="9"/>
+  <text x="40" y="105" font-family="Georgia,serif" font-size="34" fill="#21183d"><tspan x="40">Dept. of</tspan><tspan x="40" dy="38">Speculation</tspan></text>
+  <text x="40" y="478" font-family="Menlo,monospace" font-size="14" letter-spacing="2" fill="#21183d">JENNY OFFILL</text>
+</svg>

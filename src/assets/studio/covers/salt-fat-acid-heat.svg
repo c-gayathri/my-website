@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="540" viewBox="0 0 360 540">
+  <rect width="360" height="540" fill="#fff3dd"/><rect x="0" y="225" width="90" height="190" fill="#ff6b4a"/><rect x="90" y="225" width="90" height="190" fill="#ffd228"/><rect x="180" y="225" width="90" height="190" fill="#54c78c"/><rect x="270" y="225" width="90" height="190" fill="#496de8"/>
+  <text x="26" y="75" font-family="Georgia,serif" font-size="38" fill="#171717"><tspan x="26">Salt Fat</tspan><tspan x="26" dy="41">Acid Heat</tspan></text>
+  <text x="26" y="493" font-family="Menlo,monospace" font-size="14" letter-spacing="2" fill="#171717">SAMIN NOSRAT</text>
+</svg>

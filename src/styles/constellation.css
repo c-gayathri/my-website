@@ -206,7 +206,7 @@
 .view-controls {
   position: absolute;
   right: clamp(14px, 2vw, 30px);
-  bottom: 18px;
+  bottom: calc(var(--studio-footer-height, 72px) + env(safe-area-inset-bottom) + 16px);
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -256,7 +256,7 @@ body[data-studio-hover] .view-controls {
   animation: info-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* marks breathe: slow rotation + gentle size pulse */
+/* Fixed-orientation marks breathe only through scale. */
 .constellation .breathe {
   transform-origin: 0 0;
   animation: mark-breathe 9s ease-in-out infinite alternate;
@@ -264,10 +264,10 @@ body[data-studio-hover] .view-controls {
 
 @keyframes mark-breathe {
   from {
-    transform: rotate(-3deg) scale(0.95);
+    transform: scale(0.95);
   }
   to {
-    transform: rotate(4deg) scale(1.07);
+    transform: scale(1.07);
   }
 }
 
@@ -340,7 +340,8 @@ body[data-studio-hover] .constellation {
 }
 
 /* hover: the studio chrome steps back */
-body[data-studio-hover] .studio-nav a,
+body[data-studio-hover] .studio .studio-nav a,
+body[data-studio-hover] .studio .studio-nav a:visited,
 body[data-studio-hover] .studio-nav .name,
 body[data-studio-hover] .studio-nav .tagline {
   color: #fff;
@@ -401,5 +402,11 @@ body[data-studio-hover] .hint {
   .studio {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .view-controls {
+    bottom: calc(132px + env(safe-area-inset-bottom) + 18px);
   }
 }

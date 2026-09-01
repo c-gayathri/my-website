@@ -1,0 +1,87 @@
+---
+import {
+  generateLocalConstellation,
+  glintPath,
+  ornamentPoints,
+  type LocalConstellationVariant,
+} from '../../lib/studio/constellationPrimitives';
+
+interface Props {
+  seed: string;
+  variant?: LocalConstellationVariant;
+  label?: string;
+  class?: string;
+  decorative?: boolean;
+}
+
+const {
+  seed,
+  variant = 'big',
+  label = 'Decorative constellation',
+  class: className,
+  decorative = true,
+} = Astro.props;
+const model = generateLocalConstellation(seed, variant);
+const visibleEdges = model.logicalEdges.filter((edge) => edge.visible);
+const visibleNodeIds = new Set(visibleEdges.flatMap((edge) => [edge.from, edge.to]));
+const nodes = new Map(model.nodes.map((node) => [node.id, node]));
+const scale = 1.7;
+---
+
+<svg
+  class:list={['constellation-fragment', className]}
+  viewBox="0 0 1000 1000"
+  preserveAspectRatio="xMidYMid meet"
+  role={decorative ? undefined : 'img'}
+  aria-hidden={decorative ? 'true' : undefined}
+  aria-label={decorative ? undefined : label}
+  data-seed={model.seed}
+  data-variant={variant}
+  fill="currentColor"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <g fill="none" stroke="currentColor" stroke-linecap="round">
+    {visibleEdges.map((edge) => {
+      const from = nodes.get(edge.from)!;
+      const to = nodes.get(edge.to)!;
+      return (
+        <path
+          d={`M ${from.x} ${from.y} L ${to.x} ${to.y}`}
+          stroke-width="0.85"
+          stroke-dasharray={edge.style === 'dotted' ? '1 5' : undefined}
+          data-component={edge.componentId}
+        />
+      );
+    })}
+  </g>
+  <g>
+    {model.nodes.filter((node) => !visibleNodeIds.has(node.id)).map((node) => (
+      <circle cx={node.x} cy={node.y} r={1.2 * scale} data-node={node.id} />
+    ))}
+  </g>
+  <g>
+    {model.stars.map((star) => {
+      const radius = star.sizePx * scale;
+      if (star.glyph === 'dot') return <circle cx={star.x} cy={star.y} r={radius} data-glyph="dot" />;
+      if (star.glyph === 'cross') {
+        const arm = radius * 1.15;
+        return (
+          <path
+            d={`M ${star.x - arm} ${star.y} L ${star.x + arm} ${star.y} M ${star.x} ${star.y - arm} L ${star.x} ${star.y + arm}`}
+            fill="none"
+            stroke="currentColor"
+            stroke-width={radius * 0.5}
+            stroke-linecap="round"
+            data-glyph="cross"
+          />
+        );
+      }
+      return <path d={glintPath(star.x, star.y, radius, star.glyph, star.tips)} data-glyph={star.glyph} />;
+    })}
+  </g>
+  <g>
+    {model.ornaments.map((ornament) => (
+      <polygon points={ornamentPoints(ornament.x, ornament.y, ornament.sizePx * scale)} data-ornament={ornament.componentId} />
+    ))}
+  </g>
+</svg>

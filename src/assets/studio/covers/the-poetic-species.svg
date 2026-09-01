@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="540" viewBox="0 0 360 540">
+  <rect width="360" height="540" fill="#e7dbbd"/><path d="M180 165v250M180 250l-90-54M180 305l100-64M180 360l-75 58" stroke="#27694d" stroke-width="9"/><circle cx="90" cy="196" r="25" fill="#ee553f"/><circle cx="280" cy="241" r="25" fill="#ee553f"/>
+  <text x="29" y="72" font-family="Georgia,serif" font-size="37" fill="#162f29">The Poetic Species</text>
+  <text x="29" y="493" font-family="Menlo,monospace" font-size="11" letter-spacing="1" fill="#162f29">E. O. WILSON + ROBERT HASS</text>
+</svg>
