@@ -204,8 +204,8 @@ and appear throughout Studio pages as decorative keepsakes. Composition rules:
 - `src/components/studio/Constellation.tsx` — full interactive field (layout,
   SVG rendering, camera pan/zoom, drift, cursor physics, hover/focus/map modes,
   twinkle, colour splotch).
-- `src/components/studio/ConstellationFragment.astro` — static decorative SVG
-  fragment reused on writing/bookshelf/cluster/index/about pages.
+- `src/components/studio/ConstellationFragment.astro` — retained generator for
+  reference work; current public pages reserve star fields for `/studio` only.
 - `src/styles/constellation.css` — layer, cluster, title-plate, hover, control,
   and reduced-motion styling.
 - `src/data/studioConfig.ts` — world dimensions, zoom bounds, drift, layout

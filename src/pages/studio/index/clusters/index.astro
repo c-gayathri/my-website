@@ -1,0 +1,56 @@
+---
+import { getCollection } from 'astro:content';
+import { getImage } from 'astro:assets';
+import StudioLayout from '../../../../layouts/StudioLayout.astro';
+import { studioConfig } from '../../../../data/studioConfig';
+
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const clusters = await getCollection('clusters');
+const projects = await getCollection('projects');
+const mediaFor = (project: (typeof projects)[number]) =>
+  project.data.thumbnail ?? project.data.hero ?? project.data.videoPoster ?? project.data.gallery[0];
+
+const items = await Promise.all(clusters.map(async (cluster) => {
+  const related = projects.filter((project) => project.data.clusters.includes(cluster.id));
+  const media = related.map(mediaFor).find(Boolean);
+  return { cluster, count: related.length, preview: media ? await getImage({ src: media, width: 240 }) : undefined };
+}));
+---
+
+<StudioLayout title={`Clusters — ${studioConfig.name}`} section="Clusters">
+  <article class="listing">
+    <header class="listing-head">
+      <div>
+        <h1>Clusters</h1>
+        <p class="s-meta">{items.length} clusters</p>
+      </div>
+      <a class="s-link" href={`${base}/studio/index/`}>← Index</a>
+    </header>
+    <div class="rows">
+      {items.map(({ cluster, count, preview }, index) => (
+        <a class="row" href={`${base}/studio/clusters/${cluster.id}/`}>
+          <span class="s-meta number">{String(index + 1).padStart(2, '0')}</span>
+          {preview ? <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} /> : <span class="placeholder" />}
+          <strong>{cluster.data.title}</strong>
+          <span class="description s-meta">{cluster.data.description}</span>
+          <span class="s-meta">{count} {count === 1 ? 'project' : 'projects'}</span>
+          <span class="arrow" aria-hidden="true">→</span>
+        </a>
+      ))}
+    </div>
+  </article>
+</StudioLayout>
+
+<style>
+  .listing { max-width: 1500px; margin: 0 auto; }
+  .listing-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--s-ink); }
+  .listing-head h1 { margin: 0; font-family: var(--s-serif); font-size: clamp(34px, 4vw, 54px); font-weight: 500; line-height: 1; }
+  .listing-head p { margin: 8px 0 0; }
+  .row { display: grid; grid-template-columns: 34px 108px minmax(160px,.7fr) minmax(260px,1.4fr) 100px 22px; align-items: center; gap: clamp(12px,2vw,30px); min-height: 112px; padding: 10px 0; border-bottom: 1px solid var(--s-line); color: inherit; text-decoration: none; }
+  .row img, .placeholder { display:block; width:108px; height:90px; object-fit:cover; background:var(--s-line); }
+  .row strong { font-family:var(--s-serif); font-size:clamp(20px,2vw,28px); font-weight:500; }
+  .description { line-height:1.6; }
+  .row:hover strong { text-decoration:underline; text-underline-offset:4px; }
+  .arrow { justify-self:end; font-size:20px; }
+  @media (max-width:760px) { .row { grid-template-columns:24px 72px minmax(0,1fr) 18px; min-height:86px; } .row img,.placeholder { width:72px;height:64px; } .description,.row > .s-meta:nth-last-child(2) { display:none; } }
+</style>

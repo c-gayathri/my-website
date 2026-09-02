@@ -1,7 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
-import ConstellationFragment from '../../../components/studio/ConstellationFragment.astro';
 
 export async function getStaticPaths() {
   const clusters = await getCollection('clusters');
@@ -44,7 +43,6 @@ const cards: Card[] = [
     .map((project) => ({ kind: 'project' as const, project })),
   ...relatedWriting.map((entry) => ({ kind: 'writing' as const, entry })),
 ];
-const fragmentVariant = projects.length > 3 ? 'big-plus-two' : projects.length > 1 ? 'big-plus-one' : 'big';
 ---
 
 <StudioLayout title={`${cluster.data.title} — Studio`}>
@@ -64,11 +62,6 @@ const fragmentVariant = projects.length > 3 ? 'big-plus-two' : projects.length >
         </p>
         <p class="desc">{cluster.data.description}</p>
       </div>
-      <ConstellationFragment
-        class="header-constellation"
-        seed={`cluster-detail:${cluster.id}`}
-        variant={fragmentVariant}
-      />
     </header>
 
     <div class="cards">
@@ -141,7 +134,7 @@ const fragmentVariant = projects.length > 3 ? 'big-plus-two' : projects.length >
   .cluster-header {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(260px, 0.85fr) minmax(280px, 1fr) minmax(150px, 0.42fr);
+    grid-template-columns: minmax(260px, 0.85fr) minmax(280px, 1fr);
     gap: clamp(24px, 4vw, 72px);
     align-items: end;
     margin-top: 18px;
@@ -173,14 +166,6 @@ const fragmentVariant = projects.length > 3 ? 'big-plus-two' : projects.length >
     color: var(--s-grey);
     max-width: 52ch;
     margin: 8px 0 0;
-  }
-
-  :global(.header-constellation) {
-    display: block;
-    justify-self: end;
-    width: min(100%, 210px);
-    height: 92px;
-    color: var(--s-ink);
   }
 
   /* Columns provide compact masonry without measuring or overlapping cards. */
@@ -316,10 +301,6 @@ const fragmentVariant = projects.length > 3 ? 'big-plus-two' : projects.length >
   @media (max-width: 900px) {
     .cluster-header {
       grid-template-columns: minmax(220px, 0.8fr) 1.2fr;
-    }
-
-    :global(.header-constellation) {
-      display: none;
     }
 
     .cards {

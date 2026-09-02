@@ -33,6 +33,7 @@ const influences = await Promise.all(
 
 <StudioLayout title={`About — ${studioConfig.name}`} section="About" viewportFit>
   <article class="about">
+    <h1 class="page-title">About</h1>
     <section class="intro" aria-labelledby="about-statement">
       <figure class="portrait">
         <img
@@ -46,7 +47,7 @@ const influences = await Promise.all(
       </figure>
       <div class="copy">
         <p class="eyebrow s-meta">About the practice</p>
-        <h1 id="about-statement">{studioAbout.statement}</h1>
+        <h2 id="about-statement" class="statement">{studioAbout.statement}</h2>
         <div class="paragraphs">
           {studioAbout.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
         </div>
@@ -155,10 +156,18 @@ const influences = await Promise.all(
 <style>
   .about {
     display: grid;
-    grid-template-rows: minmax(0, .9fr) minmax(250px, 1.1fr);
-    height: min(590px, calc(100dvh - 165px));
-    min-height: 500px;
-    padding: 8px 0 12px;
+    grid-template-rows: auto minmax(0, .92fr) minmax(220px, 1.08fr);
+    height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 56px);
+    min-height: 520px;
+    padding: 0 0 8px;
+  }
+
+  .page-title {
+    margin: 0 0 4px;
+    font-family: var(--s-serif);
+    font-size: clamp(28px, 2.4vw, 38px);
+    font-weight: 500;
+    line-height: 1;
   }
 
   .intro {
@@ -195,7 +204,7 @@ const influences = await Promise.all(
     text-transform: uppercase;
   }
 
-  h1 {
+  .statement {
     max-width: 25ch;
     margin: 0;
     font-family: var(--s-serif);
@@ -342,7 +351,7 @@ const influences = await Promise.all(
   }
 
   @media (max-width: 1000px) {
-    .about { display: block; height: auto; min-height: 0; padding-top: 20px; }
+    .about { display: block; height: auto; min-height: 0; padding-top: 4px; }
     .intro { grid-template-columns: minmax(180px, .7fr) 1.3fr; }
     .band { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .band-section { min-height: 260px; border-bottom: 1px solid var(--s-line); }
@@ -352,9 +361,10 @@ const influences = await Promise.all(
 
   @media (max-width: 680px) {
     .intro { display: flex; flex-direction: column; align-items: stretch; padding-bottom: 36px; }
-    .portrait { grid-template-columns: minmax(0, 1fr) 100px; }
+    .portrait { display: block; }
     .portrait img { max-height: none; }
-    h1 { font-size: clamp(31px, 9vw, 42px); }
+    .portrait figcaption { margin-top: 10px; }
+    .statement { font-size: clamp(31px, 9vw, 42px); }
     .paragraphs { grid-template-columns: 1fr; gap: 12px; }
     .band { display: block; }
     .band-section, .band-section:nth-child(3) {

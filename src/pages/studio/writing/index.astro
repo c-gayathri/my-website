@@ -1,6 +1,5 @@
 ---
 import { getCollection } from 'astro:content';
-import ConstellationFragment from '../../../components/studio/ConstellationFragment.astro';
 import { studioConfig } from '../../../data/studioConfig';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 
@@ -19,69 +18,23 @@ const formatDate = (date: Date) =>
     String(date.getFullYear()).slice(2),
   ].join(' / ');
 
-function mulberry32(seed: number) {
-  let value = seed >>> 0;
-  return () => {
-    value |= 0;
-    value = (value + 0x6d2b79f5) | 0;
-    let result = Math.imul(value ^ (value >>> 15), 1 | value);
-    result = (result + Math.imul(result ^ (result >>> 7), 61 | result)) ^ result;
-    return ((result ^ (result >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-const clamp = (value: number, low: number, high: number) =>
-  Math.min(high, Math.max(low, value));
-const random = mulberry32(studioConfig.layoutSeed * 2654435761);
-const columns = [2, 36, 68];
-const placed = entries.map((entry, index) => {
-  const manual = entry.data.preview?.desktop;
-  const substantial = entry.data.type === 'essay' || entry.data.gallery.length > 0;
-  const row = Math.floor(index / 3);
-
-  return {
-    entry,
-    x: manual?.x ?? clamp(columns[index % 3] + (random() - 0.5) * 6, 1, 76),
-    y: manual?.y ?? clamp(row * 27 + (random() - 0.5) * 4 + (index % 3) * 2, 0, 90),
-    width: manual?.width ?? (substantial ? 29 : 23),
-    mobileOrder: entry.data.preview?.mobile?.order ?? index,
-  };
-});
-const canvasHeight = Math.max(Math.ceil(placed.length / 3) * 420 + 260, 860);
 ---
 
 <StudioLayout title={`${studioConfig.writingLabel} — ${studioConfig.name}`} section={studioConfig.writingLabel}>
   <header class="pad-intro">
-    <p class="s-meta">{entries.length} entries / poems, essays, fragments</p>
-    <p class="intro-note">Loose pages, kept in the order they arrived.</p>
+    <h1>{studioConfig.writingLabel}</h1>
+    <p class="s-meta">{entries.length} entries</p>
   </header>
 
-  <div class="canvas" style={`--canvas-height: ${canvasHeight}px`}>
-    <ConstellationFragment
-      class="index-fragment fragment-one"
-      seed={`writing-pad:${studioConfig.layoutSeed}:one`}
-      variant="big-plus-one"
-    />
-    <ConstellationFragment
-      class="index-fragment fragment-two"
-      seed={`writing-pad:${studioConfig.layoutSeed}:two`}
-      variant="big"
-    />
-    <ConstellationFragment
-      class="index-fragment fragment-three"
-      seed={`writing-pad:${studioConfig.layoutSeed}:three`}
-      variant="big-plus-two"
-    />
-
+  <div class="canvas">
     {
-      placed.map(({ entry, x, y, width, mobileOrder }) => {
+      entries.map((entry) => {
         const image = entry.data.image ?? entry.data.gallery[0];
         const variant = entry.data.preview?.variant ?? 'title-excerpt';
         return (
           <a
             class:list={['entry', `entry-${variant}`, { featured: entry.data.preview?.featured }]}
             href={`${base}/studio/writing/${entry.id}/`}
-            style={`--x: ${x}%; --y: ${y}%; --entry-width: ${width}%; --mobile-order: ${mobileOrder}`}
           >
             <span class="entry-meta">
               {entry.data.preview?.showDate !== false && (
@@ -115,39 +68,32 @@ const canvasHeight = Math.max(Math.ceil(placed.length / 3) * 420 + 260, 860);
     align-items: baseline;
     justify-content: space-between;
     gap: 24px;
-    margin-top: 18px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--s-line);
+    margin: 0 0 18px;
+    padding-bottom: 14px;
   }
 
   .pad-intro p {
     margin: 0;
   }
 
-  .intro-note {
-    font-family: var(--s-serif);
-    font-size: 17px;
-  }
+  .pad-intro h1 { margin:0; font-family:var(--s-serif); font-size:clamp(34px,4vw,54px); font-weight:500; line-height:1; }
 
   .canvas {
-    display: flex;
-    flex-direction: column;
-    margin-top: 22px;
-  }
-
-  :global(.index-fragment) {
-    display: none;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(28px, 4vw, 64px) clamp(20px, 3vw, 48px);
   }
 
   .entry {
     position: relative;
-    order: var(--mobile-order);
-    display: block;
+    display: flex;
+    flex-direction: column;
     width: 100%;
+    min-height: 230px;
     color: inherit;
     text-decoration: none;
-    padding: 0 34px 28px 0;
-    margin-bottom: 28px;
+    padding: 0 34px 24px 0;
+    margin: 0;
     border-bottom: 1px solid var(--s-line);
   }
 
@@ -159,8 +105,9 @@ const canvasHeight = Math.max(Math.ceil(placed.length / 3) * 420 + 260, 860);
 
   .thumb {
     display: block;
-    width: min(100%, 300px);
-    height: auto;
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
     margin: 12px 0 5px;
   }
 
@@ -192,9 +139,10 @@ const canvasHeight = Math.max(Math.ceil(placed.length / 3) * 420 + 260, 860);
   .read-mark {
     position: absolute;
     right: 2px;
-    bottom: 27px;
+    bottom: 22px;
     font-family: var(--s-mono);
-    font-size: 14px;
+    font-size: 21px;
+    font-weight: 400;
   }
 
   .entry:hover h2 {
@@ -203,74 +151,6 @@ const canvasHeight = Math.max(Math.ceil(placed.length / 3) * 420 + 260, 860);
     text-underline-offset: 4px;
   }
 
-  @media (min-width: 900px) {
-    .canvas {
-      position: relative;
-      display: block;
-      height: var(--canvas-height);
-      margin-top: 0;
-    }
-
-    .entry {
-      position: absolute;
-      z-index: 2;
-      left: var(--x);
-      top: var(--y);
-      width: var(--entry-width);
-      min-width: 210px;
-      max-width: 430px;
-      margin: 0;
-      padding: 5px 22px 10px 0;
-      border: 0;
-      background: var(--s-bg);
-    }
-
-    .entry.featured h2 {
-      font-size: clamp(32px, 3.2vw, 43px);
-    }
-
-    .read-mark {
-      right: 0;
-      bottom: 8px;
-    }
-
-    :global(.index-fragment) {
-      position: absolute;
-      z-index: 1;
-      display: block;
-      color: var(--s-ink);
-      pointer-events: none;
-    }
-
-    :global(.fragment-one) {
-      top: 16%;
-      left: 25%;
-      width: 150px;
-      height: 150px;
-    }
-
-    :global(.fragment-two) {
-      top: 48%;
-      right: 4%;
-      width: 118px;
-      height: 118px;
-    }
-
-    :global(.fragment-three) {
-      bottom: 5%;
-      left: 43%;
-      width: 168px;
-      height: 168px;
-    }
-  }
-
-  @media (max-width: 899px) {
-    .pad-intro {
-      display: block;
-    }
-
-    .intro-note {
-      margin-top: 7px !important;
-    }
-  }
+  @media (max-width: 960px) { .canvas { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width: 620px) { .pad-intro { align-items:end; } .canvas { grid-template-columns:1fr; } .entry { min-height:0; } }
 </style>

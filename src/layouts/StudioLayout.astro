@@ -70,9 +70,7 @@ const elsewhere = Object.entries(externalLinks).filter(
         }
         <a class="s-link" href={`${base}${externalLinks.research}`} target="_blank">research ↗</a>
       </div>
-      <span class="footer-right s-meta" aria-hidden={fullBleed ? 'true' : undefined}>
-        {!fullBleed && <>© {new Date().getFullYear()} {studioConfig.name}</>}
-      </span>
+      <span class="footer-right s-meta">© {new Date().getFullYear()} {studioConfig.name}</span>
     </footer>
   </div>
 </BaseLayout>
@@ -81,10 +79,12 @@ const elsewhere = Object.entries(externalLinks).filter(
   .studio {
     --studio-gutter: clamp(24px, 4vw, 72px);
     --studio-footer-height: 72px;
+    --studio-header-height: 66px;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
     min-height: 100dvh;
+    overflow-x: hidden;
   }
 
   .studio-detail {
@@ -92,6 +92,7 @@ const elsewhere = Object.entries(externalLinks).filter(
   }
 
   .studio-main {
+    padding-top: var(--studio-header-height);
     padding-bottom: calc(var(--studio-footer-height) + env(safe-area-inset-bottom));
   }
 
@@ -107,12 +108,16 @@ const elsewhere = Object.entries(externalLinks).filter(
     overflow: hidden;
   }
 
+  .studio-full :global(.studio-nav) {
+    background: transparent;
+  }
+
   .studio-full .studio-main {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    padding-bottom: 0;
+    padding-bottom: calc(var(--studio-footer-height) + env(safe-area-inset-bottom));
   }
 
   .studio-full .studio-main > :global(*) {
@@ -121,7 +126,7 @@ const elsewhere = Object.entries(externalLinks).filter(
 
   /* full-bleed pages manage their own frame */
   .studio-main.s-page {
-    padding-top: 12px;
+    padding-top: calc(var(--studio-header-height) + 12px);
     padding-bottom: calc(var(--studio-footer-height) + 32px + env(safe-area-inset-bottom));
   }
 
@@ -138,7 +143,6 @@ const elsewhere = Object.entries(externalLinks).filter(
     min-height: calc(var(--studio-footer-height) + env(safe-area-inset-bottom));
     padding: 14px var(--studio-gutter) calc(14px + env(safe-area-inset-bottom));
     background: var(--s-bg);
-    border-top: 1px solid var(--s-line);
   }
 
   .footer-left {
@@ -172,9 +176,10 @@ const elsewhere = Object.entries(externalLinks).filter(
     white-space: nowrap;
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 900px) {
     .studio {
-      --studio-footer-height: 132px;
+      --studio-footer-height: 156px;
+      --studio-header-height: 144px;
       min-height: 100svh;
     }
 
@@ -194,5 +199,15 @@ const elsewhere = Object.entries(externalLinks).filter(
       justify-self: start;
       white-space: normal;
     }
+
+    .elsewhere {
+      justify-self: stretch;
+      width: 100%;
+      min-width: 0;
+      flex-wrap: wrap;
+      gap: 9px 14px;
+    }
+
+    .elsewhere .s-link { font-size: 10px; }
   }
 </style>

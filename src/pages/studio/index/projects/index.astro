@@ -1,0 +1,48 @@
+---
+import { getCollection } from 'astro:content';
+import { getImage } from 'astro:assets';
+import StudioLayout from '../../../../layouts/StudioLayout.astro';
+import { studioConfig } from '../../../../data/studioConfig';
+
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const projects = (await getCollection('projects')).sort((a, b) => b.data.year - a.data.year || a.data.title.localeCompare(b.data.title));
+const items = await Promise.all(projects.map(async (project) => {
+  const media = project.data.thumbnail ?? project.data.hero ?? project.data.videoPoster ?? project.data.gallery[0];
+  return { project, preview: media ? await getImage({ src: media, width: 240 }) : undefined };
+}));
+---
+
+<StudioLayout title={`Projects — ${studioConfig.name}`} section="Projects">
+  <article class="listing">
+    <header class="listing-head">
+      <div><h1>Projects</h1><p class="s-meta">{items.length} projects</p></div>
+      <a class="s-link" href={`${base}/studio/index/`}>← Index</a>
+    </header>
+    <div class="rows">
+      {items.map(({ project, preview }, index) => (
+        <a class="row" href={`${base}/studio/projects/${project.id}/`}>
+          <span class="s-meta number">{String(index + 1).padStart(2, '0')}</span>
+          {preview ? <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} /> : <span class="placeholder" />}
+          <strong>{project.data.title}</strong>
+          <span class="s-meta type">{project.data.types.join(' · ') || 'work'}</span>
+          <span class="s-meta medium">{project.data.medium.join(' · ')}</span>
+          <time class="s-meta">{project.data.year}</time>
+          <span class="arrow" aria-hidden="true">→</span>
+        </a>
+      ))}
+    </div>
+  </article>
+</StudioLayout>
+
+<style>
+  .listing { max-width:1500px; margin:0 auto; }
+  .listing-head { display:flex; justify-content:space-between; align-items:end; gap:24px; padding-bottom:16px; border-bottom:1px solid var(--s-ink); }
+  .listing-head h1 { margin:0; font-family:var(--s-serif); font-size:clamp(34px,4vw,54px); font-weight:500; line-height:1; }
+  .listing-head p { margin:8px 0 0; }
+  .row { display:grid; grid-template-columns:34px 108px minmax(190px,1fr) minmax(90px,.45fr) minmax(130px,.65fr) 52px 22px; align-items:center; gap:clamp(12px,2vw,28px); min-height:112px; padding:10px 0; border-bottom:1px solid var(--s-line); color:inherit; text-decoration:none; }
+  .row img,.placeholder { display:block; width:108px; height:90px; object-fit:cover; background:var(--s-line); }
+  .row strong { font-family:var(--s-serif); font-size:clamp(20px,2vw,28px); font-weight:500; }
+  .row:hover strong { text-decoration:underline; text-underline-offset:4px; }
+  .arrow { justify-self:end; font-size:20px; }
+  @media (max-width:760px) { .row { grid-template-columns:24px 72px minmax(0,1fr) 34px 18px; min-height:86px; } .row img,.placeholder { width:72px;height:64px; } .type,.medium { display:none; } }
+</style>

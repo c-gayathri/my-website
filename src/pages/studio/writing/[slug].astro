@@ -1,6 +1,5 @@
 ---
 import { getCollection, render } from 'astro:content';
-import ConstellationFragment from '../../../components/studio/ConstellationFragment.astro';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
 import { studioBlocks } from '../../../components/studio/blocks';
@@ -36,11 +35,6 @@ const fmt = (dt: Date) =>
           {d.title && <h1>{d.title}</h1>}
         </header>
       </div>
-      <ConstellationFragment
-        class="detail-fragment"
-        seed={`writing:${entry.id}`}
-        variant={d.type === 'essay' ? 'big-plus-one' : 'big'}
-      />
     </div>
 
     {d.image && <img class="lead" src={d.image.src} alt={d.title ?? ''} width={d.image.width} height={d.image.height} loading="eager" />}
@@ -71,10 +65,7 @@ const fmt = (dt: Date) =>
   }
 
   .detail-head {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 150px;
-    gap: 24px;
-    min-height: 150px;
+    display: block;
     padding-bottom: 18px;
     border-bottom: 1px solid var(--s-line);
   }
@@ -95,13 +86,6 @@ const fmt = (dt: Date) =>
     display: flex;
     gap: 18px;
     align-items: baseline;
-  }
-
-  :global(.detail-fragment) {
-    display: block;
-    width: 150px;
-    height: 150px;
-    color: var(--s-ink);
   }
 
   h1 {
@@ -184,10 +168,6 @@ const fmt = (dt: Date) =>
       display: block;
       min-height: 0;
       padding-bottom: 16px;
-    }
-
-    :global(.detail-fragment) {
-      display: none;
     }
 
     h1 {

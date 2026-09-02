@@ -201,26 +201,24 @@
   opacity: 0;
 }
 
-/* view controls — focus / map, bottom-right, one horizontal row, no box.
-   z-index above the footer strip so the buttons stay clickable. */
+/* View controls sit on a quiet, borderless strip along the left edge. */
 .view-controls {
-  position: absolute;
-  right: clamp(14px, 2vw, 30px);
-  bottom: calc(var(--studio-footer-height, 72px) + env(safe-area-inset-bottom) + 16px);
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  gap: 22px;
-  z-index: 20;
-}
-
-body[data-studio-hover] .view-controls {
-  opacity: 0;
-  pointer-events: none;
+  gap: 18px;
+  z-index: 45;
+  padding: 14px 10px;
+  background: var(--s-bg);
 }
 
 .view-controls button {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 7px;
   background: none;
@@ -244,6 +242,8 @@ body[data-studio-hover] .view-controls {
   font-family: var(--s-mono);
   font-size: 10px;
   letter-spacing: 0.14em;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
 }
 
 /* cluster info block (anchored to the active cluster) */
@@ -349,14 +349,8 @@ body[data-studio-hover] .studio-nav .tagline {
 
 .studio-full .studio-footer {
   background: var(--s-bg);
-  transition: background 0.4s ease;
 }
 
-body[data-studio-hover] .studio-full .studio-footer {
-  background: transparent;
-}
-
-body[data-studio-hover] .studio-footer,
 body[data-studio-hover] .hint {
   opacity: 0;
   pointer-events: none;
@@ -405,8 +399,8 @@ body[data-studio-hover] .hint {
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .view-controls {
-    bottom: calc(132px + env(safe-area-inset-bottom) + 18px);
+    top: 48%;
   }
 }

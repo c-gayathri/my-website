@@ -1,7 +1,5 @@
 ---
-// Studio navigation.
-// - Constellation: name leftmost (prominent) + tagline.
-// - Inner pages: section title topmost, name smaller beside it.
+// Shared Studio navigation. Page names live in each page's content area.
 import { studioConfig } from '../../data/studioConfig';
 
 interface Props {
@@ -9,7 +7,7 @@ interface Props {
   section?: string;
 }
 
-const { variant = 'compact', section } = Astro.props;
+const { variant = 'compact' } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const path = Astro.url.pathname.replace(/\/+$/, '');
 
@@ -27,13 +25,8 @@ const isActive = (item: (typeof navItems)[number]) =>
 
 <header class:list={['studio-nav', `nav-${variant}`]}>
   <div class="nav-left">
-    {variant === 'compact' && section ? (
-      <span class="section-title">{section}</span>
-    ) : (
-      <a class="name" href={base + '/studio/'}>{studioConfig.name}</a>
-    )}
-    {variant === 'compact' && section && <a class="name-small s-meta" href={base + '/studio/'}>{studioConfig.name}</a>}
-    {variant === 'full' && <span class="tagline">{studioConfig.tagline}</span>}
+    <a class="name" href={base + '/studio/'}>{studioConfig.name}</a>
+    <span class="tagline">{studioConfig.tagline}</span>
   </div>
 
   <nav class="nav-right" aria-label="Studio">
@@ -55,9 +48,13 @@ const isActive = (item: (typeof navItems)[number]) =>
     align-items: baseline;
     justify-content: space-between;
     gap: 24px;
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     z-index: 30;
-    padding: 24px var(--studio-gutter) 0;
+    padding: 18px var(--studio-gutter) 0;
+    background: var(--s-bg);
   }
 
   .nav-left {
@@ -70,39 +67,14 @@ const isActive = (item: (typeof navItems)[number]) =>
   .name {
     font-family: var(--s-serif);
     font-weight: 500;
-    font-size: clamp(28px, 3vw, 40px);
+    font-size: clamp(22px, 2vw, 28px);
     color: var(--s-ink);
     text-decoration: none;
     line-height: 1;
   }
 
-  .section-title {
-    font-family: var(--s-serif);
-    font-weight: 500;
-    font-size: clamp(30px, 3.2vw, 44px);
-    color: var(--s-ink);
-    line-height: 1;
-  }
-
-  .nav-compact {
-    padding-top: 18px;
-  }
-
-  .nav-compact .section-title,
-  .nav-compact .name {
-    font-size: clamp(22px, 2vw, 28px);
-  }
-
   .nav-compact .nav-left {
     gap: 14px;
-  }
-
-  .name-small {
-    color: var(--s-grey);
-  }
-
-  .name-small:hover {
-    color: var(--s-ink);
   }
 
   .tagline {
@@ -125,7 +97,7 @@ const isActive = (item: (typeof navItems)[number]) =>
     text-underline-offset: 5px;
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 900px) {
     .studio-nav {
       flex-direction: column;
       gap: 12px;
@@ -133,7 +105,11 @@ const isActive = (item: (typeof navItems)[number]) =>
 
     .nav-left {
       flex-direction: column;
-      gap: 6px;
+      gap: 8px 12px;
     }
+
+    .nav-right { width: 100%; justify-content: flex-start; gap: 9px 16px; }
+    .nav-right .s-link { font-size: 10px; }
+    .tagline { font-size: 9.5px; }
   }
 </style>

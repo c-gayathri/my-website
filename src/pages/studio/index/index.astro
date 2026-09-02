@@ -12,7 +12,7 @@ const writing = (await getCollection('writing')).sort(
 );
 const books = (await getCollection('books')).sort((a, b) => {
   if (a.data.yearRead !== b.data.yearRead) return b.data.yearRead - a.data.yearRead;
-  return Number(Boolean(b.data.featured)) - Number(Boolean(a.data.featured));
+  return (b.data.dateFinished ?? b.data.title).localeCompare(a.data.dateFinished ?? a.data.title);
 });
 
 const projectMedia = (project: (typeof projects)[number]) =>
@@ -65,13 +65,14 @@ const formatDate = (date: Date) =>
   viewportFit
 >
   <div class="directory">
+    <h1 class="page-title">{studioConfig.indexLabel}</h1>
     <section class="panel clusters-panel" aria-labelledby="clusters-heading">
       <header class="panel-head">
         <div>
           <span class="number s-meta">01</span>
-          <h1 id="clusters-heading">Clusters</h1>
+          <h2 id="clusters-heading">Clusters</h2>
         </div>
-        <a class="all-link s-meta" href={sectionLink('/studio/')}>view all <span aria-hidden="true">↗</span></a>
+        <a class="all-link s-meta" href={sectionLink('/studio/index/clusters/')}>view all <span aria-hidden="true">↗</span></a>
       </header>
       <div class="cluster-grid">
         {clusterItems.map(({ cluster, count, preview }) => (
@@ -92,7 +93,7 @@ const formatDate = (date: Date) =>
           <span class="number s-meta">02</span>
           <h2 id="projects-heading">Projects</h2>
         </div>
-        <a class="all-link s-meta" href={sectionLink('/studio/')}>view all <span aria-hidden="true">↗</span></a>
+        <a class="all-link s-meta" href={sectionLink('/studio/index/projects/')}>view all <span aria-hidden="true">↗</span></a>
       </header>
       <div class="rows project-rows">
         {projectItems.map(({ project, preview }, index) => (
@@ -159,17 +160,31 @@ const formatDate = (date: Date) =>
   .directory {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.18fr);
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto auto;
+    align-content: start;
     gap: clamp(18px, 2.2vw, 34px);
-    height: min(590px, calc(100dvh - 150px));
-    min-height: 470px;
-    padding: 8px 0 12px;
+    min-height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 56px);
+    padding: 0 0 8px;
+  }
+
+  .page-title {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-family: var(--s-serif);
+    font-size: clamp(28px, 2.4vw, 38px);
+    font-weight: 500;
+    line-height: 1;
   }
 
   .panel {
     min-width: 0;
     overflow: hidden;
     border-top: 1px solid var(--s-ink);
+  }
+
+  .writing-panel,
+  .reading-panel {
+    margin-top: clamp(42px, 6vh, 78px);
   }
 
   .panel-head,
@@ -189,7 +204,7 @@ const formatDate = (date: Date) =>
   .panel-head > div { gap: 12px; }
   .number { color: var(--s-faint); }
 
-  h1, h2 {
+  h2 {
     margin: 0;
     font-family: var(--s-serif);
     font-size: clamp(23px, 2vw, 30px);
@@ -213,7 +228,7 @@ const formatDate = (date: Date) =>
   .cluster {
     display: flex;
     min-width: 0;
-    height: 58px;
+    min-height: 66px;
     align-items: center;
     gap: 9px;
     padding: 6px 8px 6px 0;
@@ -223,8 +238,8 @@ const formatDate = (date: Date) =>
   }
 
   .cluster img {
-    width: 42px;
-    height: 42px;
+    width: 52px;
+    height: 52px;
     flex: 0 0 auto;
     object-fit: cover;
     filter: saturate(.82);
@@ -349,13 +364,15 @@ const formatDate = (date: Date) =>
   }
 
   @media (max-width: 1000px) {
-    .directory { grid-template-columns: 1fr; height: auto; min-height: 0; }
+    .directory { grid-template-columns: 1fr; grid-template-rows: auto; min-height: 0; }
+    .page-title { grid-column: 1; }
+    .writing-panel, .reading-panel { margin-top: 0; }
     .panel { overflow: visible; }
   }
 
   @media (max-width: 620px) {
     .directory { gap: 32px; padding-top: 18px; }
-    .cluster-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cluster-grid { grid-template-columns: 1fr; }
     .project-row { grid-template-columns: 20px 48px minmax(0, 1fr) 34px 14px; }
     .project-row .row-detail { display: none; }
     .writing-grid { grid-template-columns: 1fr; }

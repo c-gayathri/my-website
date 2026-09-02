@@ -30,10 +30,9 @@ Two deliberately separate worlds share only src/layouts/BaseLayout.astro
      Quote, Text; presets via Place.astro on a 12-column grid)
 
 Routes under /studio: index (constellation homepage), clusters/[slug],
-projects/[slug], writing + writing/[slug] (stable route; display label
-"Writing pad" via studioConfig.writingLabel), bookshelf +
-bookshelf/[slug] (reviews), index (directory; search not built yet),
-about.astro. Nav labels + About item: StudioNav.astro navItems.
+projects/[slug], writing + writing/[slug], bookshelf + bookshelf/[slug],
+index (directory), index/clusters, index/projects, and about. Nav labels live
+in StudioNav.astro; each section heading lives in the page body.
 
 ## What is working (local only; authoritative reference commit ca3f8a7)
 
@@ -52,24 +51,24 @@ about.astro. Nav labels + About item: StudioNav.astro navItems.
 - Existing camera, drift, cursor push, dwell/cooldown, hover zoom, splotch,
   twinkle and reduced-motion behavior is preserved. Touch uses first tap to
   reveal/activate and second tap to navigate.
-- Studio navigation has full and compact variants. The footer is fixed at
-  every viewport width with content clearance; Index and About use
-  viewport-fit layouts while long routes scroll behind the fixed chrome.
+- Studio navigation consistently shows the name, tagline and route links in a
+  fixed header. The borderless footer is fixed at every viewport width with
+  content clearance and includes the copyright on the Constellation.
 - Cluster pages use compact responsive masonry with one dominant project,
-  bounded media, related writing, and desktop-only local constellations.
+  bounded media and related writing. Decorative stars are reserved for the
+  Constellation homepage.
 - Project pages use a bounded meta-rail/stage composition and support local
   video, image, gallery, modular MDX, and optional responsive privacy-mode
   YouTube embeds through `youtubeUrls`.
-- Writing uses a sparse three-column editorial scatter on desktop and a
-  ruled ordered list on mobile. Detail pages retain essay/poem/fragment
-  layouts and use desktop-only local constellation fragments.
-- Bookshelf contains 36 clearly marked sample books across three horizontal
-  rows. Covers are shown at rest; only entries with Markdown reviews show
-  `reviewed`; hover/focus/touch reveals a palette metadata panel. Touch uses
-  first tap to reveal and second tap to navigate.
-- Index is a one-screen representative directory with previews and view-all
-  links. About is viewport-fit with internally scrollable demo News,
-  Elsewhere links, and expandable influences.
+- Writing uses a stable three-column desktop grid, two columns on tablet and
+  one on mobile. Detail pages retain essay/poem/fragment layouts without
+  decorative constellation fragments.
+- Bookshelf shows one year at a time with hash-addressable year controls, one
+  challenge rail, a `featured`-driven Favourite books section, and three-row
+  horizontal shelves. Hover/focus/touch metadata and reviewed tags remain.
+- Index is a responsive representative directory with previews and complete
+  cluster/project listing routes. About is viewport-fit on desktop with
+  internally scrollable News, Elsewhere links and expandable influences.
 
 ## Known issues / validation
 
@@ -82,7 +81,7 @@ about.astro. Nav labels + About item: StudioNav.astro navItems.
   the footer remained fixed. iPhone emulation confirmed constellation and
   bookshelf first-tap reveal/second-tap navigation.
 - Index search remains intentionally unbuilt; the requested Index is a
-  compact representative directory.
+  representative directory with dedicated complete listings.
 - YouTube schema/rendering is implemented but no sample project currently
   supplies a `youtubeUrls` value.
 

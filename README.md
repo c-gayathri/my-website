@@ -3,7 +3,8 @@
 Personal site built with [Astro](https://astro.build). Two parts:
 
 - **`/`** — professional research homepage (this page; extremely minimal, zero client-side JavaScript)
-- **`/studio`** — future experimental creative site (currently a one-line placeholder)
+- **`/studio`** — experimental creative site with a constellation homepage,
+  clusters, projects, writing, bookshelf, directory, and about page
 
 See `docs/project-vision.md` for the long-term plan and `docs/technical-decisions.md` for how the project is put together.
 
@@ -107,7 +108,7 @@ src/
 ├── components/    # Hero, ProjectEntry, Education, NewsList, SiteHeader
 ├── data/          # ★ ALL editable content
 ├── layouts/       # BaseLayout — <head>/meta + global reset only
-├── pages/         # index.astro (research) · studio/ (placeholder)
+├── pages/         # index.astro (research) · studio/ routes
 └── styles/        # research.css — imported ONLY by the research page
 ```
 

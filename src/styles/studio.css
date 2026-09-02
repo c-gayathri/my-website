@@ -72,7 +72,7 @@
 /* page frame for non-constellation studio pages */
 .studio .s-page {
   width: 100%; /* flex parents + auto margins would otherwise shrink-to-fit */
-  max-width: 1680px;
+  max-width: 2200px;
   margin: 0 auto;
   padding: 24px var(--studio-gutter) 32px;
 }

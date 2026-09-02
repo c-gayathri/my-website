@@ -33,8 +33,8 @@ export const studioConfig = {
 
   // Reading challenge goals by year (books collection supplies the rest).
   readingChallenge: {
-    2026: { goal: 12 },
-    2025: { goal: 10 },
+    2026: { goal: 30 },
+    2025: { goal: 15 },
   },
 } as const;
 

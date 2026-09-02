@@ -43,8 +43,8 @@ and styles and must not import research styles. The only shared code is
 ## Current status
 
 - [x] Research homepage implemented (`src/pages/index.astro`)
-- [x] `/studio` placeholder page so the header link resolves
-- [ ] Studio: not designed yet — deliberately out of scope for now
+- [x] Studio constellation, cluster/project detail routes, Writing pad,
+  Bookshelf, Index listings, and About implemented
 
 Placeholder content to replace when available: Paper/Code/Slides URLs
 (add a `links` array to a project in `src/data/projects.ts`), and the final

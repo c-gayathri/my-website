@@ -36,8 +36,9 @@ do not casually redesign them.
   withdrawing on exit.
 - Title plates: bg-coloured rectangles with the cluster name — visible at
   rest and in map view, hidden on hover.
-- Controls (right edge): **focus** = authored framing; **map** = whole world
-  with all titles; margin dust fades at the edges in map mode.
+- Controls (left edge): a vertical, borderless background plate keeps
+  **focus** and **map** legible above the field. Focus restores the authored
+  framing; map reveals the whole world.
 - Debug: `/studio/?hover=<cluster-id>` and `/studio/?view=map`.
 
 ## Cluster pages
@@ -56,15 +57,16 @@ Artwork fits the viewport unless `size: full`. Avoid page scroll by default.
 
 ## Writing pad
 
-Spatial scatter on desktop (3 columns, shared/staggered height bands,
-`layoutSeed` shuffles), ordered stack on mobile. Entries may carry images.
-Decorative marks are fixed-pixel SVGs positioned by percentage — never
-stretched through a scaled viewBox.
+Stable three-column editorial grid on desktop, two columns on tablet and one
+column on mobile. Cards share a consistent width and may carry images. Stars
+and constellation fragments belong only to the Constellation page.
 
 ## Bookshelf
 
-Annual challenge + covers grid + featured book + review pages
-(`/studio/bookshelf/[slug]`). No "currently reading".
+One selected reading year at a time, with an in-place year switcher, one annual
+challenge rail, a horizontally browsable covers grid, and review pages
+(`/studio/bookshelf/[slug]`). `featured: true` is reserved solely for the
+Favourite books section. No "currently reading".
 
 ## Colour palette (hover)
 

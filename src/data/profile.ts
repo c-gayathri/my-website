@@ -15,6 +15,7 @@ export const profile = {
   links: {
     github: 'https://github.com/c-gayathri',
     linkedin: 'https://www.linkedin.com/in/gayathri-c/',
+    scholar: 'https://scholar.google.co.in/citations?hl=en&view_op=list_works&gmla=AKCpqFw1tsQi2VpqFTrONd8w6nR1rkJfzBfd8jx-c6xP9jZ2FDhyMPzM5eZt9HJAKKVKB6NHmUkXlwb9Vt-E7w&user=t6SydR8AAAAJ',
   },
 };
 

@@ -16,6 +16,7 @@ const byYear = years.map((year) => ({
     .filter((book) => book.data.yearRead === year)
     .sort((a, b) => (a.data.dateFinished ?? a.data.title).localeCompare(b.data.dateFinished ?? b.data.title)),
 }));
+const favourites = books.filter((book) => book.data.featured);
 
 const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} / 5`;
 ---
@@ -23,13 +24,19 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
 <StudioLayout title={`${studioConfig.bookshelfLabel} — ${studioConfig.name}`} section={studioConfig.bookshelfLabel}>
   <div class="bookshelf-page">
     <header class="shelf-intro">
-      <p class="s-meta">sample library / {books.length} volumes</p>
-      <p>Three rows of books, notes in progress. Scroll each shelf sideways.</p>
+      <h1>{studioConfig.bookshelfLabel}</h1>
+      <p class="s-meta">{books.length} books</p>
     </header>
+
+    <nav class="year-switcher" aria-label="Reading year">
+      {years.map((year, index) => (
+        <button class="s-link" type="button" data-year-button={year} aria-pressed={index === 0 ? 'true' : 'false'}>{year}</button>
+      ))}
+    </nav>
 
     {
       byYear.map(({ year, list, goal }, yearIndex) => (
-        <section class="year" id={`y${year}`} aria-labelledby={`year-${year}`}>
+        <section class="year" id={`y${year}`} aria-labelledby={`year-${year}`} data-year-panel={year} hidden={yearIndex !== 0}>
           <aside class="rail">
             <p class="s-meta rail-label">reading challenge</p>
             <p class="challenge-num" id={`year-${year}`}>
@@ -39,11 +46,18 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
             <div class="bar" aria-label={`${list.length} of ${goal} books`}>
               <div class="fill" style={`width: ${Math.min(100, (list.length / goal) * 100)}%`} />
             </div>
-            <nav class="s-meta past" aria-label="Reading years">
-              {years.map((otherYear) => (
-                <a class="s-link" href={`${base}/studio/bookshelf/#y${otherYear}`}>{otherYear}</a>
-              ))}
-            </nav>
+            {favourites.length > 0 && (
+              <section class="favourites" aria-labelledby="favourites-title">
+                <h2 id="favourites-title">Favourite books</h2>
+                <div class="favourite-covers">
+                  {favourites.map((book) => (
+                    <a href={`${base}/studio/bookshelf/${book.id}/`} aria-label={`${book.data.title} by ${book.data.author}`}>
+                      <img src={book.data.cover.src} alt="" width={book.data.cover.width} height={book.data.cover.height} loading="lazy" />
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
           </aside>
 
           <div class="shelf-wrap">
@@ -91,6 +105,22 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
 </StudioLayout>
 
 <script>
+  const yearButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-year-button]')];
+  const yearPanels = [...document.querySelectorAll<HTMLElement>('[data-year-panel]')];
+  const availableYears = yearButtons.map((button) => button.dataset.yearButton).filter(Boolean);
+
+  const selectYear = (year: string, updateHash = true) => {
+    if (!availableYears.includes(year)) year = availableYears[0] ?? '';
+    yearButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.yearButton === year)));
+    yearPanels.forEach((panel) => { panel.hidden = panel.dataset.yearPanel !== year; });
+    if (updateHash && year) history.pushState(null, '', `#y${year}`);
+  };
+
+  yearButtons.forEach((button) => button.addEventListener('click', () => selectYear(button.dataset.yearButton ?? '')));
+  const syncHash = () => selectYear(location.hash.replace(/^#y/, ''), false);
+  window.addEventListener('hashchange', syncHash);
+  syncHash();
+
   const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)');
   const cards = [...document.querySelectorAll<HTMLElement>('[data-book-card]')];
 
@@ -112,7 +142,7 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
 
 <style>
   .bookshelf-page {
-    padding-bottom: 150px;
+    padding-bottom: 80px;
   }
 
   .shelf-intro {
@@ -120,20 +150,25 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
     align-items: baseline;
     justify-content: space-between;
     gap: 24px;
-    margin: 18px 0 30px;
-    border-bottom: 1px solid var(--s-line);
-    padding-bottom: 12px;
+    margin: 0 0 10px;
+    padding-bottom: 8px;
   }
 
   .shelf-intro p { margin: 0; }
-  .shelf-intro p:last-child { font-family: var(--s-serif); font-size: 18px; }
+  .shelf-intro h1 { margin:0; font-family:var(--s-serif); font-size:clamp(34px,4vw,54px); font-weight:500; line-height:1; }
+
+  .year-switcher { display:flex; gap:16px; margin:0 0 24px; }
+  .year-switcher button { padding:0 0 3px; border:0; border-bottom:1px solid transparent; background:transparent; cursor:pointer; }
+  .year-switcher button[aria-pressed='true'] { border-bottom-color:currentColor; }
+
+  .year[hidden] { display:none; }
 
   .year {
     display: grid;
     grid-template-columns: clamp(180px, 18vw, 250px) minmax(0, 1fr);
     gap: clamp(24px, 4vw, 64px);
     align-items: start;
-    margin-top: 38px;
+    margin-top: 0;
   }
 
   .rail { position: sticky; left: 0; padding-top: 3px; }
@@ -142,7 +177,11 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   .challenge-num .big { font-family: var(--s-serif); font-size: 52px; line-height: 1; }
   .bar { width: min(100%, 190px); height: 5px; border: 1px solid var(--s-ink); margin-top: 13px; }
   .fill { height: 100%; background: var(--s-ink); }
-  .past { display: flex; gap: 12px; margin-top: 15px; }
+  .favourites { margin-top:36px; }
+  .favourites h2 { margin:0 0 12px; font-family:var(--s-serif); font-size:22px; font-weight:500; }
+  .favourite-covers { display:flex; gap:7px; flex-wrap:wrap; }
+  .favourite-covers a { display:block; }
+  .favourite-covers img { display:block; width:48px; height:72px; object-fit:cover; box-shadow:0 2px 8px rgba(20,18,10,.12); }
 
   .shelf-wrap {
     min-width: 0;
@@ -217,21 +256,9 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   @media (max-width: 700px) {
     .shelf-intro { display: block; }
     .shelf-intro p:last-child { margin-top: 8px; }
-    .year { grid-template-columns: 1fr; gap: 18px; margin-top: 34px; }
+    .year { grid-template-columns: 1fr; gap: 18px; }
     .rail { position: static; }
     .covers { grid-template-rows: repeat(2, 184px); grid-auto-columns: 114px; }
     .book-card { width: 114px; height: 171px; }
-  }
-</style>
-
-<style is:global>
-  .studio-footer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 20;
-    border-top: 1px solid var(--s-line);
-    background: var(--s-bg);
   }
 </style>
