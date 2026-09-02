@@ -43,8 +43,8 @@ in StudioNav.astro; each section heading lives in the page body.
   swarms, glints and local variants.
 - Nine collage anchors are deterministic and collision-aware by default;
   normalized frontmatter overrides can replace generated x/y/width values.
-  Collages use compact, non-overlapping seeded masonry with one dominant
-  image and project-aware source deduplication.
+  Collages use compact, non-overlapping seeded masonry with project-aware
+  source deduplication.
 - Desktop focus frames five featured collages at readable scale; map mode
   retains the full world. Mobile focus opens on one readable featured
   collage and permits a lower map zoom for the narrow viewport.
@@ -52,11 +52,14 @@ in StudioNav.astro; each section heading lives in the page body.
   twinkle and reduced-motion behavior is preserved. Touch uses first tap to
   reveal/activate and second tap to navigate.
 - Studio navigation consistently shows the name, tagline and route links in a
-  fixed header. The borderless footer is fixed at every viewport width with
-  content clearance and includes the copyright on the Constellation.
-- Cluster pages use compact responsive masonry with one dominant project,
-  bounded media and related writing. Decorative stars are reserved for the
-  Constellation homepage.
+  fixed header. The name is display-sized only on the Constellation and compact
+  elsewhere; content-page titles share one scale. The borderless footer is
+  fixed at every viewport width with content clearance and includes the
+  copyright on the Constellation. During cluster hover, its background and the
+  Focus/Map strip inherit the active cluster colour.
+- Cluster pages use compact responsive masonry with two to three equal-width
+  cards, bounded media and related writing. Decorative stars are reserved for
+  the Constellation homepage.
 - Project pages use a bounded meta-rail/stage composition and support local
   video, image, gallery, modular MDX, and optional responsive privacy-mode
   YouTube embeds through `youtubeUrls`.
@@ -64,11 +67,13 @@ in StudioNav.astro; each section heading lives in the page body.
   one on mobile. Detail pages retain essay/poem/fragment layouts without
   decorative constellation fragments.
 - Bookshelf shows one year at a time with hash-addressable year controls, one
-  challenge rail, a `featured`-driven Favourite books section, and three-row
-  horizontal shelves. Hover/focus/touch metadata and reviewed tags remain.
+  challenge rail, a `featured`-driven All time favourites section, and
+  viewport-fit three-row horizontal shelves. Cover motion,
+  hover/focus/touch metadata and reviewed tags remain.
 - Index is a responsive representative directory with previews and complete
-  cluster/project listing routes. About is viewport-fit on desktop with
-  internally scrollable News, Elsewhere links and expandable influences.
+  cluster/project listing routes. About uses a simple copy-left/portrait-right
+  composition and a divider-free lower band; it is viewport-fit on desktop
+  with internally scrollable News, Elsewhere links and expandable influences.
 
 ## Known issues / validation
 

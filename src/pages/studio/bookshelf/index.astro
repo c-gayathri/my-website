@@ -48,7 +48,7 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
             </div>
             {favourites.length > 0 && (
               <section class="favourites" aria-labelledby="favourites-title">
-                <h2 id="favourites-title">Favourite books</h2>
+                <h2 id="favourites-title">All time favourites</h2>
                 <div class="favourite-covers">
                   {favourites.map((book) => (
                     <a href={`${base}/studio/bookshelf/${book.id}/`} aria-label={`${book.data.title} by ${book.data.author}`}>
@@ -142,7 +142,9 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
 
 <style>
   .bookshelf-page {
-    padding-bottom: 80px;
+    height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 24px);
+    min-height: 540px;
+    overflow: hidden;
   }
 
   .shelf-intro {
@@ -155,9 +157,9 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   }
 
   .shelf-intro p { margin: 0; }
-  .shelf-intro h1 { margin:0; font-family:var(--s-serif); font-size:clamp(34px,4vw,54px); font-weight:500; line-height:1; }
+  .shelf-intro h1 { margin:0; font-family:var(--s-serif); font-size:var(--studio-page-title-size); font-weight:500; line-height:1; }
 
-  .year-switcher { display:flex; gap:16px; margin:0 0 24px; }
+  .year-switcher { display:flex; gap:16px; margin:0 0 16px; }
   .year-switcher button { padding:0 0 3px; border:0; border-bottom:1px solid transparent; background:transparent; cursor:pointer; }
   .year-switcher button[aria-pressed='true'] { border-bottom-color:currentColor; }
 
@@ -169,6 +171,7 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
     gap: clamp(24px, 4vw, 64px);
     align-items: start;
     margin-top: 0;
+    height: calc(100% - 92px);
   }
 
   .rail { position: sticky; left: 0; padding-top: 3px; }
@@ -177,7 +180,7 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   .challenge-num .big { font-family: var(--s-serif); font-size: 52px; line-height: 1; }
   .bar { width: min(100%, 190px); height: 5px; border: 1px solid var(--s-ink); margin-top: 13px; }
   .fill { height: 100%; background: var(--s-ink); }
-  .favourites { margin-top:36px; }
+  .favourites { margin-top:28px; }
   .favourites h2 { margin:0 0 12px; font-family:var(--s-serif); font-size:22px; font-weight:500; }
   .favourite-covers { display:flex; gap:7px; flex-wrap:wrap; }
   .favourite-covers a { display:block; }
@@ -187,30 +190,39 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
     min-width: 0;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
-    scrollbar-color: var(--s-ink) var(--s-line);
-    scrollbar-width: thin;
-    padding: 3px 3px 16px;
+    overflow-y: hidden;
+    padding: 3px 3px 10px;
   }
 
   .covers {
     display: grid;
-    grid-template-rows: repeat(3, 202px);
+    --cover-height: clamp(132px, calc((100dvh - var(--studio-header-height) - var(--studio-footer-height) - 150px) / 3), 182px);
+    --cover-width: calc(var(--cover-height) * .667);
+    grid-template-rows: repeat(3, var(--cover-height));
     grid-auto-flow: column;
-    grid-auto-columns: 126px;
-    gap: 18px 16px;
+    grid-auto-columns: var(--cover-width);
+    gap: 10px 15px;
     width: max-content;
   }
 
   .book-card {
     position: relative;
     display: block;
-    width: 126px;
-    height: 189px;
+    width: var(--cover-width);
+    height: calc(var(--cover-height) - 7px);
     color: #16130f;
     text-decoration: none;
     overflow: hidden;
     box-shadow: 0 3px 13px rgba(20, 18, 10, 0.16);
     isolation: isolate;
+    transition: transform 180ms ease, box-shadow 180ms ease;
+  }
+
+  .book-card:hover,
+  .book-card:focus-visible,
+  .book-card[data-revealed] {
+    transform: translateY(-3px) rotate(-0.2deg);
+    box-shadow: 0 7px 18px rgba(20, 18, 10, 0.19);
   }
 
   .book-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -250,13 +262,15 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   .status { margin-top: auto; color: currentColor; font-size: 8px; line-height: 1.45; }
 
   @media (prefers-reduced-motion: reduce) {
-    .overlay { transition: none; }
+    .overlay, .book-card { transition: none; }
+    .book-card:hover, .book-card:focus-visible, .book-card[data-revealed] { transform: none; }
   }
 
   @media (max-width: 700px) {
+    .bookshelf-page { height: auto; min-height: 0; overflow: visible; }
     .shelf-intro { display: block; }
     .shelf-intro p:last-child { margin-top: 8px; }
-    .year { grid-template-columns: 1fr; gap: 18px; }
+    .year { grid-template-columns: 1fr; gap: 18px; height: auto; }
     .rail { position: static; }
     .covers { grid-template-rows: repeat(2, 184px); grid-auto-columns: 114px; }
     .book-card { width: 114px; height: 171px; }

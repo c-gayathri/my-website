@@ -19,12 +19,6 @@ const projectMedia = (project: (typeof projects)[number]) => {
   return d.thumbnail ?? d.hero ?? d.videoPoster ?? d.gallery[0];
 };
 
-const dominantProject =
-  projects.find((project) => project.data.clusterPreview?.featured) ??
-  projects.find((project) => project.data.size === 'large' && projectMedia(project)) ??
-  projects.find(projectMedia) ??
-  projects[0];
-
 const allWriting = await getCollection('writing');
 const relatedWriting = allWriting
   .filter((w) =>
@@ -37,10 +31,7 @@ type Card =
   | { kind: 'writing'; entry: (typeof relatedWriting)[number] };
 
 const cards: Card[] = [
-  ...projects
-    .slice()
-    .sort((a, b) => Number(b.id === dominantProject?.id) - Number(a.id === dominantProject?.id))
-    .map((project) => ({ kind: 'project' as const, project })),
+  ...projects.map((project) => ({ kind: 'project' as const, project })),
   ...relatedWriting.map((entry) => ({ kind: 'writing' as const, entry })),
 ];
 ---
@@ -84,7 +75,7 @@ const cards: Card[] = [
           const href = `${base}/studio/projects/${p.id}/`;
           const img = projectMedia(p);
           return (
-            <a class:list={['card', `type-${d.previewType}`, { dominant: p.id === dominantProject?.id }]} href={href}>
+            <a class:list={['card', `type-${d.previewType}`]} href={href}>
               <span class="num s-meta">{String(i + 1).padStart(2, '0')}.</span>
               <h2>{d.title}</h2>
               <span class="s-meta type">{[d.medium[0], d.year].filter(Boolean).join(' · ')}</span>
@@ -191,30 +182,6 @@ const cards: Card[] = [
     transition: border-color 0.25s ease;
   }
 
-  .card.dominant {
-    column-span: all;
-    display: grid;
-    grid-template-columns: minmax(220px, 0.72fr) minmax(320px, 1.28fr);
-    grid-template-rows: auto auto 1fr;
-    column-gap: clamp(24px, 4vw, 64px);
-    min-height: 300px;
-    padding: 20px 20px 42px;
-  }
-
-  .card.dominant .num,
-  .card.dominant h2,
-  .card.dominant > .type,
-  .card.dominant > .excerpt {
-    grid-column: 1;
-  }
-
-  .card.dominant .media {
-    grid-column: 2;
-    grid-row: 1 / span 3;
-    margin-top: 0;
-    align-self: center;
-  }
-
   .card:hover {
     border-color: var(--s-grey);
   }
@@ -260,10 +227,6 @@ const cards: Card[] = [
     display: block;
   }
 
-  .dominant .media img {
-    max-height: 420px;
-  }
-
   .play {
     position: absolute;
     inset: 0;
@@ -307,9 +270,6 @@ const cards: Card[] = [
       columns: 2 240px;
     }
 
-    .card.dominant {
-      grid-template-columns: minmax(190px, 0.7fr) minmax(260px, 1.3fr);
-    }
   }
 
   @media (max-width: 680px) {
@@ -332,21 +292,14 @@ const cards: Card[] = [
       margin-top: 16px;
     }
 
-    .card,
-    .card.dominant {
+    .card {
       display: flex;
       min-height: 0;
       margin-bottom: 14px;
       padding: 14px 14px 38px;
     }
 
-    .card.dominant .media {
-      margin-top: 14px;
-      align-self: stretch;
-    }
-
-    .media img,
-    .dominant .media img {
+    .media img {
       max-height: min(52svh, 360px);
       object-position: center;
     }

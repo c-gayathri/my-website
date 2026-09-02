@@ -32,6 +32,7 @@ do not casually redesign them.
 - Hover: camera zooms to the cluster; other clusters fully removed; whole
   field turns white; violent pointillist twinkle (spawn/despawn) + line
   shimmer; info block anchored beside the cluster; header text turns white;
+  footer and Focus/Map backgrounds inherit the active cluster colour;
   colour = seeded **blob splotch** growing from the cluster (<1s) and
   withdrawing on exit.
 - Title plates: bg-coloured rectangles with the cluster name — visible at
@@ -66,7 +67,8 @@ and constellation fragments belong only to the Constellation page.
 One selected reading year at a time, with an in-place year switcher, one annual
 challenge rail, a horizontally browsable covers grid, and review pages
 (`/studio/bookshelf/[slug]`). `featured: true` is reserved solely for the
-Favourite books section. No "currently reading".
+All time favourites section. Desktop rows fit inside the fixed chrome and
+covers move subtly in place on hover. No "currently reading".
 
 ## Colour palette (hover)
 

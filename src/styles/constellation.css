@@ -330,12 +330,16 @@
    background switches with the same easing as the splotch, so the header
    washes to colour as the blob covers the canvas below it. */
 body[data-studio-hover] .studio,
-body[data-studio-hover] .constellation {
+body[data-studio-hover] .constellation,
+body[data-studio-hover] .studio-footer,
+body[data-studio-hover] .view-controls {
   background-color: var(--s-hover-bg, var(--s-bg));
 }
 
 .studio,
-.constellation {
+.constellation,
+.studio-footer,
+.view-controls {
   transition: background-color 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -344,6 +348,14 @@ body[data-studio-hover] .studio .studio-nav a,
 body[data-studio-hover] .studio .studio-nav a:visited,
 body[data-studio-hover] .studio-nav .name,
 body[data-studio-hover] .studio-nav .tagline {
+  color: #fff;
+}
+
+body[data-studio-hover] .studio-footer,
+body[data-studio-hover] .studio-footer a,
+body[data-studio-hover] .studio-footer a:visited,
+body[data-studio-hover] .studio-footer .s-meta,
+body[data-studio-hover] .view-controls button {
   color: #fff;
 }
 
