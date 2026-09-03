@@ -76,9 +76,9 @@ export function generateClusterAnchors(
   const baseW = studioConfig.world.width;
   const baseH = studioConfig.world.height;
   const n = clusters.length || 10;
-  const scale = Math.sqrt(n / 6);
-  const worldWidth = baseW * Math.max(1.25, scale);
-  const worldHeight = baseH * Math.max(1.25, scale);
+  const scale = Math.sqrt(n / 6) * 1.25;
+  const worldWidth = baseW * Math.max(1.35, scale);
+  const worldHeight = baseH * Math.max(1.35, scale);
   const padding = 90;
 
   const placed: Array<ClusterAnchor & { height: number }> = [];

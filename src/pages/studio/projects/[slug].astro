@@ -27,7 +27,10 @@ const next = siblings[(sibIndex + 1) % siblings.length];
 const img = d.thumbnail ?? d.hero;
 const { Content } = await render(project);
 const isModular = d.pageType === 'mdx';
+const isImageFirst = d.layoutMode === 'image-first';
+const isWritingFirst = d.layoutMode === 'writing-first';
 const videoSrc = d.videoSrc ? `${base}${d.videoSrc}` : undefined;
+const audioSrc = d.audioSrc ? `${base}${d.audioSrc}` : undefined;
 
 function youtubeEmbedUrl(value: string): string {
   const url = new URL(value);
@@ -115,77 +118,87 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     </aside>
 
     <div class="stage">
-      {
-        isModular ? (
-          <div class="mdx-body">
-            <Content components={studioBlocks} />
-          </div>
-        ) : d.previewType === 'text' ? (
-          <blockquote class="text-piece">
-            <p>“{d.textExcerpt ?? d.summary}”</p>
-            {Content && (
-              <div class="body">
-                <Content />
-              </div>
-            )}
-          </blockquote>
-        ) : videoSrc ? (
-          <video src={videoSrc} poster={d.videoPoster?.src} controls preload="metadata" />
-        ) : (
-          img && (
-            <img
-              src={img.src}
-              alt={d.title}
-              width={img.width}
-              height={img.height}
-              loading="eager"
-              fetchpriority="high"
-            />
-          )
+      {isWritingFirst ? (
+        <div class="mdx-body">
+          <Content components={studioBlocks} />
+          {d.gallery.length > 0 && (
+            <div class="writing-gallery">
+              {d.gallery.map((g) => (
+                <img src={g.src} alt={`${d.title} — detail`} width={g.width} height={g.height} loading="lazy" />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : isModular ? (
+        <div class="mdx-body">
+          <Content components={studioBlocks} />
+        </div>
+      ) : d.previewType === 'text' ? (
+        <blockquote class="text-piece">
+          <p>“{d.textExcerpt ?? d.summary}”</p>
+          {Content && (
+            <div class="body">
+              <Content />
+            </div>
+          )}
+        </blockquote>
+      ) : videoSrc ? (
+        <video src={videoSrc} poster={d.videoPoster?.src} controls preload="metadata" />
+      ) : d.gallery.length >= 1 ? (
+        <div
+          class:list={[
+            'gallery',
+            d.gallery.length === 1 && 'gallery--one',
+            d.gallery.length === 2 && 'gallery--two',
+            d.gallery.length > 0 && d.gallery.length < 9 && 'gallery--centered',
+          ]}
+        >
+          {(d.gallery.length ? d.gallery : img ? [img] : []).map((g) => (
+            <img src={g.src} alt={`${d.title} — detail`} width={g.width} height={g.height} loading={d.gallery.length < 4 ? 'eager' : 'lazy'} />
+          ))}
+        </div>
+      ) : (
+        img && (
+          <img
+            src={img.src}
+            alt={d.title}
+            width={img.width}
+            height={img.height}
+            loading="eager"
+            fetchpriority="high"
+          />
         )
-      }
+      )}
 
-      {
-        youtubeEmbeds.length > 0 && (
-          <div class="youtube-list">
-            {youtubeEmbeds.map((video) => (
-              <div class="youtube-embed">
-                <iframe
-                  src={video.src}
-                  title={video.title}
-                  loading="lazy"
-                  referrerpolicy="strict-origin-when-cross-origin"
-                  allow="encrypted-media; picture-in-picture; web-share"
-                  allowfullscreen
-                />
-              </div>
-            ))}
-          </div>
-        )
-      }
-
-      {
-        !isModular && d.gallery && d.gallery.length > 0 && (
-          <div
-            class:list={[
-              'gallery',
-              d.gallery.length === 1 && 'gallery--one',
-              d.gallery.length === 2 && 'gallery--two',
-              d.gallery.length > 0 && d.gallery.length < 9 && 'gallery--centered',
-            ]}
-          >
-            {d.gallery.map((g) => (
-              <img
-                src={g.src}
-                alt={`${d.title} — detail`}
-                width={g.width}
-                height={g.height}
+      {youtubeEmbeds.length > 0 && (
+        <div class="youtube-list">
+          {youtubeEmbeds.map((video) => (
+            <div class="youtube-embed">
+              <iframe
+                src={video.src}
+                title={video.title}
                 loading="lazy"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allow="encrypted-media; picture-in-picture; web-share"
+                allowfullscreen
               />
-            ))}
-          </div>
-        )
-      }
+            </div>
+          ))}
+        </div>
+      )}
+
+      {audioSrc && (
+        <div class="audio-block">
+          <audio controls src={audioSrc} preload="metadata" />
+        </div>
+      )}
+      {d.audioUrls.length > 0 && (
+        <div class="audio-list">
+          {d.audioUrls.map((url) => (
+            <audio controls src={url} preload="metadata" />
+          ))}
+        </div>
+      )}
     </div>
   </article>
 </StudioLayout>

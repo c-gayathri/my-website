@@ -209,7 +209,7 @@ function masonryLayout(
   if (!count) return { slots, width: 0, height: 0 };
 
   const sized = Array.from({ length: count }, (_, i) => {
-    const w = i === 0 ? 0.5 : 0.18 + rand() * 0.1;
+    const w = 0.28 + rand() * 0.04;
     const aspect = clamp(aspects[i] ?? 1.25, 0.55, 2.0);
     return { i, w, h: w * aspect };
   });
@@ -273,6 +273,17 @@ function masonryLayout(
     slot.y = (slot.y - measured.y0) * scale;
     slot.w *= scale;
     slot.h *= scale;
+  }
+  // Slide as close to centre as possible while preserving gap
+  if (slots.length > 1) {
+    const avgX = slots.reduce((s, slot) => s + slot.x + slot.w / 2, 0) / slots.length;
+    const avgY = slots.reduce((s, slot) => s + slot.y + slot.h / 2, 0) / slots.length;
+    const dx = (0.5 - avgX) * 0.28;
+    const dy = (0.5 - avgY) * 0.28;
+    for (const slot of slots) {
+      slot.x += dx;
+      slot.y += dy;
+    }
   }
   return { slots, width: measured.w * scale, height: measured.h * scale };
 }
@@ -1234,14 +1245,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                   />
                 );
               })}
-              <span className="plate">
-                {c.title.split(/\n|\\n/).map((line, idx, arr) => (
-                  <span key={idx}>
-                    {line}
-                    {idx < arr.length - 1 && <br />}
-                  </span>
-                ))}
-              </span>
+              <span className="plate">{c.title}</span>
             </a>
           ))}
 

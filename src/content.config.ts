@@ -67,6 +67,11 @@ const projects = defineCollection({
       featuredImage: z.string().optional(),
       /** gallery layout on the project page: 3-col grid (default) */
       galleryLayout: z.enum(['grid', 'scattered']).default('grid'),
+      /** explicit layout mode — do not infer from content */
+      layoutMode: z.enum(['image-first', 'writing-first']).default('image-first'),
+      /** image-first sizing */
+      size: z.enum(['small', 'medium', 'large', 'full-content']).default('large'),
+      fit: z.enum(['contain', 'cover']).default('contain'),
       previewType: z
         .enum(['image', 'gallery', 'video', 'text', 'media-text', 'custom'])
         .default('image'),
@@ -76,12 +81,13 @@ const projects = defineCollection({
       videoSrc: z.string().optional(),
       videoPoster: image().optional(),
       youtubeUrls: z.array(z.string().url()).default([]),
+      audioSrc: z.string().optional(),
+      audioUrls: z.array(z.string().url()).default([]),
       textExcerpt: z.string().optional(),
       /** how the individual page is built */
       pageType: z.enum(['simple', 'mdx', 'custom']).default('simple'),
       /** simple-page preset */
       pageLayout: z.enum(['image-dominant', 'side-caption', 'offset']).default('image-dominant'),
-      size: z.enum(['small', 'medium', 'large']).default('medium'),
       customComponent: z.string().optional(),
       relatedWriting: z.array(z.string()).default([]),
       /** manual placement inside the cluster page (optional override) */
@@ -118,6 +124,7 @@ const writing = defineCollection({
     gallery: z.array(image()).default([]),
     relatedProjects: z.array(z.string()).default([]),
     pageLayout: z.enum(['essay', 'poem', 'fragment', 'mixed', 'custom']).default('fragment'),
+    preserveBreaks: z.boolean().default(false),
     preview: z
       .object({
         variant: z.enum(['title-excerpt', 'minimal', 'fragment', 'image-text']).optional(),
