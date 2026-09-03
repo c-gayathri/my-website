@@ -27,10 +27,11 @@ const next = siblings[(sibIndex + 1) % siblings.length];
 const img = d.thumbnail ?? d.hero;
 const { Content } = await render(project);
 const isModular = d.pageType === 'mdx';
-const isImageFirst = d.layoutMode === 'image-first';
 const isWritingFirst = d.layoutMode === 'writing-first';
 const videoSrc = d.videoSrc ? `${base}${d.videoSrc}` : undefined;
 const audioSrc = d.audioSrc ? `${base}${d.audioSrc}` : undefined;
+const allGalleryImages = [...(img ? [img] : []), ...d.gallery] as Array<(typeof d.gallery)[number]>;
+const uniqGallery = [...new Map(allGalleryImages.map((im) => [im.src, im])).values()] as Array<(typeof d.gallery)[number]>;
 
 function youtubeEmbedUrl(value: string): string {
   const url = new URL(value);
@@ -121,15 +122,8 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
       {isWritingFirst ? (
         <div class="mdx-body">
           <Content components={studioBlocks} />
-          {d.gallery.length > 0 && (
-            <div class="writing-gallery">
-              {d.gallery.map((g) => (
-                <img src={g.src} alt={`${d.title} — detail`} width={g.width} height={g.height} loading="lazy" />
-              ))}
-            </div>
-          )}
         </div>
-      ) : isModular ? (
+      ) : isModular && d.layoutMode !== 'image-first' ? (
         <div class="mdx-body">
           <Content components={studioBlocks} />
         </div>
@@ -144,17 +138,15 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
         </blockquote>
       ) : videoSrc ? (
         <video src={videoSrc} poster={d.videoPoster?.src} controls preload="metadata" />
-      ) : d.gallery.length >= 1 ? (
+      ) : (uniqGallery.length > 0) ? (
         <div
           class:list={[
             'gallery',
-            d.gallery.length === 1 && 'gallery--one',
-            d.gallery.length === 2 && 'gallery--two',
-            d.gallery.length > 0 && d.gallery.length < 9 && 'gallery--centered',
+            uniqGallery.length === 1 ? 'gallery--one' : uniqGallery.length === 2 ? 'gallery--two' : uniqGallery.length < 9 ? 'gallery--centered' : '',
           ]}
         >
-          {(d.gallery.length ? d.gallery : img ? [img] : []).map((g) => (
-            <img src={g.src} alt={`${d.title} — detail`} width={g.width} height={g.height} loading={d.gallery.length < 4 ? 'eager' : 'lazy'} />
+          {uniqGallery.map((g) => (
+            <img src={g.src} alt={`${d.title} — detail`} width={g.width} height={g.height} loading={uniqGallery.length < 4 ? 'eager' : 'lazy'} />
           ))}
         </div>
       ) : (
@@ -426,21 +418,28 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     display: block;
   }
 
-  /* 2-image case: side by side, centered */
+  /* 2-image case: side by side, full width */
   .gallery--two {
     grid-template-columns: repeat(2, 1fr);
-    max-width: 720px;
-    margin-inline: auto;
+    width: 100%;
   }
 
   .gallery--one {
     grid-template-columns: 1fr;
-    max-width: 560px;
+    width: min(100%, 640px);
     margin-inline: auto;
   }
 
   .gallery--one img {
-    height: 420px;
+    height: auto;
+    max-height: min(72vh, 560px);
+    aspect-ratio: auto;
+  }
+
+  @media (min-width: 1400px) {
+    .gallery {
+      gap: 18px;
+    }
   }
 
   /* modular projects: blocks fill the stage on the 12-column studio grid */
@@ -491,6 +490,18 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     .stage > img,
     .stage > video {
       max-height: 72vh;
+    }
+
+    .gallery,
+    .gallery--two,
+    .gallery--one {
+      grid-template-columns: 1fr !important;
+      width: 100% !important;
+      max-width: none !important;
+    }
+
+    .gallery img {
+      height: auto;
     }
 
     .mdx-body :global(img) {

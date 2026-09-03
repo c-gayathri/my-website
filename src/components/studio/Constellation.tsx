@@ -410,10 +410,11 @@ function blobPath(seedStr: string): string {
 }
 
 /* twinkle dots — pointillist spawn/despawn while hovering */
-function twinkleDots(config: CConfig) {
+function twinkleDots(config: CConfig, clusterCount: number) {
   const rand = mulberry32(config.seed ^ 0x9e3779b9);
   const out = [];
-  for (let i = 0; i < 150; i++) {
+  const count = 90 + clusterCount * 12;
+  for (let i = 0; i < count; i++) {
     out.push({
       x: -400 + rand() * (config.world.width + 800),
       y: -400 + rand() * (config.world.height + 800),
@@ -519,7 +520,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
   }, [layouts]);
 
   const field = useMemo(() => buildField(config), [config]);
-  const twinkles = useMemo(() => twinkleDots(config), [config]);
+  const twinkles = useMemo(() => twinkleDots(config, clusters.length), [config, clusters.length]);
   const minScale = vp && vp.w <= 760 ? 0.1 : config.zoom.min;
   const nodeRefs = useRef<Array<SVGGElement | null>>([]);
   const edgeRefs = useRef<Array<SVGPathElement | null>>([]);

@@ -15,4 +15,9 @@ export default defineConfig({
   base: '/my-website',
   output: 'static',
   integrations: [react(), mdx()],
+  vite: {
+    resolve: {
+      dedupe: ['react', 'react-dom'],
+    },
+  },
 });

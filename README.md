@@ -32,6 +32,24 @@ npm run build     # generates static site in dist/
 
 > Run `npm run check` after every content edit. The authoritative field rules are in `src/content.config.ts` — if a required field is missing or a value is outside its enum, the check will fail with the exact file and line.
 
+### Adding a new cluster
+
+1. Create `src/content/clusters/<new-id>.md` with `title`, `description`, `hoverColor` etc. (see field tables below).
+2. Append `"<new-id>"` to `src/data/clusterOrder.ts` (bottom = outer ring). The top 6 in that file are the focus window.
+3. If the cluster has projects, add their ids to `src/data/projectOrder.ts[<new-id>]` (new projects at top). Run `npm run check` — the constellation regenerates deterministically at next `dev`/`build` using `studioConfig.layoutSeed` (tweak the seed if you want a new random set). No manual placement needed; the world grows as `sqrt(N/6)*1.25` so new clusters go to the edge.
+
+### Adding a new project
+
+1. Put images in `src/assets/studio/clusters/<cluster>/` (or `src/assets/studio/` for shared). Use kebab-case filenames (`my-work.jpg`, not `IMG_1234.JPG`).
+2. Create `src/content/projects/<slug>.mdx` with `title`, `year`, `clusters: ["<cluster>"]`, `hero`/`gallery` paths (quoted if they contain spaces), `featured: true` (≤5 per cluster) and `featuredImage: "my-work.jpg"` (one image to represent it in the collage).
+3. Add the slug to the top of `src/data/projectOrder.ts[<cluster>]`. If the project belongs to multiple clusters, add it to each relevant array — the Index “all projects” list will dedup (first cluster wins).
+4. Choose `layoutMode: "image-first"` (default `large`/`contain`, gallery is a 3-col grid, <9 images vertically centered, 2 images → 1fr 1fr full-width) or `layoutMode: "writing-first"` (ordered blocks: `Image`/`Gallery`/`Text`/`Quote` in MDX body). For `writing-first`, put a cover `<Image>` at top and an end-row `<ImagePair>` for the last two images.
+
+### For audio
+
+* Self-hosted: `audioSrc: "../../assets/studio/audio/track.mp3"` (store under `public/audio/` or `src/assets` — works on GitHub Pages <100 MB) → renders `<audio controls>`.
+* Embed: `audioUrls: ["https://soundcloud.com/..."]` or YouTube `youtubeUrls` for video (both work in either mode).
+
 ---
 
 ## Routes

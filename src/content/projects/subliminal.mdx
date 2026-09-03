@@ -6,27 +6,31 @@ types: ["image"]
 medium: []
 tags: []
 previewType: gallery
-hero: "../../assets/studio/clusters/Photo edits/Subliminal/IMG_1215.PNG"
+hero: "../../assets/studio/clusters/Photo edits/Subliminal/IMG_1216.PNG"
 gallery:
-  - "../../assets/studio/clusters/Photo edits/Subliminal/IMG_1215.PNG"
   - "../../assets/studio/clusters/Photo edits/Subliminal/IMG_1216.PNG"
+  - "../../assets/studio/clusters/Photo edits/Subliminal/IMG_1215.PNG"
   - "../../assets/studio/clusters/Photo edits/Subliminal/IMG_1217.PNG"
+featuredImage: "IMG_1216.PNG"
 layoutMode: writing-first
 pageType: mdx
 pageLayout: image-dominant
 size: medium
-relatedWriting: []
+relatedWriting: ["subliminal"]
 ---
 
+import cover from '../../assets/studio/clusters/Photo edits/Subliminal/IMG_1216.PNG';
 import img1 from '../../assets/studio/clusters/Photo edits/Subliminal/IMG_1215.PNG';
-import img2 from '../../assets/studio/clusters/Photo edits/Subliminal/IMG_1216.PNG';
-import img3 from '../../assets/studio/clusters/Photo edits/Subliminal/IMG_1217.PNG';
-import Gallery from '../../components/studio/blocks/Gallery.astro';
+import img2 from '../../assets/studio/clusters/Photo edits/Subliminal/IMG_1217.PNG';
+import Image from '../../components/studio/blocks/Image.astro';
+import ImagePair from '../../components/studio/blocks/ImagePair.astro';
 
 ‘‘I have a knack for understanding people’’, she explained. But I understand none as much you, she added to herself. How could she justify the hours that he takes up on her mind? How she watches him like she watches no other, listens like she hears no other...
 
+<Image src={cover} preset="large" caption="Subliminal — cover" />
+
 She was a blip on his horizon. An interesting phenomenon, he thought, for something about her was off. He couldn’t quite place a finger on it. Was it how she never seemed to blink? Or how she always seemed to live an inch below your skin? A subliminal existence, most intriguing.
 
-<Gallery images={[img1, img2, img3]} />
-
 Anon, the interesting phenomenon appears again, and he casts a curious eye in her direction. Sometimes, she elicits his chuckle, maybe a question or a remark in passing, then he returns to his day. She, however, will preserve and feed off this morsel that he has thrown her way for yet another forever, until she is visible again, a blip on his horizon.
+
+<ImagePair left={img1} right={img2} caption="Subliminal — details" />
