@@ -34,7 +34,7 @@ const metadata = [
       <h1 class={d.title.length > 40 ? 'long-title' : undefined}>{d.title}</h1>
       <p class="author">{d.author}</p>
       <p class="s-meta metadata">{metadata.join(' · ')}</p>
-      {d.goodreadsLink && <a class="s-link external" href={d.goodreadsLink} rel="external">goodreads ↗</a>}
+      {d.goodreadsLink && <a class="s-link external" href={d.goodreadsLink} target="_blank" rel="external">goodreads ↗</a>}
 
       {hasReview && Content ? (
         <section class="review" aria-label="Review">

@@ -3,9 +3,18 @@ import { getCollection } from 'astro:content';
 import { getImage } from 'astro:assets';
 import StudioLayout from '../../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../../data/studioConfig';
+import { clusterOrder } from '../../../../data/clusterOrder';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
-const clusters = await getCollection('clusters');
+const allClusters = await getCollection('clusters');
+const clusters = [...allClusters].sort((a, b) => {
+  const ia = clusterOrder.indexOf(a.id);
+  const ib = clusterOrder.indexOf(b.id);
+  if (ia === -1 && ib === -1) return a.id.localeCompare(b.id);
+  if (ia === -1) return 1;
+  if (ib === -1) return -1;
+  return ia - ib;
+});
 const projects = await getCollection('projects');
 const mediaFor = (project: (typeof projects)[number]) =>
   project.data.thumbnail ?? project.data.hero ?? project.data.videoPoster ?? project.data.gallery[0];

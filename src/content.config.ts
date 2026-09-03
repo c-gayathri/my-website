@@ -61,6 +61,12 @@ const projects = defineCollection({
       medium: z.array(z.string()).default([]),
       tags: z.array(z.string()).default([]),
       summary: z.string().optional(),
+      /** mark ≤5 projects per cluster as featured — those images populate the constellation collage */
+      featured: z.boolean().default(false),
+      /** filename of the one image in this project to use (e.g. "IMG_1168.PNG"); defaults to hero/thumbnail/gallery[0] */
+      featuredImage: z.string().optional(),
+      /** gallery layout on the project page: 3-col grid (default) */
+      galleryLayout: z.enum(['grid', 'scattered']).default('grid'),
       previewType: z
         .enum(['image', 'gallery', 'video', 'text', 'media-text', 'custom'])
         .default('image'),

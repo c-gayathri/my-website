@@ -68,29 +68,80 @@ function randomFor(value: string) {
 }
 
 /** Deterministic collision-aware defaults; frontmatter overrides are applied by the page. */
-export function generateClusterAnchors(clusters: ClusterAnchorInput[]): Record<string, ClusterAnchor> {
-  const { width: worldWidth, height: worldHeight } = studioConfig.world;
+export function generateClusterAnchors(
+  clusters: ClusterAnchorInput[],
+  order?: string[],
+): Record<string, ClusterAnchor> {
+  // World grows as sqrt(N) so area scales linearly with count.
+  const baseW = studioConfig.world.width;
+  const baseH = studioConfig.world.height;
+  const n = clusters.length || 10;
+  const scale = Math.sqrt(n / 6);
+  const worldWidth = baseW * Math.max(1.25, scale);
+  const worldHeight = baseH * Math.max(1.25, scale);
   const padding = 90;
+
   const placed: Array<ClusterAnchor & { height: number }> = [];
   const result: Record<string, ClusterAnchor> = {};
-  const ordered = [...clusters].sort((a, b) => hashString(`${studioConfig.layoutSeed}:${a.id}`) - hashString(`${studioConfig.layoutSeed}:${b.id}`));
 
-  for (const cluster of ordered) {
+  // Canonical order drives focus window and outer rings. Fallback to hash if no order supplied.
+  const ordered = order
+    ? [...clusters].sort((a, b) => {
+        const ia = order.indexOf(a.id);
+        const ib = order.indexOf(b.id);
+        if (ia === -1 && ib === -1) return a.id.localeCompare(b.id);
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      })
+    : [...clusters].sort((a, b) => hashString(`${studioConfig.layoutSeed}:${a.id}`) - hashString(`${studioConfig.layoutSeed}:${b.id}`));
+
+  const focusIds = new Set((order ?? ordered.map((c) => c.id)).slice(0, 6));
+  const centerX = worldWidth / 2;
+  const centerY = worldHeight / 2;
+
+  for (let idx = 0; idx < ordered.length; idx++) {
+    const cluster = ordered[idx];
     const fingerprint = `${studioConfig.layoutSeed}:${cluster.id}:${cluster.title}:${cluster.description}`;
     const random = randomFor(fingerprint);
     const width = 320 + random() * 100;
     const height = width * 0.9;
+    const isFocus = focusIds.has(cluster.id);
     let best: ClusterAnchor | null = null;
     let bestClearance = -1;
-    for (let attempt = 0; attempt < 600; attempt += 1) {
-      const candidate = {
-        x: width / 2 + padding + random() * (worldWidth - width - padding * 2),
-        y: height / 2 + padding + random() * (worldHeight - height - padding * 2),
-        width,
-      };
-      const collides = placed.some((other) =>
-        Math.abs(candidate.x - other.x) < (width + other.width) / 2 + padding
-        && Math.abs(candidate.y - other.y) < (height + other.height) / 2 + padding);
+
+    for (let attempt = 0; attempt < 800; attempt += 1) {
+      let x: number;
+      let y: number;
+      if (isFocus) {
+        // Central window for focus clusters — larger disc to avoid crowding
+        const angle = random() * Math.PI * 2;
+        const r = random() * Math.min(worldWidth, worldHeight) * 0.30;
+        x = centerX + Math.cos(angle) * r;
+        y = centerY + Math.sin(angle) * r;
+        // Clamp inside world
+        x = Math.max(width / 2 + padding, Math.min(worldWidth - width / 2 - padding, x));
+        y = Math.max(height / 2 + padding, Math.min(worldHeight - height / 2 - padding, y));
+      } else {
+        // Outer rings: radius grows with order index
+        const ring = Math.floor((idx - 6) / 3) + 1; // 3 per ring
+        const baseR = Math.min(worldWidth, worldHeight) * 0.28;
+        const step = Math.min(worldWidth, worldHeight) * 0.16;
+        const angle = random() * Math.PI * 2;
+        const r = baseR + ring * step + random() * step * 0.5;
+        x = centerX + Math.cos(angle) * r;
+        y = centerY + Math.sin(angle) * r;
+        // Clamp inside world
+        x = Math.max(width / 2 + padding, Math.min(worldWidth - width / 2 - padding, x));
+        y = Math.max(height / 2 + padding, Math.min(worldHeight - height / 2 - padding, y));
+      }
+
+      const candidate = { x, y, width };
+      const collides = placed.some(
+        (other) =>
+          Math.abs(candidate.x - other.x) < (width + other.width) / 2 + padding &&
+          Math.abs(candidate.y - other.y) < (height + other.height) / 2 + padding,
+      );
       if (collides) continue;
       const clearance = placed.length
         ? Math.min(...placed.map((other) => Math.hypot(candidate.x - other.x, candidate.y - other.y)))

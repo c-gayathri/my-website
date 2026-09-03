@@ -247,13 +247,26 @@ function masonryLayout(
     valid.sort((a, b) => {
       const ab = boundsFor(a);
       const bb = boundsFor(b);
-      const area = ab.w * ab.h - bb.w * bb.h;
-      return area || Math.abs(ab.w - ab.h) - Math.abs(bb.w - bb.h) || a.x - b.x || a.y - b.y;
+      // Prefer compact, square-ish, centered groups with uniform gap.
+      // Penalize long rectangles and off-center drift.
+      const areaA = ab.w * ab.h;
+      const areaB = bb.w * bb.h;
+      const aspectA = Math.abs(ab.w - ab.h) / Math.max(ab.w, ab.h);
+      const aspectB = Math.abs(bb.w - bb.h) / Math.max(bb.w, bb.h);
+      const centerDistA = Math.hypot((ab.x0 + ab.x1) / 2, (ab.y0 + ab.y1) / 2);
+      const centerDistB = Math.hypot((bb.x0 + bb.x1) / 2, (bb.y0 + bb.y1) / 2);
+      // Elongation penalty if one side >1.6× the other
+      const elongA = Math.max(ab.w, ab.h) / Math.min(ab.w, ab.h) > 1.6 ? 0.15 : 0;
+      const elongB = Math.max(bb.w, bb.h) / Math.min(bb.w, bb.h) > 1.6 ? 0.15 : 0;
+      const scoreA = areaA * (1 + aspectA * 0.8 + elongA) + centerDistA * 0.3;
+      const scoreB = areaB * (1 + aspectB * 0.8 + elongB) + centerDistB * 0.3;
+      return scoreA - scoreB || a.x - b.x || a.y - b.y;
     });
     slots[image.i] = valid[0];
   }
 
   const measured = boundsFor();
+  // Keep uniform padding; ensure the collage is centered and not stretched
   const scale = Math.min(1, 1 / measured.w, 1 / measured.h);
   for (const slot of slots) {
     slot.x = (slot.x - measured.x0) * scale;
@@ -1221,7 +1234,14 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                   />
                 );
               })}
-              <span className="plate">{c.title}</span>
+              <span className="plate">
+                {c.title.split(/\n|\\n/).map((line, idx, arr) => (
+                  <span key={idx}>
+                    {line}
+                    {idx < arr.length - 1 && <br />}
+                  </span>
+                ))}
+              </span>
             </a>
           ))}
 

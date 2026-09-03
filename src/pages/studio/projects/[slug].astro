@@ -59,12 +59,15 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     <aside class="rail">
       <nav class="crumbs s-meta" aria-label="Breadcrumb">
         <a href={`${base}/studio/`}>← constellation</a>
-        {
-          clusterLinks.map((c) => (
-            <a href={`${base}/studio/clusters/${c.id}/`}>{c.data.title}</a>
-          ))
-        }
       </nav>
+      {clusterLinks.length > 0 && (
+        <div class="cluster-list s-meta">
+          <span>In: </span>
+          {clusterLinks.map((c, i) => (
+            <a href={`${base}/studio/clusters/${c.id}/`}>{c.data.title}{i < clusterLinks.length - 1 ? ' · ' : ''}</a>
+          ))}
+        </div>
+      )}
 
       <h1>{d.title}</h1>
 
@@ -163,7 +166,14 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
 
       {
         !isModular && d.gallery && d.gallery.length > 0 && (
-          <div class="gallery">
+          <div
+            class:list={[
+              'gallery',
+              d.gallery.length === 1 && 'gallery--one',
+              d.gallery.length === 2 && 'gallery--two',
+              d.gallery.length > 0 && d.gallery.length < 9 && 'gallery--centered',
+            ]}
+          >
             {d.gallery.map((g) => (
               <img
                 src={g.src}
@@ -384,16 +394,40 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
   }
 
   .gallery {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 14px;
-    flex-wrap: wrap;
     margin-top: 26px;
-    justify-content: center;
+    align-content: start;
+  }
+
+  .gallery--centered {
+    align-content: center;
+    min-height: 360px;
   }
 
   .gallery img {
-    height: 120px;
-    width: auto;
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* 2-image case: side by side, centered */
+  .gallery--two {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 720px;
+    margin-inline: auto;
+  }
+
+  .gallery--one {
+    grid-template-columns: 1fr;
+    max-width: 560px;
+    margin-inline: auto;
+  }
+
+  .gallery--one img {
+    height: 420px;
   }
 
   /* modular projects: blocks fill the stage on the 12-column studio grid */

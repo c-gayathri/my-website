@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
+import { projectOrder } from '../../../data/projectOrder';
 
 export async function getStaticPaths() {
   const clusters = await getCollection('clusters');
@@ -10,13 +11,44 @@ export async function getStaticPaths() {
 const { cluster } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const all = await getCollection('projects');
+const order = projectOrder[cluster.id] ?? [];
 const projects = all
   .filter((p) => p.data.clusters.includes(cluster.id))
-  .sort((a, b) => (b.data.clusterPreview?.featured ? 1 : 0) - (a.data.clusterPreview?.featured ? 1 : 0));
+  .sort((a, b) => {
+    const ia = order.indexOf(a.id);
+    const ib = order.indexOf(b.id);
+    if (ia !== -1 || ib !== -1) {
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    }
+    // Fallback: featured first, then id
+    const fa = a.data.featured ? 1 : 0;
+    const fb = b.data.featured ? 1 : 0;
+    if (fa !== fb) return fb - fa;
+    return a.id.localeCompare(b.id);
+  });
 
 const projectMedia = (project: (typeof projects)[number]) => {
   const d = project.data;
+  // Featured image takes precedence
+  if (d.featuredImage) {
+    const pool = [d.hero, d.thumbnail, d.videoPoster, ...d.gallery].filter(Boolean) as NonNullable<typeof d.hero>[];
+    const hit = pool.find((img) => String((img as any).src).includes(d.featuredImage!));
+    if (hit) return hit;
+  }
   return d.thumbnail ?? d.hero ?? d.videoPoster ?? d.gallery[0];
+};
+
+const galleryPreview = (project: (typeof projects)[number]) => {
+  const d = project.data;
+  const pool = [d.hero, ...d.gallery].filter(Boolean) as NonNullable<typeof d.hero>[];
+  // Use featuredImage first if present
+  if (d.featuredImage) {
+    const hit = pool.find((img) => String((img as any).src).includes(d.featuredImage!));
+    if (hit) return [hit, ...pool.filter((x) => x !== hit)].slice(0, 3);
+  }
+  return pool.slice(0, 3);
 };
 
 const allWriting = await getCollection('writing');
@@ -73,7 +105,7 @@ const cards: Card[] = [
           const p = card.project;
           const d = p.data;
           const href = `${base}/studio/projects/${p.id}/`;
-          const img = projectMedia(p);
+          const previews = galleryPreview(p);
           return (
             <a class:list={['card', `type-${d.previewType}`]} href={href}>
               <span class="num s-meta">{String(i + 1).padStart(2, '0')}.</span>
@@ -81,18 +113,26 @@ const cards: Card[] = [
               <span class="s-meta type">{[d.medium[0], d.year].filter(Boolean).join(' · ')}</span>
               {d.previewType === 'text' ? (
                 <p class="s-meta excerpt">“{d.textExcerpt ?? d.summary}”</p>
-              ) : img ? (
+              ) : previews.length ? (
                 <span class="media">
-                  <img
-                    src={img.src}
-                    alt={d.title}
-                    width={img.width}
-                    height={img.height}
-                    loading={i < 3 ? 'eager' : 'lazy'}
-                  />
+                  {previews.length === 1 ? (
+                    <img
+                      src={previews[0].src}
+                      alt={d.title}
+                      width={previews[0].width}
+                      height={previews[0].height}
+                      loading={i < 3 ? 'eager' : 'lazy'}
+                    />
+                  ) : (
+                    <span class="mini-grid">
+                      {previews.map((im) => (
+                        <img src={im.src} alt={d.title} width={im.width} height={im.height} loading="lazy" />
+                      ))}
+                    </span>
+                  )}
                   {d.previewType === 'video' && <span class="play" aria-hidden="true">▶</span>}
-                  {d.previewType === 'gallery' && d.gallery.length > 0 && (
-                    <span class="s-meta plus">+ {d.gallery.length}</span>
+                  {previews.length > 1 && d.gallery.length > 3 && (
+                    <span class="s-meta plus">+ {d.gallery.length - 2}</span>
                   )}
                   {d.previewType === 'media-text' && d.summary && (
                     <span class="s-meta side">{d.summary}</span>
@@ -159,11 +199,13 @@ const cards: Card[] = [
     margin: 8px 0 0;
   }
 
-  /* Columns provide compact masonry without measuring or overlapping cards. */
+  /* Grid provides left-to-right order (1,2,3) without empty gaps. */
   .cards {
-    columns: 3 260px;
-    column-gap: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
     margin-top: 20px;
+    align-items: start;
   }
 
   .card {
@@ -176,8 +218,6 @@ const cards: Card[] = [
     flex-direction: column;
     min-width: 0;
     width: 100%;
-    margin: 0 0 20px;
-    break-inside: avoid;
     overflow: hidden;
     transition: border-color 0.25s ease;
   }
@@ -227,6 +267,24 @@ const cards: Card[] = [
     display: block;
   }
 
+  .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .mini-grid img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .mini-grid img:first-child {
+    grid-column: 1 / -1;
+    height: 160px;
+  }
+
   .play {
     position: absolute;
     inset: 0;
@@ -267,7 +325,7 @@ const cards: Card[] = [
     }
 
     .cards {
-      columns: 2 240px;
+      grid-template-columns: repeat(2, 1fr);
     }
 
   }
@@ -288,7 +346,7 @@ const cards: Card[] = [
     }
 
     .cards {
-      columns: 1;
+      grid-template-columns: 1fr;
       margin-top: 16px;
     }
 

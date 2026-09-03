@@ -172,7 +172,10 @@
   font-size: 12px;
   letter-spacing: 0.08em;
   padding: 5px 11px;
-  white-space: nowrap;
+  white-space: pre-wrap;
+  text-align: center;
+  line-height: 1.25;
+  max-width: 22ch;
   transition: opacity 0.4s ease;
 }
 

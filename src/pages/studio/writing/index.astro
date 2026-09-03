@@ -2,11 +2,22 @@
 import { getCollection } from 'astro:content';
 import { studioConfig } from '../../../data/studioConfig';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
+import { writingFeaturedOrder } from '../../../data/writingFeatured';
 
-const entries = (await getCollection('writing')).sort((a, b) => {
-  const featuredA = a.data.preview?.featured ? 1 : 0;
-  const featuredB = b.data.preview?.featured ? 1 : 0;
-  if (featuredA !== featuredB) return featuredB - featuredA;
+const allEntries = await getCollection('writing');
+const entries = [...allEntries].sort((a, b) => {
+  const fa = writingFeaturedOrder.indexOf(a.id);
+  const fb = writingFeaturedOrder.indexOf(b.id);
+  const aFeatured = fa !== -1;
+  const bFeatured = fb !== -1;
+  if (aFeatured || bFeatured) {
+    if (!aFeatured) return 1;
+    if (!bFeatured) return -1;
+    return fa - fb;
+  }
+  const featA = a.data.preview?.featured ? 1 : 0;
+  const featB = b.data.preview?.featured ? 1 : 0;
+  if (featA !== featB) return featB - featA;
   return b.data.date.valueOf() - a.data.date.valueOf();
 });
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');

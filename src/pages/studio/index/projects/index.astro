@@ -3,9 +3,29 @@ import { getCollection } from 'astro:content';
 import { getImage } from 'astro:assets';
 import StudioLayout from '../../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../../data/studioConfig';
+import { clusterOrder } from '../../../../data/clusterOrder';
+import { projectOrder } from '../../../../data/projectOrder';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
-const projects = (await getCollection('projects')).sort((a, b) => b.data.year - a.data.year || a.data.title.localeCompare(b.data.title));
+const allProjects = await getCollection('projects');
+const byId = new Map(allProjects.map((p) => [p.id, p]));
+const seen = new Set<string>();
+const projects: typeof allProjects = [];
+for (const cid of clusterOrder) {
+  const list = projectOrder[cid] ?? [];
+  for (const pid of list) {
+    if (!seen.has(pid) && byId.has(pid)) {
+      seen.add(pid);
+      projects.push(byId.get(pid)!);
+    }
+  }
+}
+for (const p of allProjects) {
+  if (!seen.has(p.id)) {
+    projects.push(p);
+    seen.add(p.id);
+  }
+}
 const items = await Promise.all(projects.map(async (project) => {
   const media = project.data.thumbnail ?? project.data.hero ?? project.data.videoPoster ?? project.data.gallery[0];
   return { project, preview: media ? await getImage({ src: media, width: 240 }) : undefined };

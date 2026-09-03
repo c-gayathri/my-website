@@ -16,7 +16,12 @@ const byYear = years.map((year) => ({
   goal: challenge[year]?.goal ?? books.filter((book) => book.data.yearRead === year).length,
   list: books
     .filter((book) => book.data.yearRead === year)
-    .sort((a, b) => (a.data.dateFinished ?? a.data.title).localeCompare(b.data.dateFinished ?? b.data.title)),
+    .sort((a, b) => {
+      const aHas = Boolean(a.data.dateFinished);
+      const bHas = Boolean(b.data.dateFinished);
+      if (aHas !== bHas) return aHas ? -1 : 1;
+      return (a.data.dateFinished ?? a.data.title).localeCompare(b.data.dateFinished ?? b.data.title);
+    }),
 }));
 const favourites = books.filter((book) => book.data.featured);
 const favouriteThumbs = await Promise.all(

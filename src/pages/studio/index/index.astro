@@ -3,16 +3,66 @@ import { getCollection } from 'astro:content';
 import { getImage } from 'astro:assets';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
+import { clusterOrder } from '../../../data/clusterOrder';
+import { projectOrder } from '../../../data/projectOrder';
+import { writingFeaturedOrder } from '../../../data/writingFeatured';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
-const clusters = await getCollection('clusters');
-const projects = (await getCollection('projects')).sort((a, b) => b.data.year - a.data.year);
-const writing = (await getCollection('writing')).sort(
-  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
-);
-const books = (await getCollection('books')).sort((a, b) => {
+const allClusters = await getCollection('clusters');
+const clusters = [...allClusters].sort((a, b) => {
+  const ia = clusterOrder.indexOf(a.id);
+  const ib = clusterOrder.indexOf(b.id);
+  if (ia !== -1 || ib !== -1) {
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  }
+  return a.id.localeCompare(b.id);
+});
+
+// Index total list: walk clusterOrder top→bottom, emit project only first time seen
+const allProjects = await getCollection('projects');
+const byId = new Map(allProjects.map((p) => [p.id, p]));
+const seen = new Set<string>();
+const orderedProjects: typeof allProjects = [];
+for (const cid of clusterOrder) {
+  const list = projectOrder[cid] ?? [];
+  for (const pid of list) {
+    if (!seen.has(pid) && byId.has(pid)) {
+      seen.add(pid);
+      orderedProjects.push(byId.get(pid)!);
+    }
+  }
+}
+// Append any projects not in any order (new ones)
+for (const p of allProjects) {
+  if (!seen.has(p.id)) {
+    orderedProjects.push(p);
+    seen.add(p.id);
+  }
+}
+const projects = orderedProjects;
+
+const allWriting = await getCollection('writing');
+const writing = [...allWriting].sort((a, b) => {
+  const fa = writingFeaturedOrder.indexOf(a.id);
+  const fb = writingFeaturedOrder.indexOf(b.id);
+  const aFeatured = fa !== -1;
+  const bFeatured = fb !== -1;
+  if (aFeatured || bFeatured) {
+    if (!aFeatured) return 1;
+    if (!bFeatured) return -1;
+    return fa - fb;
+  }
+  return b.data.date.valueOf() - a.data.date.valueOf();
+});
+const allBooks = await getCollection('books');
+const books = [...allBooks].sort((a, b) => {
   if (a.data.yearRead !== b.data.yearRead) return b.data.yearRead - a.data.yearRead;
-  return (b.data.dateFinished ?? b.data.title).localeCompare(a.data.dateFinished ?? a.data.title);
+  const aHasDate = Boolean(a.data.dateFinished);
+  const bHasDate = Boolean(b.data.dateFinished);
+  if (aHasDate !== bHasDate) return aHasDate ? -1 : 1;
+  return (b.data.dateFinished ?? b.data.title).localeCompare(a.data.dateFinished ?? b.data.title);
 });
 
 const projectMedia = (project: (typeof projects)[number]) =>
