@@ -9,7 +9,7 @@ export const studioAbout: {
   paragraphs: string[];
   education: Array<{ title: string; place: string; period: string }>;
   skills: string[];
-  news: Array<{ date: string; text: string; demo: boolean }>;
+  news: Array<{ date: string; text: string; demo?: boolean }>;
   influences: StudioInfluence[];
 } = {
   statement: 'I make, collect and study images, words, sounds, and the spaces between them.',
@@ -21,23 +21,21 @@ export const studioAbout: {
     {
       title: 'B.Tech in Engineering Physics & M.Tech in Data Science',
       place: 'IIT Madras',
-      period: '2018 - 2022',
+      period: '2018 — 2022',
+    },
+    {
+      title: 'Diploma Certification',
+      place: 'Pracheen Kala Kendra',
+      period: '',
     },
   ],
-  skills: ['digital illustration', 'data visualisation', 'creative coding', 'photography'],
-  news: [
-    { date: 'May 2026', text: 'New cluster: Going Out', demo: true },
-    { date: 'Jan 2026', text: 'Added new works to Swirl / Signal', demo: true },
-    { date: 'Aug 2025', text: 'Small experiments in sound and text', demo: true },
-    { date: 'Mar 2025', text: 'Bookshelf notes and recommendations added', demo: true },
-    { date: 'Nov 2024', text: 'Studio archive opened', demo: true },
-  ],
+  skills: ['digital illustration', 'data visualisation', 'creative coding', 'photography', 'watercolour', 'photo editing'],
+  news: [],
   influences: [
-    { file: 'sample-17.png', title: 'folded geometry', href: '/studio/projects/yellow-geometry/' },
-    { file: 'sample-20.png', title: 'magnolia, x-rayed', href: '/studio/projects/magnolia-xrayed/' },
-    { file: 'sample-11.png', title: 'violet weather' },
-    { file: 'sample-13.png', title: 'two people, one line', href: '/studio/projects/couple-after/' },
-    { file: 'sample-19.png', title: 'small rose', href: '/studio/projects/small-rose/' },
-    { file: 'sample-01.png', title: 'smoke, in four colours', href: '/studio/projects/smoke-in-four-colours/' },
+    { file: 'beloved.jpg', title: 'Beloved — Toni Morrison' },
+    { file: 'god-of-small-things.jpg', title: 'The God of Small Things — Arundhati Roy' },
+    { file: 'andy-warhol-marilyn.webp', title: 'Marilyn — Andy Warhol' },
+    { file: 'LaColonneBrisee-2_900x.jpg', title: 'La Colonne Brisée — Frida Kahlo' },
+    { file: 'images.jpeg', title: 'Untitled' },
   ],
 };

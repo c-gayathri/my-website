@@ -1,27 +1,38 @@
 ---
-// MDX block: small mono text, for fragments and marginal notes.
+// MDX block: text with selectable style. Variants give you the full range
+// of paragraph treatments used across the studio (mono marginalia, serif essay, note).
 import Place from './Place.astro';
 
 interface Props {
   preset?: 'centered' | 'left' | 'right' | 'offset-left' | 'offset-right' | 'narrow' | 'narrow-left' | 'large';
+  variant?: 'mono' | 'serif' | 'note' | 'meta';
+  size?: 'sm' | 'md' | 'lg';
+  colStart?: number;
+  colSpan?: number;
+  offsetY?: number;
+  offsetX?: number;
 }
 
-const { preset = 'narrow-left' } = Astro.props;
+const { preset = 'narrow-left', variant = 'mono', size = 'md', colStart, colSpan, offsetY, offsetX } = Astro.props;
 ---
 
-<Place {preset}>
-  <div class="blk-text">
+<Place {preset} {colStart} {colSpan} {offsetY} {offsetX}>
+  <div class:list={['blk-text', `variant-${variant}`, `size-${size}`]}>
     <slot />
   </div>
 </Place>
 
 <style>
   .blk-text {
-    font-family: var(--s-mono);
-    font-size: 12.5px;
     line-height: 1.85;
     color: var(--s-grey);
   }
+  .variant-mono { font-family: var(--s-mono); font-size: 12.5px; }
+  .variant-serif { font-family: var(--s-serif); font-size: 18px; line-height: 1.65; color: var(--s-ink); }
+  .variant-note { font-family: var(--s-mono); font-size: 10.5px; line-height: 1.7; color: var(--s-faint); font-style: italic; }
+  .variant-meta { font-family: var(--s-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--s-grey); }
+  .size-sm { font-size: 0.85em; }
+  .size-lg { font-size: 1.15em; }
 
   .blk-text :global(p) {
     margin: 0 0 1em;

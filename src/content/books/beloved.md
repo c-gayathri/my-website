@@ -1,11 +1,12 @@
 ---
-title: Beloved
-author: Toni Morrison
-cover: ../../assets/studio/covers/beloved.svg
+demo: false
+title: "Beloved"
+author: "Toni Morrison"
+cover: ../../assets/studio/covers/beloved.jpg
 yearRead: 2025
-rating: 5
-dateFinished: 23 Feb 2025
-excerpt: History returning as a presence that will not be ignored.
+rating: 5.0
+dateFinished: "13 May 2025"
+featured: true
+goodreadsLink: "https://www.goodreads.com/book/show/6149"
 ---
 
-*(Sample review.)* History returning as a presence that will not be ignored.

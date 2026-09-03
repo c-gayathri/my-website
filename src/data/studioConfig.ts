@@ -25,7 +25,7 @@ export const studioConfig = {
 
   // Seeded shuffling for deterministic default layouts. Change the seed to
   // try a different automatic arrangement; keep the one you like.
-  layoutSeed: 7,
+  layoutSeed: 19,
 
   // Curated hover palette (used in order per cluster hash unless the
   // cluster specifies hoverColor). Chosen so white type stays readable.

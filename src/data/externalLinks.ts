@@ -9,4 +9,5 @@ export const externalLinks = {
   substack: 'https://substack.com/@gayathrineelachandran',
   blog: 'https://vanillalamusings.wordpress.com/',
   twitter: '', // optional, later
+  goodreads: 'https://www.goodreads.com/user/show/30028606-c-gayathri',
 };

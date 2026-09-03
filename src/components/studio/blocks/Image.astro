@@ -10,18 +10,24 @@ interface Props {
   colStart?: number;
   colSpan?: number;
   offsetY?: number;
+  offsetX?: number;
+  /** Resize the image within its grid cell, e.g. "72%", "420px", "85%" */
+  width?: string;
+  /** Scale factor 0.5–1.5 for fine tuning */
+  scale?: number;
   caption?: string;
 }
 
-const { src, alt = '', preset, colStart, colSpan, offsetY, caption } = Astro.props;
+const { src, alt = '', preset, colStart, colSpan, offsetY, offsetX, width, scale, caption } = Astro.props;
 const url = typeof src === 'string' ? src : src.src;
 const w = typeof src === 'string' ? undefined : src.width;
 const h = typeof src === 'string' ? undefined : src.height;
+const imgStyle = [width ? `width:${width};` : '', scale ? `transform:scale(${scale}); transform-origin:center;` : ''].join('');
 ---
 
-<Place {preset} {colStart} {colSpan} {offsetY}>
+<Place {preset} {colStart} {colSpan} {offsetY} {offsetX}>
   <figure class="blk-image">
-    <img src={url} {alt} width={w} height={h} loading="lazy" />
+    <img src={url} {alt} width={w} height={h} loading="lazy" style={imgStyle || undefined} />
     {caption && <figcaption class="s-meta">{caption}</figcaption>}
   </figure>
 </Place>

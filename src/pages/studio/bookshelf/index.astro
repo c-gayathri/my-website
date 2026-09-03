@@ -1,7 +1,9 @@
 ---
 import { getCollection } from 'astro:content';
+import { getImage } from 'astro:assets';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
+import { externalLinks } from '../../../data/externalLinks';
 
 const books = await getCollection('books');
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
@@ -17,6 +19,12 @@ const byYear = years.map((year) => ({
     .sort((a, b) => (a.data.dateFinished ?? a.data.title).localeCompare(b.data.dateFinished ?? b.data.title)),
 }));
 const favourites = books.filter((book) => book.data.featured);
+const favouriteThumbs = await Promise.all(
+  favourites.map(async (book) => ({
+    book,
+    thumb: await getImage({ src: book.data.cover, width: 96 }),
+  })),
+);
 
 const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} / 5`;
 ---
@@ -50,13 +58,16 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
               <section class="favourites" aria-labelledby="favourites-title">
                 <h2 id="favourites-title">All time favourites</h2>
                 <div class="favourite-covers">
-                  {favourites.map((book) => (
+                  {favouriteThumbs.map(({ book, thumb }) => (
                     <a href={`${base}/studio/bookshelf/${book.id}/`} aria-label={`${book.data.title} by ${book.data.author}`}>
-                      <img src={book.data.cover.src} alt="" width={book.data.cover.width} height={book.data.cover.height} loading="lazy" />
+                      <img src={thumb.src} alt="" width={thumb.attributes.width} height={thumb.attributes.height} loading="lazy" />
                     </a>
                   ))}
                 </div>
               </section>
+            )}
+            {externalLinks.goodreads && (
+              <a class="s-link goodreads-link" href={externalLinks.goodreads} target="_blank" rel="external">Goodreads ↗</a>
             )}
           </aside>
 
@@ -81,7 +92,7 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
                     />
                     {hasReview && <span class="reviewed s-meta">reviewed</span>}
                     <span class="overlay">
-                      <span class="title">{book.data.title}</span>
+                      <span class={`title ${book.data.title.length > 32 ? 'title-long' : ''}`}>{book.data.title}</span>
                       <span class="author">{book.data.author}</span>
                       <span class="meta s-meta">
                         {ratingOf(book.data.rating)}<br />
@@ -182,9 +193,10 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   .fill { height: 100%; background: var(--s-ink); }
   .favourites { margin-top:28px; }
   .favourites h2 { margin:0 0 12px; font-family:var(--s-serif); font-size:22px; font-weight:500; }
-  .favourite-covers { display:flex; gap:7px; flex-wrap:wrap; }
+  .favourite-covers { display:flex; gap:7px; flex-wrap:wrap; max-height:220px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding-right:4px; }
   .favourite-covers a { display:block; }
   .favourite-covers img { display:block; width:48px; height:72px; object-fit:cover; box-shadow:0 2px 8px rgba(20,18,10,.12); }
+  .goodreads-link { display:inline-block; margin-top:14px; }
 
   .shelf-wrap {
     min-width: 0;
@@ -257,6 +269,7 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   .book-card[data-revealed] .overlay { transform: translateY(0); }
 
   .title { font-family: var(--s-serif); font-size: 21px; font-weight: 600; line-height: 0.98; }
+  .title-long { font-size: 15px; line-height: 1.02; }
   .author { margin-top: 7px; font-family: var(--s-mono); font-size: 9px; line-height: 1.35; }
   .meta { margin-top: 13px; color: currentColor; font-size: 8px; line-height: 1.55; }
   .status { margin-top: auto; color: currentColor; font-size: 8px; line-height: 1.45; }

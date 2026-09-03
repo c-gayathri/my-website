@@ -4,13 +4,13 @@ import StudioLayout from '../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../data/studioConfig';
 import { studioAbout } from '../../data/studioAbout';
 import { externalLinks } from '../../data/externalLinks';
-import portrait from '../../assets/portrait.png';
+import aboutPhoto from '../../assets/about.jpg';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
-const portraitImage = await getImage({ src: portrait, width: 480 });
+const portraitImage = await getImage({ src: aboutPhoto, width: 560 });
 const elsewhere = Object.entries(externalLinks).filter(([key, href]) => key !== 'research' && href);
 const sampleImages = import.meta.glob<{ default: import('astro').ImageMetadata }>(
-  '../../assets/studio/sample/*.{png,jpg,jpeg,webp}',
+  '../../assets/studio/Influences/*.{png,jpg,jpeg,webp}',
   { eager: true },
 );
 
@@ -71,16 +71,18 @@ const influences = await Promise.all(
         <header class="section-head">
           <span class="s-meta">02</span>
           <h2 id="news-title">News</h2>
-          <span class="demo-note s-meta">demo entries</span>
         </header>
-        <div class="news-scroll" tabindex="0" aria-label="Demo news entries, scroll for more">
-          {studioAbout.news.map((item) => (
-            <article class="news-item">
-              <time class="s-meta">{item.date}</time>
-              <p>{item.text}</p>
-              {item.demo && <span class="demo-badge s-meta">demo</span>}
-            </article>
-          ))}
+        <div class="news-scroll" tabindex="0" aria-label="News, scroll for more">
+          {studioAbout.news.length ? (
+            studioAbout.news.map((item) => (
+              <article class="news-item">
+                <time class="s-meta">{item.date}</time>
+                <p>{item.text}</p>
+              </article>
+            ))
+          ) : (
+            <p class="s-meta" style="padding:8px 0; color:var(--s-faint);">No news yet.</p>
+          )}
         </div>
       </section>
 
@@ -185,10 +187,11 @@ const influences = await Promise.all(
   .portrait img {
     display: block;
     width: 100%;
-    max-width: 340px;
-    max-height: min(33dvh, 310px);
+    max-width: 360px;
+    aspect-ratio: 3 / 4;
+    max-height: min(46dvh, 520px);
     object-fit: cover;
-    object-position: center 28%;
+    object-position: center top;
   }
 
   .copy { min-width: 0; max-width: 650px; }

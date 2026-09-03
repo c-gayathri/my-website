@@ -55,7 +55,7 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
 ---
 
 <StudioLayout title={`${d.title} — Studio`} slim>
-  <article class="project">
+  <article class:list={['project', `size-${d.size}`, `layout-${d.pageLayout}`]}>
     <aside class="rail">
       <nav class="crumbs s-meta" aria-label="Breadcrumb">
         <a href={`${base}/studio/`}>← constellation</a>
@@ -347,7 +347,15 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     border: 0;
   }
 
-  /* size: full opts into a larger, scrollable presentation */
+  /* size variants — use frontmatter `size: small | medium | large` */
+  .size-small .stage > img,
+  .size-small .stage > video {
+    max-height: calc(100dvh - 280px);
+    max-width: 560px;
+  }
+
+  .size-large .stage > img,
+  .size-large .stage > video,
   .size-full .stage > img,
   .size-full .stage > video {
     max-height: none;
@@ -388,10 +396,10 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     width: auto;
   }
 
-  /* modular projects: blocks fill the stage on the studio grid */
+  /* modular projects: blocks fill the stage on the 12-column studio grid */
   .mdx-body {
     display: grid;
-    grid-template-columns: repeat(10, 1fr);
+    grid-template-columns: repeat(12, 1fr);
     column-gap: 24px;
     row-gap: 44px;
     align-content: center;
@@ -399,7 +407,7 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
   }
 
   .mdx-body :global(.place) {
-    grid-column: auto / span 10;
+    grid-column: auto / span 12;
   }
 
   .mdx-body :global(img) {
