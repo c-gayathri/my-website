@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
+import Lightbox from '../../../components/studio/Lightbox.astro';
 import { studioConfig } from '../../../data/studioConfig';
 import { studioBlocks } from '../../../components/studio/blocks';
 
@@ -37,11 +38,19 @@ const fmt = (dt: Date) =>
       </div>
     </div>
 
+    {/* Explicit cover: `image` is the cover only. `gallery` images render
+        as inline blocks below the prose — never merged into the cover. */}
     {d.image && <img class="lead" src={d.image.src} alt={d.title ?? ''} width={d.image.width} height={d.image.height} loading="eager" />}
 
     <div class="prose">
       <Content components={studioBlocks} />
     </div>
+
+    {d.gallery.length > 0 && (
+      <div class="inline-images">
+        <Lightbox images={d.gallery.map((g) => ({ src: g.src, width: g.width, height: g.height }))} title={d.title ?? 'writing'} />
+      </div>
+    )}
 
     {
       related.length > 0 && (
@@ -101,6 +110,22 @@ const fmt = (dt: Date) =>
     width: 100%;
     height: auto;
     margin-top: 28px;
+  }
+
+  /* explicit inline gallery: full-width natural-height figures, click to open */
+  .inline-images {
+    margin-top: 36px;
+    display: grid;
+    gap: 22px;
+  }
+
+  .inline-images :global(.lightbox) { display: contents; }
+  .inline-images :global(.thumbs) { display: contents; }
+  .inline-images :global(.thumb img) {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
   }
 
   .prose {

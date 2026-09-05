@@ -67,6 +67,8 @@ const projects = defineCollection({
       featuredImage: z.string().optional(),
       /** gallery layout on the project page: 3-col grid (default) */
       galleryLayout: z.enum(['grid', 'scattered']).default('grid'),
+      /** gallery columns when >2 images: '2' or '3' (default '3'). 1 image → full width, 2 → two columns. */
+      galleryColumns: z.enum(['2', '3']).default('3'),
       /** explicit layout mode — do not infer from content */
       layoutMode: z.enum(['image-first', 'writing-first']).default('image-first'),
       /** image-first sizing */

@@ -1,0 +1,83 @@
+---
+// Click-to-open lightbox for project galleries. Progressive enhancement:
+// images render as buttons opening a <dialog> with the full-res src.
+interface Props {
+  images: Array<{ src: string; width?: number; height?: number }>;
+  title: string;
+}
+const { images, title } = Astro.props;
+const dialogId = `lightbox-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+---
+<div class="lightbox" data-lightbox={dialogId}>
+  <div class="thumbs">
+    {images.map((g, i) => (
+      <button type="button" class="thumb" data-index={i} aria-label={`Open ${title} image ${i + 1}`}>
+        <img src={g.src} alt={`${title} — detail ${i + 1}`} width={g.width} height={g.height} loading={images.length < 4 ? 'eager' : 'lazy'} />
+      </button>
+    ))}
+  </div>
+  <dialog id={dialogId} class="viewer" aria-label={`${title} — image viewer`}>
+    <img class="viewer-img" src={images[0]?.src} alt={`${title} — full view`} />
+    <div class="viewer-bar">
+      <button type="button" class="v-prev" aria-label="Previous image">←</button>
+      <span class="v-count s-meta"></span>
+      <button type="button" class="v-next" aria-label="Next image">→</button>
+      <button type="button" class="v-close" aria-label="Close">✕</button>
+    </div>
+  </dialog>
+</div>
+
+<script is:inline define:vars={{ dialogId, images: images.map((g) => g.src), title }}>
+  const root = document.querySelector(`[data-lightbox="${dialogId}"]`);
+  const dialog = document.getElementById(dialogId);
+  const img = dialog?.querySelector('.viewer-img');
+  const count = dialog?.querySelector('.v-count');
+  let index = 0;
+  const show = (i) => {
+    index = (i + images.length) % images.length;
+    if (img) img.src = images[index];
+    if (img) img.alt = `${title} — full view ${index + 1}`;
+    if (count) count.textContent = `${index + 1} / ${images.length}`;
+  };
+  root?.querySelectorAll('.thumb').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      show(Number(btn.dataset.index ?? 0));
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+    });
+  });
+  dialog?.querySelector('.v-prev')?.addEventListener('click', (e) => { e.stopPropagation(); show(index - 1); });
+  dialog?.querySelector('.v-next')?.addEventListener('click', (e) => { e.stopPropagation(); show(index + 1); });
+  dialog?.querySelector('.v-close')?.addEventListener('click', () => dialog.close());
+  dialog?.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+  dialog?.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') show(index - 1);
+    if (e.key === 'ArrowRight') show(index + 1);
+  });
+  show(0);
+</script>
+
+<style>
+  .thumbs { display: contents; }
+  .thumb {
+    padding: 0; border: none; background: none; cursor: zoom-in;
+    display: block; width: 100%; min-width: 0;
+  }
+  .thumb img {
+    width: 100%; height: auto; display: block;
+    box-shadow: 0 3px 30px rgba(20, 18, 10, 0.13);
+  }
+  .viewer {
+    border: none; padding: 0; background: rgba(18, 17, 13, 0.92);
+    max-width: min(92vw, 1400px); max-height: 90vh;
+  }
+  .viewer::backdrop { background: rgba(18, 17, 13, 0.7); }
+  .viewer-img { display: block; max-width: 100%; max-height: 78vh; width: auto; height: auto; margin: 0 auto; }
+  .viewer-bar {
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    padding: 12px; color: #fff; font-family: var(--s-mono); font-size: 12px;
+  }
+  .viewer-bar button {
+    background: none; border: 1px solid rgba(255,255,255,0.4); color: #fff;
+    padding: 6px 12px; cursor: pointer; font: inherit;
+  }
+</style>

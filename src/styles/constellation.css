@@ -29,10 +29,27 @@
   transition: color 0.45s ease;
 }
 
+/* global field fades out on hover so only the loud local constellation
+   (1-2 clusters beside the collage) remains visible on the colour bg */
+.field-group {
+  transition: opacity 0.4s ease;
+}
+
+.constellation.hovered .field-group {
+  opacity: 0;
+}
+
 .twinkle-layer {
   color: #fff;
   pointer-events: none;
   z-index: 2;
+  transition: opacity 0.4s ease;
+}
+
+/* hide the old full-world tiny-star twinkle on hover — the loud local
+   cluster provides the violent twinkle instead */
+.constellation.hovered .twinkle-layer {
+  opacity: 0;
 }
 
 .splotch-layer {

@@ -523,7 +523,10 @@ const ARCHETYPES: readonly Archetype[] = [
   { name: 'dim', weight: 1, nodeMin: 1, nodeMax: 2, pocketsMin: 0, pocketsMax: 1, pocketStars: [4, 8] as const, runsMin: 1, runsMax: 1, scale: [0.5, 0.7] as const },
 ];
 
-export function generateGlobalConstellation(seed = 'studio-global-constellation'): ConstellationModel {
+export function generateGlobalConstellation(
+  seed = 'studio-global-constellation',
+  opts: { extraStars?: number } = {},
+): ConstellationModel {
   const geometry = randomSource(`${seed}:radius`);
   const visibility = randomSource(`${seed}:visibility`);
   const decoration = randomSource(`${seed}:decoration`);
@@ -619,7 +622,10 @@ export function generateGlobalConstellation(seed = 'studio-global-constellation'
     packed.push(paddedAt(componentBBox(model, id)!, centre, pad));
   });
 
-  const target = decoration.integer(235, 270);
+  // Density grows with cluster count so new stars/lines are GENERATED
+  // across the whole cluster region (never stretched). Pass extraStars
+  // from the caller based on world area / cluster count.
+  const target = decoration.integer(235, 270) + Math.max(0, Math.min(220, opts.extraStars ?? 0));
   const ambientCount = decoration.integer(4, 7);
   const ambientCentres: Point[] = [];
   for (let index = 0; index < ambientCount; index += 1) {
@@ -638,7 +644,8 @@ export function generateGlobalConstellation(seed = 'studio-global-constellation'
     for (let star = 0; star < count; star += 1) addStar(model, decoration, ellipsePoint(decoration, centre, sigma.major, sigma.minor, angle, model.isoX), 'ambient');
   }
   const backgroundCount = Math.max(25, target - model.stars.length);
-  for (let index = 0; index < backgroundCount && model.stars.length < 285; index += 1) {
+  const cap = 285 + Math.max(0, Math.min(200, opts.extraStars ?? 0));
+  for (let index = 0; index < backgroundCount && model.stars.length < cap; index += 1) {
     addStar(model, decoration, { x: decoration.between(0.03, 0.97), y: decoration.between(0.04, 0.96) }, 'background');
   }
   for (let index = 0; index < decoration.integer(1, 2); index += 1) {

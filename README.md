@@ -29,6 +29,7 @@ npm run build     # generates static site in dist/
 | `npm run check` | Validate Astro, TypeScript, and content schemas |
 | `npm run build` | Generate the static site in `dist/` |
 | `npm run preview` | Preview the production build |
+| `npm run constellation:update` | Regenerate constellation coverage after adding/removing a cluster (writes `src/data/constellationMeta.json`, fails if any cluster lies outside the star field) |
 
 > Run `npm run check` after every content edit. The authoritative field rules are in `src/content.config.ts` — if a required field is missing or a value is outside its enum, the check will fail with the exact file and line.
 
@@ -36,7 +37,16 @@ npm run build     # generates static site in dist/
 
 1. Create `src/content/clusters/<new-id>.md` with `title`, `description`, `hoverColor` etc. (see field tables below).
 2. Append `"<new-id>"` to `src/data/clusterOrder.ts` (bottom = outer ring). The top 6 in that file are the focus window.
-3. If the cluster has projects, add their ids to `src/data/projectOrder.ts[<new-id>]` (new projects at top). Run `npm run check` — the constellation regenerates deterministically at next `dev`/`build` using `studioConfig.layoutSeed` (tweak the seed if you want a new random set). No manual placement needed; the world grows as `sqrt(N/6)*1.25` so new clusters go to the edge.
+3. If the cluster has projects, add their ids to `src/data/projectOrder.ts[<new-id>]` (new projects at top).
+4. Run `npm run constellation:update` — new stars/lines are **generated** across the enlarged cluster region (never stretched); the script verifies every cluster lies inside the star field and reports `extraStars`. Then `npm run check`. The world grows as `max(1.35, sqrt(N/6)*1.25)` so new clusters go to the edge with fresh surrounding constellation. Removing a cluster: delete the `.md` file, drop its id from `clusterOrder.ts`/`projectOrder.ts`, re-run the same two commands.
+
+### Modifying content
+
+- **Cluster text/colour:** edit `src/content/clusters/<id>.md` (`title`, `description`, `hoverDescription`, `hoverColor`). No script needed — just `npm run check`.
+- **Project images/text:** edit `src/content/projects/<slug>.mdx`. `hero` = first/cover image, `gallery` = the rest. Set `galleryColumns: "2"` for a two-per-row grid (default `"3"` when >2 images; 1 → full width, 2 → two columns automatically). Set `layoutMode: "writing-first"` when the body is mostly text (>~150 words: prose + images stacked, e.g. `a-rush-of-blood-to-the-head`, `cotton-candy-fluff`, `pain-is-red-2`, `subliminal`); leave `image-first` for image-led pages. Clicking any gallery image opens a full-size lightbox — no markup needed.
+- **Writing:** `image` = cover (lead image only), `gallery` = inline images rendered as full-width blocks below the prose. Place additional `<Image>`/`<Gallery>` blocks directly in the MDX body for mid-text placement. `pageLayout: essay|poem|fragment` controls text style.
+- **Research links:** GitHub/LinkedIn/Scholar in `src/data/profile.ts` open in a new tab (`target="_blank"` in `Hero.astro`).
+- After any content edit: `npm run check` then `npm run build`.
 
 ### Adding a new project
 
@@ -230,7 +240,8 @@ Use MDX blocks for composed pages (see Image placement below). The `Untitled.txt
 | `previewType` | No | `image` (default) / `gallery` / `video` / `text` / `media-text` / `custom` | **What the preview card shows:** `image` = `hero`, `gallery` = `hero` + count badge, `video` = `videoSrc` with play overlay, `text` = large italic `textExcerpt`/`summary`, `media-text` = `hero` + `summary` side-by-side, `custom` = requires `customComponent`. |
 | `hero` | No | `image()` | Main image path relative to the file. Leave empty if no image. Paths with spaces **must be quoted**: `hero: "../../assets/studio/clusters/album art/IMG_0794.PNG"`. |
 | `thumbnail` | No | `image()` | Optional smaller preview; falls back to `hero`. |
-| `gallery` | No | `image[]` | Additional images. Shown as a row under the stage on `simple` pages. Quote paths with spaces. |
+| `gallery` | No | `image[]` | Additional images. Shown as a responsive grid under the stage on `simple` pages (natural heights retained, click to open lightbox). Quote paths with spaces. |
+| `galleryColumns` | No | `"2"` / `"3"` (`"3"` default) | Columns when >2 images. `1` image → full width, `2` → two columns automatically. Set `"2"` for larger two-per-row presentation. |
 | `videoSrc` | No | `string` | Path to `.mp4`/`.mov` under `assets/` (e.g. `"../../assets/studio/clusters/eyes/IMG_1272.mp4"`). Use with `previewType: video`. |
 | `videoPoster` | No | `image()` | Poster for `videoSrc`. |
 | `youtubeUrls` | No | `string[]` (`url`) | One or more YouTube URLs — rendered as embeds. |

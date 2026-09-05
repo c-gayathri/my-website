@@ -143,7 +143,11 @@ function makeNode(
 }
 
 function buildField(config: CConfig): Field {
-  const model = generateGlobalConstellation(`studio-home:${config.seed}`);
+  // New stars/lines are generated across the full cluster world — density
+  // scales with world area so coverage matches cluster spread (no stretch).
+  const areaRatio = (config.world.width * config.world.height) / (2600 * 1700);
+  const extraStars = Math.round(Math.max(0, areaRatio - 1) * 120);
+  const model = generateGlobalConstellation(`studio-home:${config.seed}`, { extraStars });
   const rand = mulberry32(hashStr(`${model.seed}:motion`));
   const W = config.world.width;
   const H = config.world.height;
@@ -317,7 +321,9 @@ function hoverStarsFor(c: CCluster, boxH: number): HoverStars {
   const ax = sideX * (cw * 0.52 + 36 + rand() * 30);
   const ay = sideY * (ch * 0.52 + 26 + rand() * 24);
   const box = model.layout.fragBBox!;
-  const scale = 0.34;
+  // Loud hover constellation: same vocabulary as the field, bigger +
+  // more violent twinkle, anchored beside the collage.
+  const scale = 0.5;
   const nodes: HoverStar[] = [];
   const nodeIndexes = new Map<string, number>();
   const visible = model.logicalEdges.filter((edge) => edge.visible);
@@ -335,10 +341,10 @@ function hoverStarsFor(c: CCluster, boxH: number): HoverStars {
     nodes.push({
       ...p,
       glyph: endpoint?.glyph ?? 'dot',
-      size: (endpoint?.sizePx ?? 1.2) * 1.7,
+      size: (endpoint?.sizePx ?? 1.2) * 2.2,
       tips: endpoint?.tips ?? [1, 1, 1, 1],
-      delay: rand() * 0.9,
-      dur: 0.75 + rand() * 0.4,
+      delay: rand() * 0.6,
+      dur: 0.5 + rand() * 0.3,
     });
   }
   const edges = visible.map((edge) => {
@@ -360,11 +366,11 @@ function hoverStarsFor(c: CCluster, boxH: number): HoverStars {
   });
   for (const star of model.stars.filter((item) => !item.endpoint)) {
     const p = point(star.x, star.y);
-    nodes.push({ ...p, glyph: star.glyph, size: star.sizePx * 1.7, tips: star.tips, delay: rand() * 0.9, dur: 0.75 + rand() * 0.4 });
+    nodes.push({ ...p, glyph: star.glyph, size: star.sizePx * 2.2, tips: star.tips, delay: rand() * 0.6, dur: 0.5 + rand() * 0.3 });
   }
   for (const ornament of model.ornaments) {
     const p = point(ornament.x, ornament.y);
-    nodes.push({ ...p, glyph: 'ornament', size: ornament.sizePx * 1.7, tips: [1, 1, 1, 1], delay: rand() * 0.9, dur: 0.75 + rand() * 0.4 });
+    nodes.push({ ...p, glyph: 'ornament', size: ornament.sizePx * 2.2, tips: [1, 1, 1, 1], delay: rand() * 0.6, dur: 0.5 + rand() * 0.3 });
   }
   return { nodes, edges };
 }
@@ -1089,7 +1095,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
           </svg>
 
           <svg className="star-layer" width="100%" height="100%" aria-hidden="true">
-            <g ref={fieldRef} transform={`translate(${vp.w / 2} ${vp.h / 2})`}>
+            <g ref={fieldRef} className="field-group" transform={`translate(${vp.w / 2} ${vp.h / 2})`}>
               {field.edges.map((e, i) => (
                 <path
                   key={`e${i}`}

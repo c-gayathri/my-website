@@ -15,11 +15,13 @@ const clusters = await getCollection('clusters');
 const projects = await getCollection('projects');
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 
-// World grows as sqrt(N) so area scales linearly.
-const worldScale = Math.sqrt(Math.max(1, clusters.length / 10));
+// World MUST match generateClusterAnchors() scaling so star-field bounds
+// and cluster anchors share the same box. Run `npm run constellation:update`
+// after adding/removing a cluster to verify coverage.
+const anchorScale = Math.max(1.35, Math.sqrt(Math.max(1, clusters.length) / 6) * 1.25);
 const world = {
-  width: studioConfig.world.width * (clusters.length > 10 ? worldScale : 1),
-  height: studioConfig.world.height * (clusters.length > 10 ? worldScale : 1),
+  width: studioConfig.world.width * anchorScale,
+  height: studioConfig.world.height * anchorScale,
 };
 
 const generatedAnchors = generateClusterAnchors(
