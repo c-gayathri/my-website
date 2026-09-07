@@ -509,5 +509,4 @@ Pushes to `main` deploy through `.github/workflows/deploy.yml` to `https://c-gay
 * `docs/studio-design-system.md` — layout and interaction rules.
 * `docs/constellation-geometry.md` — authoritative Constellation geometry.
 * `docs/technical-decisions.md` — architectural constraints.
-* `HANDOFF.md` — current implementation and validation status.
 
