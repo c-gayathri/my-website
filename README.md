@@ -291,6 +291,7 @@ Write the poem, essay, fragment, or mixed entry here. You can also import blocks
 | `gallery` | No | `image[]` | Additional images (rendered where you place them, or unused). |
 | `relatedProjects` | No | `string[]` | Project slugs to link. |
 | `pageLayout` | No | `essay` / `poem` / `fragment` (default) / `mixed` / `custom` | **Text style** (see § Paragraph styles). `essay` = serif 19.5px, `poem`/`fragment` = mono. |
+| `preserveBreaks` | No | `boolean` `false` (default) | `true` = single line breaks in the source render as line breaks (for poems). `false` = a single newline is ignored; use a blank line for a new paragraph. |
 | `preview.variant` | No | `title-excerpt` / `minimal` / `fragment` / `image-text` | Index card style. `fragment` shows a larger serif excerpt. |
 | `preview.showDate` | No | `boolean` `true` | Show the date on the index. |
 | `preview.showType` | No | `boolean` `true` | Show the `type` label. |
@@ -464,6 +465,40 @@ import ImagePair from '../../components/studio/blocks/ImagePair.astro';
 | **Project `simple` rail** | `note` 12.5px mono grey (summary) | Frontmatter `summary` + `pageType: simple` |
 | **Project `simple` `text` variant** | Pull-quote `26–36px` serif italic (`textExcerpt`/`summary`) + `body` 12.5px mono | `previewType: text` |
 | **Book detail `review`** | `18px` serif, `1.65`, `55ch` | Markdown body of `books/*.md` |
+
+### Basic paragraph formatting (Markdown)
+
+Wherever you write body text — writing entries, `writing-first` project bodies, book reviews, and inside `<Text>` blocks — use plain Markdown. Frontmatter fields (`title`, `description`, `summary`, `excerpt`) are plain text: no formatting there.
+
+| What you want | What you type | Notes |
+|---|---|---|
+| New paragraph | Leave a **blank line** between paragraphs | A single newline is ignored (unless `preserveBreaks: true`, see below) |
+| Line break within a paragraph | End the line with **two spaces** then newline, or use `\` at line end | For poems, easier: set `preserveBreaks: true` in writing frontmatter — every single newline becomes a break |
+| *Italic* | `*text*` or `_text_` | |
+| **Bold** | `**text**` | |
+| `Code` | `` `text` `` | Mono inline snippet |
+| Section heading | `## Heading` | Serif heading; use `##`, not `#` (`#` is the page title) |
+| Bulleted list | Lines starting with `- ` | Blank line before the list |
+| Numbered list | Lines starting with `1. `, `2. ` | Numbers auto-increment |
+| Quote | Lines starting with `> ` | Italic block; for a big pull-quote use `<Quote>` instead |
+| Link | `[label](https://…)` | Opens in the same tab |
+| Divider | `---` on its own line | Horizontal rule |
+
+Example:
+
+```mdx
+## A small heading
+
+This is *italic* and this is **bold**. This is `code`.
+
+- first item
+- second item
+
+> a quiet quoted line
+
+A poem needs breaks — either set `preserveBreaks: true` up top,
+or end each line with two spaces.
+```
 
 **Example — composing a project page:**
 

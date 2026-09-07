@@ -42,7 +42,7 @@ const fmt = (dt: Date) =>
         as inline blocks below the prose — never merged into the cover. */}
     {d.image && <img class="lead" src={d.image.src} alt={d.title ?? ''} width={d.image.width} height={d.image.height} loading="eager" />}
 
-    <div class="prose">
+    <div class:list={['prose', d.preserveBreaks ? 'preserve-breaks' : '']}>
       <Content components={studioBlocks} />
     </div>
 
@@ -130,6 +130,13 @@ const fmt = (dt: Date) =>
 
   .prose {
     margin-top: 30px;
+  }
+
+  /* preserveBreaks: true — single line breaks in the source render as
+     line breaks (for poems). Default false: a single newline is ignored,
+     use a blank line for a new paragraph. */
+  .prose.preserve-breaks :global(p) {
+    white-space: pre-line;
   }
 
   /* essay: readable serif column */
