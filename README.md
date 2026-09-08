@@ -500,6 +500,36 @@ A poem needs breaks — either set `preserveBreaks: true` up top,
 or end each line with two spaces.
 ```
 
+### Adding blocks in between (images, quotes, text styles)
+
+Inside writing entries and `writing-first` project bodies, drop a block anywhere between paragraphs — it renders exactly where you place it. Every path is **relative to the `.mdx` file**:
+
+```mdx
+import detail from '../../assets/studio/writing/Subliminal/IMG_1217.PNG';
+import Image from '../../components/studio/blocks/Image.astro';
+
+First paragraph of your text…
+
+<Image src={detail} alt="Subliminal — detail" preset="large" />
+
+Next paragraph…
+```
+
+| Block | Import | Key props |
+|---|---|---|
+| `Image` — one image mid-text | `.../blocks/Image.astro` | `src` (imported image), `alt`, `preset` (default `large` in writing; see grid presets above), `caption` (small line under the image), `width` (`"72%"`) |
+| `ImagePair` — two images side by side | `.../blocks/ImagePair.astro` | `left`, `right` (imported images), `altLeft`/`altRight`, `caption` |
+| `Gallery` — staggered row of 3+ | `.../blocks/Gallery.astro` | `images={[a, b, c]}` |
+| `Quote` — oversized pull-quote | `.../blocks/Quote.astro` | children = quote text, `attribution="— Name"` |
+| `Text` — switch paragraph style | `.../blocks/Text.astro` | `variant`: `mono` (default) / `serif` / `note` / `meta`, `size`: `sm` / `md` / `lg` |
+
+Rules of thumb:
+
+- **Prefer blocks over raw `![](...)` Markdown images.** Raw images render unstyled (a CSS guard keeps their aspect safe, but they get no caption, no sizing, no lightbox).
+- **One import per image**, placed after the frontmatter. The name is yours (`detail`, `cover`, `step1`…).
+- Don't duplicate: `image:` frontmatter is the cover (top), `gallery:` frontmatter renders below the prose — an image placed inline as a block should be removed from `gallery:` so it appears once.
+- Presets like `centered`/`left`/`right` refer to the 12-column project grid; in writing pages every block simply spans the reading column.
+
 **Example — composing a project page:**
 
 ```mdx

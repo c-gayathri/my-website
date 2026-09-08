@@ -92,6 +92,9 @@ const metadata = [
   }
 
   .review :global(p:first-child) { margin-top: 0; }
+  /* Raw markdown images in reviews carry width/height attributes; without
+     height:auto the global max-width cap would stretch them vertically. */
+  .review :global(img) { max-width: 100%; height: auto; display: block; margin: 18px auto; }
   .empty { margin-top: 28px; border-top: 1px solid var(--s-line); padding-top: 18px; }
 
   @media (max-width: 620px) {

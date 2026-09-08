@@ -132,6 +132,16 @@ const fmt = (dt: Date) =>
     margin-top: 30px;
   }
 
+  /* Raw markdown images in the body: Astro emits width/height attributes
+     and the global reset only caps max-width, so without height:auto a
+     constrained image stretches vertically. Guard every body image. */
+  .prose :global(img) {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 24px auto;
+  }
+
   /* preserveBreaks: true — single line breaks in the source render as
      line breaks (for poems). Default false: a single newline is ignored,
      use a blank line for a new paragraph. */
