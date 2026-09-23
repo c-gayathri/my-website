@@ -13,16 +13,18 @@ interface Props {
   offsetX?: number;
   /** Resize the image within its grid cell, e.g. "72%", "420px", "85%" */
   width?: string;
+  /** Optional CSS height for the image, e.g. "480px" or "70vh" */
+  height?: string;
   /** Scale factor 0.5–1.5 for fine tuning */
   scale?: number;
   caption?: string;
 }
 
-const { src, alt = '', preset, colStart, colSpan, offsetY, offsetX, width, scale, caption } = Astro.props;
+const { src, alt = '', preset, colStart, colSpan, offsetY, offsetX, width, height, scale, caption } = Astro.props;
 const url = typeof src === 'string' ? src : src.src;
 const w = typeof src === 'string' ? undefined : src.width;
 const h = typeof src === 'string' ? undefined : src.height;
-const imgStyle = [width ? `width:${width};` : '', scale ? `transform:scale(${scale}); transform-origin:center;` : ''].join('');
+const imgStyle = [width ? `width:${width};` : '', height ? `height:${height};` : '', scale ? `transform:scale(${scale}); transform-origin:center;` : ''].join('');
 ---
 
 <Place {preset} {colStart} {colSpan} {offsetY} {offsetX}>

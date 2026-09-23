@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
+import BookCover from '../../../components/studio/BookCover.astro';
 import { studioConfig } from '../../../data/studioConfig';
 
 export async function getStaticPaths() {
@@ -15,7 +16,7 @@ const hasReview = Boolean(book.body?.trim());
 const { Content } = hasReview ? await render(book) : { Content: null };
 const metadata = [
   d.rating != null ? `${d.rating} / 5` : 'not rated',
-  d.dateFinished ? `finished ${d.dateFinished}` : `read ${d.yearRead}`,
+  d.dateFinished ? `finished ${d.dateFinished}` : d.yearRead ? `read ${d.yearRead}` : d.goodreadsShelf === 'to-read' ? 'to read' : 'read date not recorded',
 ];
 ---
 
@@ -26,7 +27,7 @@ const metadata = [
 
   <article class="book">
     <div class="cover-wrap">
-      <img class="cover" src={d.cover.src} alt={`${d.title} by ${d.author}`} width={d.cover.width} height={d.cover.height} />
+      <BookCover class="cover" cover={d.cover} title={d.title} author={d.author} coverLookup={d.coverLookup} loading="eager" />
     </div>
 
     <div class="info">
@@ -60,7 +61,7 @@ const metadata = [
   }
 
   .cover-wrap { display: grid; gap: 8px; }
-  .cover { display: block; width: 100%; height: auto; box-shadow: 0 4px 22px rgba(20, 18, 10, 0.16); }
+  :global(.cover) { display: block; width: 100%; height: auto; box-shadow: 0 4px 22px rgba(20, 18, 10, 0.16); }
   .cover-wrap .s-meta { color: var(--s-faint); }
   .status { margin: 2px 0 16px; color: var(--s-ink); letter-spacing: 0.13em; text-transform: uppercase; }
 

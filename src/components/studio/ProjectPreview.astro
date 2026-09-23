@@ -12,9 +12,9 @@ const d = project.data;
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const href = `${base}/studio/projects/${project.id}/`;
 
-const img = d.thumbnail ?? d.hero;
+const img = d.thumbnail ?? d.hero ?? d.gallery[0];
 const isVideo = d.previewType === 'video';
-const poster = d.videoPoster ?? d.hero;
+const poster = d.videoPoster ?? d.hero ?? d.gallery[0];
 const mediumLine = [d.medium.join(', '), d.year ? String(d.year) : '']
   .filter(Boolean)
   .join(' · ');
@@ -104,6 +104,7 @@ const mediumLine = [d.medium.join(', '), d.year ? String(d.year) : '']
     font-size: 22px;
     font-style: italic;
     line-height: 1.45;
+    white-space: pre-line;
   }
 
   .count {
@@ -143,5 +144,6 @@ const mediumLine = [d.medium.join(', '), d.year ? String(d.year) : '']
     line-height: 1.6;
     color: var(--s-grey);
     max-width: 42ch;
+    white-space: pre-line;
   }
 </style>

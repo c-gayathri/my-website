@@ -51,25 +51,33 @@ const data = await Promise.all(
     const orderedProjects = orderList
       .map((id) => byId.get(id))
       .filter(Boolean) as typeof allForCluster;
-    // Append any missing projects (new ones) to top, dedup
+    // Keep explicitly ordered projects first; append unlisted projects using
+    // the same featured/name fallback as the cluster page.
     const missing = allForCluster.filter((p) => !orderList.includes(p.id));
-    const fullOrdered = [...missing, ...orderedProjects];
+    missing.sort((a, b) => {
+      const featured = Number(b.data.featured) - Number(a.data.featured);
+      return featured || a.id.localeCompare(b.id);
+    });
+    const fullOrdered = [...orderedProjects, ...missing];
 
-    // Prefer featured (≤5), else first 5 in order
-    const featured = fullOrdered.filter((p) => p.data.featured);
-    const chosen = (featured.length ? featured : fullOrdered).slice(0, 5);
-
-    type ProjectImage = NonNullable<(typeof chosen)[number]['data']['hero']>;
-    const pickImage = (project: (typeof chosen)[number]): ProjectImage | null => {
+    type ProjectImage = NonNullable<(typeof allForCluster)[number]['data']['hero']>;
+    const pickImage = (project: (typeof allForCluster)[number]): ProjectImage | null => {
       const feat = project.data.featuredImage;
       if (feat) {
         const pool = [project.data.hero, project.data.thumbnail, project.data.videoPoster, ...project.data.gallery].filter(Boolean) as ProjectImage[];
         const hit = pool.find((img: any) => String(img.src).includes(feat));
         if (hit) return hit as ProjectImage;
       }
-      const image = project.data.thumbnail ?? project.data.hero ?? project.data.videoPoster ?? project.data.gallery[0];
+      const image = project.data.thumbnail ?? project.data.hero ?? project.data.gallery[0] ?? project.data.videoPoster;
       return image ? (image as ProjectImage) : null;
     };
+
+    // Keep the first project image as the default cluster preview. Feature
+    // flags may affect the rest of the collage, but not its first image.
+    const featured = fullOrdered.filter((p) => p.data.featured);
+    const firstProject = fullOrdered.find((p) => pickImage(p));
+    const remaining = (featured.length ? featured : fullOrdered).filter((p) => p !== firstProject);
+    const chosen = [firstProject, ...remaining].filter(Boolean).slice(0, 5) as typeof allForCluster;
 
     const seen = new Set<string>();
     const imgs: Array<{ projectId: string; image: ProjectImage }> = [];
@@ -79,12 +87,26 @@ const data = await Promise.all(
       seen.add((image as any).src);
       imgs.push({ projectId: project.id, image });
     }
-    const images = await Promise.all(
+    const renderedImages = await Promise.all(
       imgs.map(async ({ projectId, image }) => {
         const g = await getImage({ src: image, width: 640 });
         return { src: g.src, w: image.width, h: image.height, projectId };
       }),
     );
+    const explicitPreview = c.data.previewImage
+      ? await getImage({ src: c.data.previewImage, width: 640 })
+      : null;
+    const images = explicitPreview
+      ? [
+          {
+            src: explicitPreview.src,
+            w: c.data.previewImage!.width,
+            h: c.data.previewImage!.height,
+            projectId: firstProject?.id ?? '',
+          },
+          ...renderedImages.filter((image) => image.src !== explicitPreview.src),
+        ]
+      : renderedImages;
     const generated = generatedAnchors[c.id];
     const legacyOverride = c.data.desktop;
     const normalizedOverride = c.data.generatedThenOverrideable;

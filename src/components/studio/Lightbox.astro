@@ -2,7 +2,7 @@
 // Click-to-open lightbox for project galleries. Progressive enhancement:
 // images render as buttons opening a <dialog> with the full-res src.
 interface Props {
-  images: Array<{ src: string; width?: number; height?: number }>;
+  images: Array<{ src: string; width?: number; height?: number; caption?: string }>;
   title: string;
 }
 const { images, title } = Astro.props;
@@ -13,6 +13,7 @@ const dialogId = `lightbox-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
     {images.map((g, i) => (
       <button type="button" class="thumb" data-index={i} aria-label={`Open ${title} image ${i + 1}`}>
         <img src={g.src} alt={`${title} — detail ${i + 1}`} width={g.width} height={g.height} loading={images.length < 4 ? 'eager' : 'lazy'} />
+        {g.caption && <span class="thumb-caption s-meta">{g.caption}</span>}
       </button>
     ))}
   </div>
@@ -66,6 +67,7 @@ const dialogId = `lightbox-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
     width: 100%; height: auto; display: block;
     box-shadow: 0 3px 30px rgba(20, 18, 10, 0.13);
   }
+  .thumb-caption { display: block; margin-top: 8px; text-align: left; }
   .viewer {
     border: none; padding: 0; background: rgba(18, 17, 13, 0.92);
     max-width: min(92vw, 1400px); max-height: 90vh;

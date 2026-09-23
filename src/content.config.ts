@@ -11,10 +11,12 @@ import { glob } from 'astro/loaders';
 
 const clusters = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/clusters' }),
-  schema: z.object({
+  schema: ({ image }) => z.object({
     title: z.string(),
     subtitle: z.string().optional(),
     description: z.string(),
+    /** Optional cluster collage cover; defaults to the first project image. */
+    previewImage: image().optional(),
     hoverDescription: z.string().optional(),
     hoverColor: z.string().optional(),
     /** featured clusters frame the view when the constellation opens */
@@ -78,8 +80,14 @@ const projects = defineCollection({
         .enum(['image', 'gallery', 'video', 'text', 'media-text', 'custom'])
         .default('image'),
       hero: image().optional(),
+      /** Optional caption for the lead image; omitted or empty leaves the page unchanged. */
+      heroCaption: z.string().optional(),
       thumbnail: image().optional(),
       gallery: z.array(image()).default([]),
+      /** Optional captions aligned by index with gallery; empty strings are placeholders. */
+      galleryCaptions: z.array(z.string()).optional(),
+      /** Optional caption for the gallery as a whole. */
+      galleryCaption: z.string().optional(),
       videoSrc: z.string().optional(),
       videoPoster: image().optional(),
       youtubeUrls: z.array(z.string().url()).default([]),
@@ -130,6 +138,7 @@ const writing = defineCollection({
     preview: z
       .object({
         variant: z.enum(['title-excerpt', 'minimal', 'fragment', 'image-text']).optional(),
+        image: image().optional(),
         desktop: z
           .object({
             x: z.number(),
@@ -157,8 +166,14 @@ const books = defineCollection({
     demo: z.boolean().default(true),
     title: z.string(),
     author: z.string(),
-    cover: image(),
-    yearRead: z.number().int(),
+    /** A local cover or a large public cover URL. */
+    cover: z.union([image(), z.string().url()]),
+    /** Others shelf entries may not have a recorded finish year. */
+    yearRead: z.number().int().optional(),
+    shelf: z.enum(['year', 'others']).default('year'),
+    goodreadsShelf: z.enum(['read', 'to-read']).optional(),
+    /** If the selected cover is unavailable, look it up by title and author. */
+    coverLookup: z.boolean().default(false),
     rating: z.number().min(0).max(5).optional(),
     dateFinished: z.string().optional(),
     featured: z.boolean().optional(),

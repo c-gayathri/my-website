@@ -19,5 +19,10 @@ export default defineConfig({
     resolve: {
       dedupe: ['react', 'react-dom'],
     },
+    optimizeDeps: {
+      esbuildOptions: {
+        define: { 'process.env.NODE_ENV': '"development"' },
+      },
+    },
   },
 });

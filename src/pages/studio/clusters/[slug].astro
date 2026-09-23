@@ -37,12 +37,18 @@ const projectMedia = (project: (typeof projects)[number]) => {
     const hit = pool.find((img) => String((img as any).src).includes(d.featuredImage!));
     if (hit) return hit;
   }
-  return d.thumbnail ?? d.hero ?? d.videoPoster ?? d.gallery[0];
+  return d.thumbnail ?? d.hero ?? d.gallery[0] ?? d.videoPoster;
+};
+
+const galleryPreviewImages = (project: (typeof projects)[number]) => {
+  const d = project.data;
+  const candidates = [d.hero, ...d.gallery].filter(Boolean) as NonNullable<typeof d.hero>[];
+  return candidates.filter((image, index) => candidates.findIndex((other) => other.src === image.src) === index);
 };
 
 const galleryPreview = (project: (typeof projects)[number]) => {
   const d = project.data;
-  const pool = [d.hero, ...d.gallery].filter(Boolean) as NonNullable<typeof d.hero>[];
+  const pool = galleryPreviewImages(project);
   // Use featuredImage first if present
   if (d.featuredImage) {
     const hit = pool.find((img) => String((img as any).src).includes(d.featuredImage!));
@@ -51,27 +57,14 @@ const galleryPreview = (project: (typeof projects)[number]) => {
   return pool.slice(0, 3);
 };
 
-const allWriting = await getCollection('writing');
-const relatedWriting = allWriting
-  .filter((w) =>
-    w.data.relatedProjects.some((rid) => projects.some((p) => p.id === rid)),
-  )
-  .slice(0, 2);
-
-type Card =
-  | { kind: 'project'; project: (typeof projects)[number] }
-  | { kind: 'writing'; entry: (typeof relatedWriting)[number] };
-
-const cards: Card[] = [
-  ...projects.map((project) => ({ kind: 'project' as const, project })),
-  ...relatedWriting.map((entry) => ({ kind: 'writing' as const, entry })),
-];
+const cards = projects;
 ---
 
 <StudioLayout title={`${cluster.data.title} — Studio`}>
   <article class="cluster-page">
     <nav class="crumbs s-meta" aria-label="Breadcrumb">
       <a href={`${base}/studio/`}>← back to constellation</a>
+      <a href={`${base}/studio/index/clusters/`}>← Index</a>
     </nav>
 
     <header class="cluster-header">
@@ -81,7 +74,7 @@ const cards: Card[] = [
       </div>
       <div class="intro">
         <p class="s-meta meta">
-          {projects.length} {projects.length === 1 ? 'project' : 'projects'}{relatedWriting.length ? ` · ${relatedWriting.length} writings` : ''}
+          {projects.length} {projects.length === 1 ? 'project' : 'projects'}
         </p>
         <p class="desc">{cluster.data.description}</p>
       </div>
@@ -89,23 +82,11 @@ const cards: Card[] = [
 
     <div class="cards">
       {
-        cards.map((card, i) => {
-          if (card.kind === 'writing') {
-            const w = card.entry;
-            return (
-              <a class="card writing" href={`${base}/studio/writing/${w.id}/`}>
-                <span class="num s-meta">{String(i + 1).padStart(2, '0')}.</span>
-                <h2>{w.data.title ?? w.id.replace(/-/g, ' ')}</h2>
-                <span class="s-meta type">{w.data.type}</span>
-                {w.data.excerpt && <p class="s-meta excerpt">{w.data.excerpt}</p>}
-                <span class="go s-meta" aria-hidden="true">→</span>
-              </a>
-            );
-          }
-          const p = card.project;
+        cards.map((p, i) => {
           const d = p.data;
           const href = `${base}/studio/projects/${p.id}/`;
           const previews = galleryPreview(p);
+          const previewImageCount = galleryPreviewImages(p).length;
           return (
             <a class:list={['card', `type-${d.previewType}`]} href={href}>
               <span class="num s-meta">{String(i + 1).padStart(2, '0')}.</span>
@@ -131,8 +112,8 @@ const cards: Card[] = [
                     </span>
                   )}
                   {d.previewType === 'video' && <span class="play" aria-hidden="true">▶</span>}
-                  {previews.length > 1 && d.gallery.length > 3 && (
-                    <span class="s-meta plus">+ {d.gallery.length - 2}</span>
+                  {previewImageCount > previews.length && (
+                    <span class="s-meta plus">+ {previewImageCount - previews.length}</span>
                   )}
                   {d.previewType === 'media-text' && d.summary && (
                     <span class="s-meta side">{d.summary}</span>
@@ -243,6 +224,7 @@ const cards: Card[] = [
   .card .excerpt {
     margin: 12px 0 0;
     line-height: 1.7;
+    white-space: pre-line;
   }
 
   .card .go {
@@ -312,6 +294,7 @@ const cards: Card[] = [
     display: block;
     margin-top: 10px;
     line-height: 1.6;
+    white-space: pre-line;
   }
 
   /* writing cards read quieter */

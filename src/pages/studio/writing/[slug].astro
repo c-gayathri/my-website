@@ -4,6 +4,7 @@ import StudioLayout from '../../../layouts/StudioLayout.astro';
 import Lightbox from '../../../components/studio/Lightbox.astro';
 import { studioConfig } from '../../../data/studioConfig';
 import { studioBlocks } from '../../../components/studio/blocks';
+import { isFeaturedWriting } from '../../../data/writingOrder';
 
 export async function getStaticPaths() {
   const entries = await getCollection('writing');
@@ -12,6 +13,7 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const d = entry.data;
+const featured = isFeaturedWriting(entry.id);
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const { Content } = await render(entry);
 const allProjects = await getCollection('projects');
@@ -32,6 +34,7 @@ const fmt = (dt: Date) =>
           <div class="entry-meta">
             {d.preview?.showDate !== false && <span class="s-meta">{fmt(d.date)}</span>}
             {d.preview?.showType !== false && <span class="s-meta">{d.type}</span>}
+            {featured && <span class="s-meta featured-label">featured</span>}
           </div>
           {d.title && <h1>{d.title}</h1>}
         </header>
@@ -96,6 +99,8 @@ const fmt = (dt: Date) =>
     gap: 18px;
     align-items: baseline;
   }
+
+  .featured-label { margin-left: auto; }
 
   h1 {
     font-family: var(--s-serif);

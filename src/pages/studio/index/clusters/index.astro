@@ -4,6 +4,7 @@ import { getImage } from 'astro:assets';
 import StudioLayout from '../../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../../data/studioConfig';
 import { clusterOrder } from '../../../../data/clusterOrder';
+import { projectOrder } from '../../../../data/projectOrder';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const allClusters = await getCollection('clusters');
@@ -17,11 +18,23 @@ const clusters = [...allClusters].sort((a, b) => {
 });
 const projects = await getCollection('projects');
 const mediaFor = (project: (typeof projects)[number]) =>
-  project.data.thumbnail ?? project.data.hero ?? project.data.videoPoster ?? project.data.gallery[0];
+  project.data.thumbnail ?? project.data.hero ?? project.data.gallery[0] ?? project.data.videoPoster;
 
 const items = await Promise.all(clusters.map(async (cluster) => {
   const related = projects.filter((project) => project.data.clusters.includes(cluster.id));
-  const media = related.map(mediaFor).find(Boolean);
+  const order = projectOrder[cluster.id] ?? [];
+  related.sort((a, b) => {
+    const ia = order.indexOf(a.id);
+    const ib = order.indexOf(b.id);
+    if (ia !== -1 || ib !== -1) {
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    }
+    const featured = Number(b.data.featured) - Number(a.data.featured);
+    return featured || a.id.localeCompare(b.id);
+  });
+  const media = cluster.data.previewImage ?? related.map(mediaFor).find(Boolean);
   return { cluster, count: related.length, preview: media ? await getImage({ src: media, width: 240 }) : undefined };
 }));
 ---

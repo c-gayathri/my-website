@@ -37,23 +37,24 @@ npm run build     # generates static site in dist/
 
 1. Create `src/content/clusters/<new-id>.md` with `title`, `description`, `hoverColor` etc. (see field tables below).
 2. Append `"<new-id>"` to `src/data/clusterOrder.ts` (bottom = outer ring). The top 6 in that file are the focus window.
-3. If the cluster has projects, add their ids to `src/data/projectOrder.ts[<new-id>]` (new projects at top).
-4. Run `npm run constellation:update` — new stars/lines are **generated** across the enlarged cluster region (never stretched); the script verifies every cluster lies inside the star field and reports `extraStars`. Then `npm run check`. The world grows as `max(1.35, sqrt(N/6)*1.25)` so new clusters go to the edge with fresh surrounding constellation. Removing a cluster: delete the `.md` file, drop its id from `clusterOrder.ts`/`projectOrder.ts`, re-run the same two commands.
+3. If the cluster has projects, add their ids to `src/data/projectOrder.ts[<new-id>]` in display order (first id supplies the default cluster preview; new projects go at the top).
+4. Leave `previewImage` out to use that first project's lead image, or set `previewImage: "../../assets/studio/.../cover.jpg"` in the cluster frontmatter to choose a cluster-specific image.
+5. Run `npm run constellation:update` — new stars/lines are **generated** across the enlarged cluster region (never stretched); the script verifies every cluster lies inside the star field and reports `extraStars`. Then `npm run check`. The world grows as `max(1.35, sqrt(N/6)*1.25)` so new clusters go to the edge with fresh surrounding constellation. Removing a cluster: delete the `.md` file, drop its id from `clusterOrder.ts`/`projectOrder.ts`, re-run the same two commands.
 
 ### Modifying content
 
-- **Cluster text/colour:** edit `src/content/clusters/<id>.md` (`title`, `description`, `hoverDescription`, `hoverColor`). No script needed — just `npm run check`.
-- **Project images/text:** edit `src/content/projects/<slug>.mdx`. `hero` = first/cover image, `gallery` = the rest. Set `galleryColumns: "2"` for a two-per-row grid (default `"3"` when >2 images; 1 → full width, 2 → two columns automatically). Set `layoutMode: "writing-first"` when the body is mostly text (>~150 words: prose + images stacked, e.g. `a-rush-of-blood-to-the-head`, `cotton-candy-fluff`, `pain-is-red-2`, `subliminal`); leave `image-first` for image-led pages. Clicking any gallery image opens a full-size lightbox — no markup needed.
-- **Writing:** `image` = cover (lead image only), `gallery` = inline images rendered as full-width blocks below the prose. Place additional `<Image>`/`<Gallery>` blocks directly in the MDX body for mid-text placement. `pageLayout: essay|poem|fragment` controls text style.
+- **Cluster text/colour/preview:** edit `src/content/clusters/<id>.md` (`title`, `description`, `hoverDescription`, `hoverColor`). `previewImage` is optional; without it, the first project's lead image is used. Project order is in `src/data/projectOrder.ts`. No script needed — just `npm run check`.
+- **Project images/text:** edit `src/content/projects/<slug>.mdx`. `gallery` is the image list; `hero` is optional and can override which image leads previews. If `hero` is omitted, the first gallery image is used in previews. Repeating that image as both `hero` and `gallery[0]` is safe and appears only once. `summary` is a short blurb directly below the project title, separate from image captions. Use `layoutMode: "writing-first"` for a long written piece and put its prose and image blocks in the MDX body; use `image-first` for image-led pages. Gallery images open in a full-size lightbox.
+- **Writing:** `image` = first-image fallback for the Writing Pad card, `preview.image` = optional card override, and `gallery[0]` is used when no cover image exists. `gallery` = inline images rendered as full-width blocks below the prose. Place additional `<Image>`/`<Gallery>` blocks directly in the MDX body for mid-text placement. `src/data/writingOrder.ts` is the featured subset and its display order; unlisted pieces follow in descending `date` order. The same order appears on the Writing Pad and the Index. `pageLayout: essay|poem|fragment` controls text style.
 - **Research links:** GitHub/LinkedIn/Scholar in `src/data/profile.ts` open in a new tab (`target="_blank"` in `Hero.astro`).
 - After any content edit: `npm run check` then `npm run build`.
 
 ### Adding a new project
 
 1. Put images in `src/assets/studio/clusters/<cluster>/` (or `src/assets/studio/` for shared). Use kebab-case filenames (`my-work.jpg`, not `IMG_1234.JPG`).
-2. Create `src/content/projects/<slug>.mdx` with `title`, `year`, `clusters: ["<cluster>"]`, `hero`/`gallery` paths (quoted if they contain spaces), `featured: true` (≤5 per cluster) and `featuredImage: "my-work.jpg"` (one image to represent it in the collage).
+2. Create `src/content/projects/<slug>.mdx` with `title`, `year`, `clusters: ["<cluster>"]`, and a `gallery` list (quote paths if they contain spaces). `hero` is optional; when omitted, the first gallery image is used as the preview image. Add `featured: true` (≤5 per cluster) and `featuredImage: "my-work.jpg"` if you want to choose the image used in the constellation collage.
 3. Add the slug to the top of `src/data/projectOrder.ts[<cluster>]`. If the project belongs to multiple clusters, add it to each relevant array — the Index “all projects” list will dedup (first cluster wins).
-4. Choose `layoutMode: "image-first"` (default `large`/`contain`, gallery is a 3-col grid, <9 images vertically centered, 2 images → 1fr 1fr full-width) or `layoutMode: "writing-first"` (ordered blocks: `Image`/`Gallery`/`Text`/`Quote` in MDX body). For `writing-first`, put a cover `<Image>` at top and an end-row `<ImagePair>` for the last two images.
+4. Choose `layoutMode: "image-first"` for a lead image or gallery, or `layoutMode: "writing-first"` for a written piece built from prose and MDX blocks (`Image`, `ImagePair`, `Text`, `Quote`). In a writing-first page, import and place images in the body where they should appear.
 
 ### For audio
 
@@ -68,7 +69,7 @@ npm run build     # generates static site in dist/
 |---|---|
 | `/` | Research profile, projects, education, and news (data in `src/data/`) |
 | `/studio/` | Interactive Constellation |
-| `/studio/clusters/[slug]/` | Projects and writing belonging to a cluster |
+| `/studio/clusters/[slug]/` | Projects belonging to a cluster |
 | `/studio/projects/[slug]/` | Individual creative project |
 | `/studio/writing/` | Writing pad (index) |
 | `/studio/writing/[slug]/` | Individual writing entry |
@@ -94,8 +95,7 @@ npm run build     # generates static site in dist/
 │   │       ├── covers/            # book-cover artwork (jpg/jpeg/png/svg)
 │   │       ├── clusters/          # source images for projects, organised by cluster
 │   │       ├── writing/           # source text + images for writing entries
-│   │       ├── Influences/        # images for the About → Influences grid
-│   │       └── goodreads_library_export.numbers
+│   │       └── Influences/        # images for the About → Influences grid
 │   ├── components/
 │   │   ├── *.astro                # research components (Hero, etc.)
 │   │   └── studio/
@@ -194,7 +194,9 @@ clusters: [eyes]
 types: ["image"]
 medium: ["watercolour"]
 tags: ["study"]
-summary: "One-line summary used in previews — leave empty and fill later if you prefer."
+summary: >-
+  A short description goes here. It can wrap over several lines in the source
+  and will appear below the title, above the project metadata.
 previewType: image
 hero: "../../assets/studio/clusters/eyes/self portrait.jpg"
 pageType: simple
@@ -203,7 +205,7 @@ size: medium
 relatedWriting: []
 ---
 
-Optional body text — only visible when `previewType: text` (see modes below).
+For an image-led page, put the short accompanying text in `summary`; the body is only rendered with `previewType: text`. For a longer written piece, use `layoutMode: writing-first` and write the content in the body.
 ```
 
 **Gallery folder example** (subfolder `Subliminal` with 3 PNGs + `Untitled.txt`):
@@ -227,33 +229,39 @@ size: medium
 Use MDX blocks for composed pages (see Image placement below). The `Untitled.txt` content goes here.
 ```
 
+For a project page that is just a frontmatter gallery (for example `src/content/projects/meenakshi.mdx`), `galleryCaptions` is an optional list in the same order as `gallery`. Leave an empty string at any position to keep that image uncaptioned. `heroCaption` is for a standalone lead image; `galleryCaption` is for one caption below the whole gallery. `galleryColumns: "2"` or `"3"` controls the columns when a gallery contains more than two images; Meenakshi has an explicit `"3"` placeholder, matching its current default.
+
 | Field | Required | Type / Modes | Notes |
 |---|---|---|---|
 | `title` | **Yes** | `string` | Project title. Quote if it contains `:`. |
 | `year` | **Yes** | `int` | Year shown on the project page and used for sorting. |
 | `date` | No | `string` | Optional precise date (e.g. `"2025-06-14"`). |
 | `clusters` | No | `string[]` | Cluster slugs this project belongs to. Use `[]` if none. One project can belong to multiple clusters (dedup). |
-| `types` | No | `string[]` | Free-form, e.g. `["image"]`, `["image","series"]`. Used for filtering, not styling. |
+| `types` | No | `string[]` | Free-form, e.g. `["image"]`, `["image","series"]`. Kept as project metadata; the site displays `medium` instead. |
 | `medium` | No | `string[]` | e.g. `["watercolour","ink"]`, `["digital","photography"]`. Shown in the left rail. |
 | `tags` | No | `string[]` | Free-form. |
-| `summary` | No | `string` | One-line preview summary. Leave `""` if you will fill later — no placeholder is inserted. |
+| `summary` | No | `string` | Short blurb shown directly below the project title, separate from image captions. Newlines in a summary are rendered as line breaks. For poetry or other multiline text, use a YAML literal block (`summary: |`) so YAML retains those newlines; `summary: >-` folds wrapped source lines into a paragraph. Omit it or leave it as `""` until you have text. |
+| `layoutMode` | No | `image-first` (default) / `writing-first` | `image-first` shows the lead artwork/gallery. `writing-first` displays the MDX body as the written piece; add images in that body with imported blocks such as `<Image>` and `<ImagePair>`. |
 | `previewType` | No | `image` (default) / `gallery` / `video` / `text` / `media-text` / `custom` | **What the preview card shows:** `image` = `hero`, `gallery` = `hero` + count badge, `video` = `videoSrc` with play overlay, `text` = large italic `textExcerpt`/`summary`, `media-text` = `hero` + `summary` side-by-side, `custom` = requires `customComponent`. |
-| `hero` | No | `image()` | Main image path relative to the file. Leave empty if no image. Paths with spaces **must be quoted**: `hero: "../../assets/studio/clusters/album art/IMG_0794.PNG"`. |
+| `hero` | No | `image()` | Optional preview/lead image path relative to the file. If omitted, the first `gallery` image is used as the preview image. A hero repeated as the first gallery image is de-duplicated in gallery previews. Paths with spaces **must be quoted**. |
+| `heroCaption` | No | `string` | Caption for the lead image. Leave `""` as a placeholder to show no caption. |
 | `thumbnail` | No | `image()` | Optional smaller preview; falls back to `hero`. |
-| `gallery` | No | `image[]` | Additional images. Shown as a responsive grid under the stage on `simple` pages (natural heights retained, click to open lightbox). Quote paths with spaces. |
-| `galleryColumns` | No | `"2"` / `"3"` (`"3"` default) | Columns when >2 images. `1` image → full width, `2` → two columns automatically. Set `"2"` for larger two-per-row presentation. |
+| `gallery` | No | `image[]` | Project images. The first item can supply the preview image when `hero` is omitted. Shown as a responsive grid on image-first project pages (natural heights retained, click to open lightbox). Quote paths with spaces. |
+| `galleryCaptions` | No | `string[]` | Optional per-image captions aligned by index with `gallery`. Use `""` entries as empty placeholders. |
+| `galleryCaption` | No | `string` | Optional caption for the gallery as a whole, shown below its images. Leave `""` to keep it hidden. |
+| `galleryColumns` | No | `"2"` / `"3"` (`"3"` default) | Columns when there are more than two images. A single image uses the single-image layout; two images appear side by side. |
 | `videoSrc` | No | `string` | Path to `.mp4`/`.mov` under `assets/` (e.g. `"../../assets/studio/clusters/eyes/IMG_1272.mp4"`). Use with `previewType: video`. |
 | `videoPoster` | No | `image()` | Poster for `videoSrc`. |
 | `youtubeUrls` | No | `string[]` (`url`) | One or more YouTube URLs — rendered as embeds. |
 | `textExcerpt` | No | `string` | Large italic pull-quote when `previewType: text`. |
 | `pageType` | No | `simple` (default) / `mdx` / `custom` | `simple` = left rail + single artwork (fits viewport) + optional `gallery` row. `mdx` = modular editorial page using blocks (see below). `custom` requires `customComponent`. |
 | `pageLayout` | No | `image-dominant` (default) / `side-caption` / `offset` | Preset for `simple` pages. Currently hooks as `layout-*` class for future styling — `image-dominant` is the default. |
-| `size` | No | `small` / `medium` (default) / `large` | **Viewport fit** on `simple` pages: `small` caps at ~560px wide, `medium` fits the viewport (`max-height: calc(100dvh - 190px)`), `large` breaks out (`max-height: none; width: 100%` — scrollable presentation). Add as `size: large` to let a tall image scroll. |
+| `size` | No | `small` / `medium` / `large` / `full-content` (`large` default) | Sizing class for project artwork. `small` constrains a standalone image to about 560px; `large` expands stage images to the available width. For an image inside written content, use the MDX `Image` block's `width` and `preset` instead. |
 | `relatedWriting` | No | `string[]` | Writing slugs (filenames without extension) to link under “related writing” in the rail. |
 | `clusterPreview` | No | `{x,y,width,align,featured}` | Manual placement inside the cluster page (rare; omit). |
 | `mobile` | No | `{order,width,align}` | Mobile ordering hint for cluster-page card. |
 
-**Body visibility:** On `pageType: simple`, the Markdown body after `---` is **only rendered** when `previewType: text` (as a `blockquote` under the pull-quote). For `image`/`gallery`/`video` simple pages the body is ignored — put composed content in a `pageType: mdx` file instead.
+**Choosing where text goes:** Use `summary` for a short blurb shown right below the title, not below the image. Image captions are separate and belong on the relevant image block. On image-first pages, the MDX body is only rendered with `previewType: text`; for long prose, use `pageType: mdx`, `layoutMode: writing-first`, and put the writing and any image blocks in the MDX body. For image-first galleries, `galleryColumns: "2"` or `"3"` selects columns when there are more than two images; one image stays full width, two images stay side by side, and a single row remains vertically centered.
 
 ---
 
@@ -284,7 +292,7 @@ Write the poem, essay, fragment, or mixed entry here. You can also import blocks
 | Field | Required | Type / Modes |
 |---|---|---|
 | `title` | No | `string` | Display title. Some fragments omit it (poem without title). |
-| `date` | **Yes** | `coercible date` (`YYYY-MM-DD`) | Used for sorting (newest first on the index, featured first). |
+| `date` | **Yes** | `coercible date` (`YYYY-MM-DD`) | Unlisted pieces sort newest first; pieces in `src/data/writingOrder.ts` use that file's featured order. |
 | `type` | No | `poem` / `essay` / `fragment` (default) / `mixed` | Semantic type, shown as a small label if `preview.showType` is true. |
 | `excerpt` | No | `string` | Preview excerpt on the index. Leave `""` to omit. |
 | `image` | No | `image()` | Lead image above the prose. Relative path, quote if it has spaces. |
@@ -296,7 +304,7 @@ Write the poem, essay, fragment, or mixed entry here. You can also import blocks
 | `preview.showDate` | No | `boolean` `true` | Show the date on the index. |
 | `preview.showType` | No | `boolean` `true` | Show the `type` label. |
 | `preview.excerptLength` | No | `number` | Truncation hint (reserved). |
-| `preview.featured` | No | `boolean` | If `true`, the entry sorts to the top of the index. |
+| `preview.featured` | No | `boolean` | Legacy field. Use `src/data/writingOrder.ts` to mark and order featured entries. |
 | `preview.desktop`/`preview.mobile` | No | `{x,y,width,align}` / `{order,width}` | Pinning hints (rare). |
 
 **Word-count heuristic used for your current 9 entries:** `>350 words` → `essay`, otherwise `fragment`. You can retag after.
@@ -329,25 +337,31 @@ Write the review here. Leaving the body empty creates an unreviewed book (shows 
 | `demo` | No | `boolean` `true` (default) | **Set `demo: false` for every real book.** Demo books are ignored in your current shelf. |
 | `title` | **Yes** | `string` | Book title. The overlay auto-shrinks when the title is long (`>32 chars` → smaller font; detail page `>40 chars` → smaller `h1`). Quote titles with `:` or `'`. |
 | `author` | **Yes** | `string` | |
-| `cover` | **Yes** | `image()` | Path to `assets/studio/covers/*.{jpg,jpeg,png,svg,webp}`. Quote if the path has spaces. |
-| `yearRead` | **Yes** | `int` | Year bucket (e.g. `2025`, `2026`). The latest `yearRead` opens by default. |
+| `cover` | **Yes** | `image()` or URL | Local cover path, or a large Open Library ISBN URL. Quote URL/path values. |
+| `yearRead` | No | `int` | Year bucket (e.g. `2024`, `2025`, `2026`). The latest year opens by default. For undated entries on Others, omit it. |
+| `shelf` | No | `year` / `others` (`year` default) | Put older or undated titles under `others`; these stay out of annual reading challenges. |
+| `goodreadsShelf` | No | `read` / `to-read` | Preserves Goodreads shelf status for entries shown under Others. |
 | `rating` | No | `0`–`5` | Supports halves (e.g. `4.5`). Shown as `4.5 / 5` on the detail page. |
 | `dateFinished` | No | `string` | e.g. `"2 Sep 2026"`. Shown in the metadata line. |
-| `featured` | No | `boolean` | `true` adds the book to **All time favourites** (left rail, scrolls when >~12). Only `The God of Small Things`, `Beloved`, `Seeing Like a Feminist` are currently `true`. |
+| `featured` | No | `boolean` | `true` adds the book to **All time favourites** (left rail, scrolls when >~12). |
+| `coverLookup` | No | `boolean` | `true` tries Google Books for a large cover if the selected ISBN or placeholder cover is unavailable. |
 | `recommended` | No | `boolean` `false` | Legacy flag (reserved). |
 | `excerpt` | No | `string` | One-line preview on the shelf overlay. |
 | `goodreadsLink` | No | `string` (`url`) | Per-book Goodreads URL (`https://www.goodreads.com/book/show/<id>`). The shelf footer also links to your profile: `https://www.goodreads.com/user/show/30028606-c-gayathri` (set in `src/data/externalLinks.ts`). |
 
 *The “reviewed” badge appears only when the Markdown body is non-empty. An empty body shows “No review yet.” — no “sample title card” or “review pending” text is inserted.*
 
-**Goodreads import:** Your current 24 books (2025 + 2026) were generated from `assets/studio/goodreads_library_export.numbers` via `numbers-parser`. To add more books, re-export **CSV** from Goodreads (My Books → Import/Export → Export Library) and drop `goodreads_library_export.csv` in `assets/studio/`, or update the `.numbers` file and re-run the import script. Covers are matched by slug: `The God of Small Things` → `god-of-small-things.jpg` — keep filenames kebab-cased.
+**Cover choice:** ISBN-backed entries use the large Open Library cover endpoint (`-L`) and try a title/author lookup in Google Books if that edition has no cover. Entries without an ISBN use the same title/author lookup. Existing local covers can be kept or replaced by changing `cover`.
+
+**All-time favourite order:** Set `featured: true` to include a book in the favourite strip. Reorder favourites by moving their content slugs in `src/data/bookFavouriteOrder.ts` (first entry appears first); featured books missing from that list are appended alphabetically.
 
 **Reading challenge:** The progress bar and “/ goal” text come from `src/data/studioConfig.ts`:
 
 ```ts
 readingChallenge: {
-  2026: { goal: 30 },
-  2025: { goal: 15 },
+  2026: { goal: 20 },
+  2025: { goal: 12 },
+  2024: { goal: 8 },
 }
 ```
 
@@ -440,6 +454,12 @@ import ImagePair from '../../components/studio/blocks/ImagePair.astro';
 * `scale` — `transform: scale(0.5–1.5)` for fine tuning without reflowing the grid.
 * Both can be combined with `colStart`/`colSpan` for exact placement + size.
 
+To add captions to images in a written piece, set `caption` on `<Image>`. `<ImagePair>` accepts `captionLeft` and `captionRight` for individual image captions, plus `caption` for the pair as a whole. `<Gallery>` accepts `captions={["", ""]}` for per-image caption placeholders and `caption=""` for a caption below the whole gallery. Empty captions render nothing.
+
+For a written-piece gallery, `columns={2}` (or `1`, `3`, or `4`) switches to that many equal columns. Omit `columns` to keep the current staggered layout. The project gallery uses its frontmatter `galleryColumns: "2"` or `"3"` setting for galleries with more than two images.
+
+On Subliminal, empty `width` and `height` props are left on its `<Image>` and `<ImagePair>` blocks as sizing placeholders. Fill them with CSS values such as `"80%"` or `"480px"` when you want to resize; blank values leave the current layout unchanged.
+
 **Other blocks:**
 
 * `ImagePair` — `left`, `right` (both `ImageMetadata`), `preset: centered|large|left|right`, `caption`.
@@ -517,9 +537,9 @@ Next paragraph…
 
 | Block | Import | Key props |
 |---|---|---|
-| `Image` — one image mid-text | `.../blocks/Image.astro` | `src` (imported image), `alt`, `preset` (default `large` in writing; see grid presets above), `caption` (small line under the image), `width` (`"72%"`) |
-| `ImagePair` — two images side by side | `.../blocks/ImagePair.astro` | `left`, `right` (imported images), `altLeft`/`altRight`, `caption` |
-| `Gallery` — staggered row of 3+ | `.../blocks/Gallery.astro` | `images={[a, b, c]}` |
+| `Image` — one image mid-text | `.../blocks/Image.astro` | `src` (imported image), `alt`, `preset` (default `large` in writing; see grid presets above), `caption`, `width`, `height` |
+| `ImagePair` — two images side by side | `.../blocks/ImagePair.astro` | `left`, `right` (imported images), `altLeft`/`altRight`, `captionLeft`/`captionRight`, `caption`, `widthLeft`/`heightLeft`, `widthRight`/`heightRight` |
+| `Gallery` — staggered row of 3+ | `.../blocks/Gallery.astro` | `images={[a, b, c]}`, optional `captions={["", "", ""]}`, `caption`, `columns={2}` (1–4) |
 | `Quote` — oversized pull-quote | `.../blocks/Quote.astro` | children = quote text, `attribution="— Name"` |
 | `Text` — switch paragraph style | `.../blocks/Text.astro` | `variant`: `mono` (default) / `serif` / `note` / `meta`, `size`: `sm` / `md` / `lg` |
 
@@ -574,4 +594,3 @@ Pushes to `main` deploy through `.github/workflows/deploy.yml` to `https://c-gay
 * `docs/studio-design-system.md` — layout and interaction rules.
 * `docs/constellation-geometry.md` — authoritative Constellation geometry.
 * `docs/technical-decisions.md` — architectural constraints.
-

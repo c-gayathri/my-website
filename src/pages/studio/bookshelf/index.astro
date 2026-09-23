@@ -1,13 +1,16 @@
 ---
 import { getCollection } from 'astro:content';
-import { getImage } from 'astro:assets';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
+import BookCover from '../../../components/studio/BookCover.astro';
 import { studioConfig } from '../../../data/studioConfig';
 import { externalLinks } from '../../../data/externalLinks';
+import { bookFavouriteOrder } from '../../../data/bookFavouriteOrder';
 
 const books = await getCollection('books');
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
-const years = [...new Set(books.map((book) => book.data.yearRead))].sort((a, b) => b - a);
+const years = [...new Set(books
+  .filter((book) => book.data.shelf !== 'others' && book.data.yearRead != null)
+  .map((book) => book.data.yearRead!))].sort((a, b) => b - a);
 const challenge = studioConfig.readingChallenge as Record<number, { goal: number }>;
 const palette = ['#ff4f9a', '#ffe600', '#35ef7d', '#ff643d', '#42d7ff', '#b68cff'];
 
@@ -15,19 +18,35 @@ const byYear = years.map((year) => ({
   year,
   goal: challenge[year]?.goal ?? books.filter((book) => book.data.yearRead === year).length,
   list: books
-    .filter((book) => book.data.yearRead === year)
+    .filter((book) => book.data.shelf !== 'others' && book.data.yearRead === year)
     .sort((a, b) => {
       const aHas = Boolean(a.data.dateFinished);
       const bHas = Boolean(b.data.dateFinished);
       if (aHas !== bHas) return aHas ? -1 : 1;
       return (a.data.dateFinished ?? a.data.title).localeCompare(b.data.dateFinished ?? b.data.title);
-    }),
+  }),
 }));
-const favourites = books.filter((book) => book.data.featured);
+const others = books
+  .filter((book) => book.data.shelf === 'others')
+  .sort((a, b) => {
+    const shelfOrder = (a.data.goodreadsShelf === 'to-read' ? 1 : 0) - (b.data.goodreadsShelf === 'to-read' ? 1 : 0);
+    return shelfOrder || a.data.title.localeCompare(b.data.title);
+  });
+const panels = [
+  ...byYear.map(({ year, list, goal }, yearIndex) => ({
+    key: String(year), label: String(year), list, goal, yearIndex,
+  })),
+  { key: 'others', label: 'Others', list: others, goal: null, yearIndex: byYear.length },
+];
+const favouriteOrder = new Map<string, number>(bookFavouriteOrder.map((id, index) => [id, index] as const));
+const favourites = books
+  .filter((book) => book.data.featured)
+  .sort((a, b) => (favouriteOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (favouriteOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+    || a.data.title.localeCompare(b.data.title));
 const favouriteThumbs = await Promise.all(
-  favourites.map(async (book) => ({
+  favourites.map((book) => ({
     book,
-    thumb: await getImage({ src: book.data.cover, width: 96 }),
+    thumb: book.data.cover,
   })),
 );
 
@@ -38,34 +57,43 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   <div class="bookshelf-page">
     <header class="shelf-intro">
       <h1>{studioConfig.bookshelfLabel}</h1>
-      <p class="s-meta">{books.length} books</p>
+    <p class="s-meta">{books.length} books</p>
     </header>
 
     <nav class="year-switcher" aria-label="Reading year">
-      {years.map((year, index) => (
-        <button class="s-link" type="button" data-year-button={year} aria-pressed={index === 0 ? 'true' : 'false'}>{year}</button>
+      {panels.map(({ key, label }, index) => (
+        <button class="s-link" type="button" data-year-button={key} aria-pressed={index === 0 ? 'true' : 'false'}>{label}</button>
       ))}
     </nav>
 
     {
-      byYear.map(({ year, list, goal }, yearIndex) => (
-        <section class="year" id={`y${year}`} aria-labelledby={`year-${year}`} data-year-panel={year} hidden={yearIndex !== 0}>
+      panels.map(({ key, label, list, goal, yearIndex }, panelIndex) => (
+        <section class="year" id={`y${key}`} aria-labelledby={`year-${key}`} data-year-panel={key} hidden={panelIndex !== 0}>
           <aside class="rail">
-            <p class="s-meta rail-label">reading challenge</p>
-            <p class="challenge-num" id={`year-${year}`}>
-              <span class="big">{list.length}</span>
-              <span class="s-meta"> / {goal} books</span>
-            </p>
-            <div class="bar" aria-label={`${list.length} of ${goal} books`}>
-              <div class="fill" style={`width: ${Math.min(100, (list.length / goal) * 100)}%`} />
-            </div>
+            {goal == null ? (
+              <>
+                <p class="s-meta rail-label">other books</p>
+                <p class="challenge-num" id={`year-${key}`}><span class="big">{list.length}</span><span class="s-meta"> books</span></p>
+              </>
+            ) : (
+              <>
+                <p class="s-meta rail-label">reading challenge</p>
+                <p class="challenge-num" id={`year-${key}`}>
+                  <span class="big">{list.length}</span>
+                  <span class="s-meta"> / {goal} books</span>
+                </p>
+                <div class="bar" aria-label={`${list.length} of ${goal} books`}>
+                  <div class="fill" style={`width: ${Math.min(100, (list.length / goal) * 100)}%`} />
+                </div>
+              </>
+            )}
             {favourites.length > 0 && (
               <section class="favourites" aria-labelledby="favourites-title">
                 <h2 id="favourites-title">All time favourites</h2>
                 <div class="favourite-covers">
                   {favouriteThumbs.map(({ book, thumb }) => (
                     <a href={`${base}/studio/bookshelf/${book.id}/`} aria-label={`${book.data.title} by ${book.data.author}`}>
-                      <img src={thumb.src} alt="" width={thumb.attributes.width} height={thumb.attributes.height} loading="lazy" />
+                      <BookCover cover={thumb} title={book.data.title} author={book.data.author} alt="" width={96} height={144} coverLookup={book.data.coverLookup} />
                     </a>
                   ))}
                 </div>
@@ -77,10 +105,11 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
           </aside>
 
           <div class="shelf-wrap">
-            <div class="covers" aria-label={`${year} books`}>
+            <div class="covers" aria-label={`${label} books`}>
               {list.map((book, bookIndex) => {
                 const hasReview = Boolean(book.body?.trim());
                 const color = palette[(yearIndex * 3 + bookIndex) % palette.length];
+                const dateLabel = book.data.dateFinished ?? book.data.yearRead ?? (book.data.goodreadsShelf === 'to-read' ? 'to read' : 'date unknown');
                 return (
                   <a
                     class="book-card"
@@ -88,20 +117,14 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
                     style={`--card-color: ${color}`}
                     data-book-card
                   >
-                    <img
-                      src={book.data.cover.src}
-                      alt={`${book.data.title} by ${book.data.author}`}
-                      width={book.data.cover.width}
-                      height={book.data.cover.height}
-                      loading="lazy"
-                    />
+                    <BookCover cover={book.data.cover} title={book.data.title} author={book.data.author} loading="lazy" coverLookup={book.data.coverLookup} />
                     {hasReview && <span class="reviewed s-meta">reviewed</span>}
                     <span class="overlay">
                       <span class={`title ${book.data.title.length > 32 ? 'title-long' : ''}`}>{book.data.title}</span>
                       <span class="author">{book.data.author}</span>
                       <span class="meta s-meta">
                         {ratingOf(book.data.rating)}<br />
-                        {book.data.dateFinished ?? book.data.yearRead}
+                        {dateLabel}
                       </span>
                       <span class="status s-meta">
                         {hasReview
@@ -190,17 +213,17 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
     height: calc(100% - 92px);
   }
 
-  .rail { position: sticky; left: 0; padding-top: 3px; }
+  .rail { position: sticky; left: 0; display:flex; flex-direction:column; height:100%; min-height:0; padding-top:3px; }
   .rail-label { color: var(--s-ink); letter-spacing: 0.16em; text-transform: uppercase; }
   .challenge-num { margin: 12px 0 0; }
   .challenge-num .big { font-family: var(--s-serif); font-size: 52px; line-height: 1; }
   .bar { width: min(100%, 190px); height: 5px; border: 1px solid var(--s-ink); margin-top: 13px; }
   .fill { height: 100%; background: var(--s-ink); }
-  .favourites { margin-top:28px; }
+  .favourites { display:flex; flex-direction:column; flex:1 1 auto; min-height:0; margin-top:28px; }
   .favourites h2 { margin:0 0 12px; font-family:var(--s-serif); font-size:22px; font-weight:500; }
-  .favourite-covers { display:flex; gap:7px; flex-wrap:wrap; max-height:220px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding-right:4px; }
-  .favourite-covers a { display:block; }
-  .favourite-covers img { display:block; width:48px; height:72px; object-fit:cover; box-shadow:0 2px 8px rgba(20,18,10,.12); }
+  .favourite-covers { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); justify-items:center; align-items:start; align-content:start; flex:1 1 auto; min-height:0; gap:clamp(7px, 1vh, 12px); max-height:none; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding:0 4px 8px 0; }
+  .favourite-covers a { display:block; width:min(100%, 112px); height:auto; min-width:0; aspect-ratio:2 / 3; }
+  :global(.favourite-covers img) { display:block; width:100%; height:100%; object-fit:contain; background:var(--s-bg); box-shadow:0 2px 8px rgba(20,18,10,.12); }
   .goodreads-link { display:inline-block; margin-top:14px; }
 
   .shelf-wrap {
@@ -242,7 +265,7 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
     box-shadow: 0 7px 18px rgba(20, 18, 10, 0.19);
   }
 
-  .book-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  :global(.book-card img) { display: block; width: 100%; height: 100%; object-fit: contain; background:var(--s-bg); }
 
   .reviewed {
     position: absolute;
@@ -289,7 +312,10 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
     .shelf-intro { display: block; }
     .shelf-intro p:last-child { margin-top: 8px; }
     .year { grid-template-columns: 1fr; gap: 18px; height: auto; }
-    .rail { position: static; }
+    .rail { position:static; display:block; height:auto; }
+    .favourites { display:block; min-height:0; }
+    .favourite-covers { grid-template-columns:repeat(2,minmax(0,1fr)); flex:initial; min-height:0; overflow-y:auto; }
+    .favourite-covers a { width:min(100%, 112px); height:auto; }
     .covers { grid-template-rows: repeat(2, 184px); grid-auto-columns: 114px; }
     .book-card { width: 114px; height: 171px; }
   }

@@ -1,11 +1,12 @@
 ---
 import { getCollection } from 'astro:content';
 import { getImage } from 'astro:assets';
+import BookCover from '../../../components/studio/BookCover.astro';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
 import { clusterOrder } from '../../../data/clusterOrder';
 import { projectOrder } from '../../../data/projectOrder';
-import { writingFeaturedOrder } from '../../../data/writingFeatured';
+import { isFeaturedWriting, sortWritingEntries } from '../../../data/writingOrder';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const allClusters = await getCollection('clusters');
@@ -44,21 +45,12 @@ for (const p of allProjects) {
 const projects = orderedProjects;
 
 const allWriting = await getCollection('writing');
-const writing = [...allWriting].sort((a, b) => {
-  const fa = writingFeaturedOrder.indexOf(a.id);
-  const fb = writingFeaturedOrder.indexOf(b.id);
-  const aFeatured = fa !== -1;
-  const bFeatured = fb !== -1;
-  if (aFeatured || bFeatured) {
-    if (!aFeatured) return 1;
-    if (!bFeatured) return -1;
-    return fa - fb;
-  }
-  return b.data.date.valueOf() - a.data.date.valueOf();
-});
+const writing = sortWritingEntries(allWriting);
 const allBooks = await getCollection('books');
 const books = [...allBooks].sort((a, b) => {
-  if (a.data.yearRead !== b.data.yearRead) return b.data.yearRead - a.data.yearRead;
+  const aYear = a.data.yearRead ?? Number.NEGATIVE_INFINITY;
+  const bYear = b.data.yearRead ?? Number.NEGATIVE_INFINITY;
+  if (aYear !== bYear) return bYear - aYear;
   const aHasDate = Boolean(a.data.dateFinished);
   const bHasDate = Boolean(b.data.dateFinished);
   if (aHasDate !== bHasDate) return aHasDate ? -1 : 1;
@@ -66,12 +58,24 @@ const books = [...allBooks].sort((a, b) => {
 });
 
 const projectMedia = (project: (typeof projects)[number]) =>
-  project.data.thumbnail ?? project.data.hero ?? project.data.videoPoster ?? project.data.gallery[0];
+  project.data.thumbnail ?? project.data.hero ?? project.data.gallery[0] ?? project.data.videoPoster;
 
 const clusterItems = await Promise.all(
   clusters.map(async (cluster) => {
     const related = projects.filter((project) => project.data.clusters.includes(cluster.id));
-    const media = related.map(projectMedia).find(Boolean);
+    const order = projectOrder[cluster.id] ?? [];
+    related.sort((a, b) => {
+      const ia = order.indexOf(a.id);
+      const ib = order.indexOf(b.id);
+      if (ia !== -1 || ib !== -1) {
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      }
+      const featured = Number(b.data.featured) - Number(a.data.featured);
+      return featured || a.id.localeCompare(b.id);
+    });
+    const media = cluster.data.previewImage ?? related.map(projectMedia).find(Boolean);
     const preview = media ? await getImage({ src: media, width: 112 }) : undefined;
     return { cluster, count: related.length, preview };
   }),
@@ -89,7 +93,7 @@ const projectItems = await Promise.all(
 
 const writingItems = await Promise.all(
   writing.slice(0, 4).map(async (entry) => {
-    const media = entry.data.image ?? entry.data.gallery[0];
+    const media = entry.data.preview?.image ?? entry.data.image ?? entry.data.gallery[0];
     return {
       entry,
       preview: media ? await getImage({ src: media, width: 112 }) : undefined,
@@ -98,9 +102,9 @@ const writingItems = await Promise.all(
 );
 
 const readingItems = await Promise.all(
-  books.slice(0, 4).map(async (book) => ({
+  books.slice(0, 4).map((book) => ({
     book,
-    cover: await getImage({ src: book.data.cover, width: 80 }),
+    cover: book.data.cover,
   })),
 );
 
@@ -153,7 +157,7 @@ const formatDate = (date: Date) =>
               <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="eager" />
             ) : <span class="image-placeholder" aria-hidden="true" />}
             <span class="row-title">{project.data.title}</span>
-            <span class="row-detail s-meta">{project.data.types[0] ?? 'work'}</span>
+            <span class="row-detail s-meta">{project.data.medium.join(' · ')}</span>
             <time class="s-meta">{project.data.year}</time>
             <span aria-hidden="true">→</span>
           </a>
@@ -174,7 +178,7 @@ const formatDate = (date: Date) =>
           <a class="writing-card" href={sectionLink(`/studio/writing/${entry.id}/`)}>
             {preview && <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="lazy" />}
             <span class="writing-copy">
-              <span class="s-meta">{entry.data.type} · {formatDate(entry.data.date)}</span>
+              <span class="s-meta">{entry.data.type} · {formatDate(entry.data.date)}{isFeaturedWriting(entry.id) ? ' · featured' : ''}</span>
               <strong>{entry.data.title ?? entry.id.replace(/-/g, ' ')}</strong>
               {entry.data.excerpt && <small>{entry.data.excerpt}</small>}
             </span>
@@ -194,7 +198,7 @@ const formatDate = (date: Date) =>
       <div class="book-grid">
         {readingItems.map(({ book, cover }) => (
           <a class="book" href={sectionLink(`/studio/bookshelf/${book.id}/`)}>
-            <img src={cover.src} alt="" width={cover.attributes.width} height={cover.attributes.height} loading="lazy" />
+            <BookCover cover={cover} title={book.data.title} author={book.data.author} alt="" width={120} height={180} loading="lazy" coverLookup={book.data.coverLookup} />
             <span>
               <strong>{book.data.title}</strong>
               <small class="s-meta">{book.data.author}</small>
@@ -386,7 +390,7 @@ const formatDate = (date: Date) =>
     padding-top: 12px;
   }
   .book { color: inherit; text-decoration: none; min-width: 0; }
-  .book img {
+  :global(.book img) {
     display: block;
     width: auto;
     height: 105px;

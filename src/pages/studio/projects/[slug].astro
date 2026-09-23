@@ -33,6 +33,15 @@ const videoSrc = d.videoSrc ? `${base}${d.videoSrc}` : undefined;
 const audioSrc = d.audioSrc ? `${base}${d.audioSrc}` : undefined;
 const allGalleryImages = [...(img ? [img] : []), ...d.gallery] as Array<(typeof d.gallery)[number]>;
 const uniqGallery = [...new Map(allGalleryImages.map((im) => [im.src, im])).values()] as Array<(typeof d.gallery)[number]>;
+const captionBySrc = new Map(d.gallery.map((image, index) => [image.src, d.galleryCaptions?.[index] ?? '']));
+const lightboxImages = uniqGallery.map((image) => ({
+  src: image.src,
+  width: image.width,
+  height: image.height,
+  caption: image.src === img?.src && d.heroCaption?.trim()
+    ? d.heroCaption
+    : captionBySrc.get(image.src),
+}));
 
 function youtubeEmbedUrl(value: string): string {
   const url = new URL(value);
@@ -64,6 +73,9 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     <aside class="rail">
       <nav class="crumbs s-meta" aria-label="Breadcrumb">
         <a href={`${base}/studio/`}>← constellation</a>
+        {primaryCluster && <a href={`${base}/studio/clusters/${primaryCluster.id}/`}>← Index</a>}
+        {!primaryCluster && <a href={`${base}/studio/index/`}>← Index</a>}
+        <a href={`${base}/studio/index/projects/`}>← All projects</a>
       </nav>
       {clusterLinks.length > 0 && (
         <div class="cluster-list s-meta">
@@ -76,13 +88,12 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
 
       <h1>{d.title}</h1>
 
+      {d.summary && <p class="note">{d.summary}</p>}
+
       <dl class="meta s-meta">
         {d.medium.length > 0 && <div><dt>media</dt><dd>{d.medium.join(', ')}</dd></div>}
         <div><dt>year</dt><dd>{d.year}</dd></div>
-        {d.types.length > 0 && <div><dt>form</dt><dd>{d.types.join(', ')}</dd></div>}
       </dl>
-
-      {d.summary && <p class="note">{d.summary}</p>}
 
       <div class="pn">
         {
@@ -100,10 +111,6 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
           )
         }
       </div>
-
-      <a class="s-meta all" href={primaryCluster ? `${base}/studio/clusters/${primaryCluster.id}/` : `${base}/studio/`}>
-        view all projects
-      </a>
 
       {
         d.relatedWriting.length > 0 && (
@@ -147,7 +154,7 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
             uniqGallery.length > 2 && uniqGallery.length < 9 ? 'gallery--centered' : '',
           ]}
         >
-          <Lightbox images={uniqGallery.map((g) => ({ src: g.src, width: g.width, height: g.height }))} title={d.title} />
+          <Lightbox images={lightboxImages} title={d.title} />
         </div>
       ) : (
         img && (
@@ -161,6 +168,7 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
           />
         )
       )}
+      {uniqGallery.length > 0 && d.galleryCaption && <p class="gallery-caption s-meta">{d.galleryCaption}</p>}
 
       {youtubeEmbeds.length > 0 && (
         <div class="youtube-list">
@@ -271,6 +279,7 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     color: var(--s-grey);
     margin: 26px 0 0;
     max-width: 40ch;
+    white-space: pre-line;
   }
 
   .pn {
@@ -388,6 +397,7 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     font-style: italic;
     line-height: 1.5;
     max-width: 30ch;
+    white-space: pre-line;
   }
 
   .body {
@@ -443,6 +453,8 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     max-height: min(80vh, 720px);
     object-fit: contain;
   }
+
+  .gallery-caption { margin: 10px 0 0; }
 
   @media (min-width: 1400px) {
     .project { max-width: min(1780px, 94vw); }

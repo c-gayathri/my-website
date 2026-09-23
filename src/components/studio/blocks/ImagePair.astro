@@ -9,20 +9,34 @@ interface Props {
   altLeft?: string;
   altRight?: string;
   caption?: string;
+  captionLeft?: string;
+  captionRight?: string;
+  widthLeft?: string;
+  widthRight?: string;
+  heightLeft?: string;
+  heightRight?: string;
   preset?: 'centered' | 'large' | 'left' | 'right';
 }
 
-const { left, right, altLeft = '', altRight = '', caption, preset = 'large' } = Astro.props;
+const { left, right, altLeft = '', altRight = '', caption, captionLeft, captionRight, widthLeft, widthRight, heightLeft, heightRight, preset = 'large' } = Astro.props;
 
 const url = (v: ImageMetadata | string) => (typeof v === 'string' ? v : v.src);
 const dims = (v: ImageMetadata | string) =>
   typeof v === 'string' ? {} : { width: v.width, height: v.height };
+const imageStyle = (width?: string, height?: string) =>
+  [width ? `width:${width};` : '', height ? `height:${height};` : ''].join('');
 ---
 
 <Place {preset}>
   <div class="pair">
-    <img src={url(left)} alt={altLeft} {...dims(left)} loading="lazy" />
-    <img class="low" src={url(right)} alt={altRight} {...dims(right)} loading="lazy" />
+    <figure class="pair-item">
+      <img src={url(left)} alt={altLeft} {...dims(left)} loading="lazy" style={imageStyle(widthLeft, heightLeft) || undefined} />
+      {captionLeft && <figcaption class="s-meta">{captionLeft}</figcaption>}
+    </figure>
+    <figure class="pair-item low">
+      <img src={url(right)} alt={altRight} {...dims(right)} loading="lazy" style={imageStyle(widthRight, heightRight) || undefined} />
+      {captionRight && <figcaption class="s-meta">{captionRight}</figcaption>}
+    </figure>
   </div>
   {caption && <p class="s-meta cap">{caption}</p>}
 </Place>
@@ -34,8 +48,11 @@ const dims = (v: ImageMetadata | string) =>
     align-items: flex-start;
   }
 
+  .pair-item { min-width: 0; flex: 1; margin: 0; }
+  .pair-item figcaption { margin-top: 8px; }
+
   img {
-    width: calc(50% - 9px);
+    width: 100%;
     height: auto;
     display: block;
     box-shadow: 0 2px 18px rgba(20, 18, 10, 0.08);

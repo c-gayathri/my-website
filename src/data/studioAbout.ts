@@ -34,8 +34,8 @@ export const studioAbout: {
   influences: [
     { file: 'beloved.jpg', title: 'Beloved — Toni Morrison' },
     { file: 'god-of-small-things.jpg', title: 'The God of Small Things — Arundhati Roy' },
-    { file: 'andy-warhol-marilyn.webp', title: 'Marilyn — Andy Warhol' },
-    { file: 'LaColonneBrisee-2_900x.jpg', title: 'La Colonne Brisée — Frida Kahlo' },
-    { file: 'images.jpeg', title: 'Untitled' },
+    { file: 'andy-warhol-marilyn.webp', title: 'Andy Warhol' },
+    { file: 'LaColonneBrisee-2_900x.jpg', title: 'Frida Kahlo' },
+    { file: 'images.jpeg', title: 'Kandinsky' },
   ],
 };

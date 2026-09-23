@@ -4,6 +4,9 @@ dist/
 # generated types
 .astro/
 
+# local working files
+/working/
+
 # dependencies
 node_modules/
 constellation-math-lab/test-results/
