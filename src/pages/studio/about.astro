@@ -106,11 +106,11 @@ const influences = await Promise.all(
       <section class="band-section influence-section" aria-labelledby="influences-title" data-influences>
         <header class="section-head">
           <span class="s-meta">04</span>
-          <h2 id="influences-title">Influences</h2>
+          <h2 id="influences-title">My Muses</h2>
         </header>
         <div class="influence-grid">
-          {influences.map((influence, index) => (
-            <figure class="influence" data-extra={index >= 3 ? '' : undefined} hidden={index >= 3}>
+          {influences.map((influence) => (
+            <figure class:list={['influence', influence.title === 'Frida Kahlo' ? 'influence--frida' : '']}>
               {influence.href ? (
                 <a href={influence.href} aria-label={`${influence.title}, open related work`}>
                   <img src={influence.preview.src} alt="" width={influence.preview.attributes.width} height={influence.preview.attributes.height} loading="lazy" />
@@ -125,33 +125,10 @@ const influences = await Promise.all(
             </figure>
           ))}
         </div>
-        {influences.length > 3 && (
-          <button class="influence-toggle s-meta" type="button" aria-expanded="false">
-            <span data-more>view more +</span><span data-less hidden>view less −</span>
-          </button>
-        )}
       </section>
     </div>
   </article>
 </StudioLayout>
-
-<script>
-  document.querySelectorAll<HTMLElement>('[data-influences]').forEach((section) => {
-    const button = section.querySelector<HTMLButtonElement>('.influence-toggle');
-    if (!button) return;
-    button.addEventListener('click', () => {
-      const expanded = button.getAttribute('aria-expanded') !== 'true';
-      button.setAttribute('aria-expanded', String(expanded));
-      section.querySelectorAll<HTMLElement>('[data-extra]').forEach((item) => {
-        item.hidden = !expanded;
-      });
-      const more = button.querySelector<HTMLElement>('[data-more]');
-      const less = button.querySelector<HTMLElement>('[data-less]');
-      if (more) more.hidden = expanded;
-      if (less) less.hidden = !expanded;
-    });
-  });
-</script>
 
 <style>
   .about {
@@ -312,7 +289,6 @@ const influences = await Promise.all(
     padding-top: 10px;
   }
   .influence { min-width: 0; margin: 0; }
-  .influence[hidden] { display: none; }
   .influence a { display: block; color: inherit; text-decoration: none; }
   .influence img {
     display: block;
@@ -321,6 +297,7 @@ const influences = await Promise.all(
     object-fit: cover;
     filter: saturate(.85);
   }
+  .influence--frida img { object-position: center 20%; }
   .influence figcaption {
     overflow: hidden;
     margin-top: 4px;
@@ -331,16 +308,6 @@ const influences = await Promise.all(
     white-space: nowrap;
   }
   .influence a:hover figcaption { text-decoration: underline; }
-  .influence-toggle {
-    margin-top: 10px;
-    padding: 0 0 2px;
-    border: 0;
-    border-bottom: 1px solid currentColor;
-    background: transparent;
-    color: var(--s-ink);
-    cursor: pointer;
-    font-size: 9px;
-  }
 
   @media (max-width: 1000px) {
     .about { display: block; height: auto; min-height: 0; padding-top: 4px; }

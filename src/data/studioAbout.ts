@@ -32,10 +32,10 @@ export const studioAbout: {
   skills: ['digital illustration', 'data visualisation', 'creative coding', 'photography', 'watercolour', 'photo editing'],
   news: [],
   influences: [
-    { file: 'beloved.jpg', title: 'Beloved — Toni Morrison' },
-    { file: 'god-of-small-things.jpg', title: 'The God of Small Things — Arundhati Roy' },
-    { file: 'andy-warhol-marilyn.webp', title: 'Andy Warhol' },
-    { file: 'LaColonneBrisee-2_900x.jpg', title: 'Frida Kahlo' },
-    { file: 'images.jpeg', title: 'Kandinsky' },
+    { file: 'beloved.jpg', title: 'Beloved — Toni Morrison', href: 'https://www.arts.gov/initiatives/nea-big-read/beloved' },
+    { file: 'god-of-small-things.jpg', title: 'The God of Small Things — Arundhati Roy', href: 'https://en.wikipedia.org/wiki/The_God_of_Small_Things' },
+    { file: 'andy-warhol-marilyn.webp', title: 'Andy Warhol', href: 'https://www.warhol.org/andy-warhols-life/' },
+    { file: 'LaColonneBrisee-2_900x.jpg', title: 'Frida Kahlo', href: 'https://www.museofridakahlo.org.mx/frida/?lang=en' },
+    { file: 'images.jpeg', title: 'Kandinsky', href: 'https://en.wikipedia.org/wiki/Wassily_Kandinsky' },
   ],
 };

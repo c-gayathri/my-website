@@ -91,10 +91,11 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
             {favourites.length > 0 && (
               <section class="favourites" aria-labelledby="favourites-title">
                 <h2 id="favourites-title">All time favourites</h2>
-                <div class="favourite-covers">
-                  {favouriteThumbs.map(({ book, thumb }) => (
-                    <a href={`${base}/studio/bookshelf/${book.id}/`} aria-label={`${book.data.title} by ${book.data.author}`}>
+                  <div class="favourite-covers">
+                    {favouriteThumbs.map(({ book, thumb }) => (
+                    <a class="favourite-card" href={`${base}/studio/bookshelf/${book.id}/`} aria-label={`${book.data.title} by ${book.data.author}`} data-favourite-card style={`--card-color: ${palette[(favouriteOrder.get(book.id) ?? 0) % palette.length]}`}>
                       <BookCover cover={thumb} title={book.data.title} author={book.data.author} alt="" width={96} height={144} coverLookup={book.data.coverLookup} />
+                      <span class="favourite-overlay"><span class="favourite-title">{book.data.title}</span><span class="favourite-author">{book.data.author}</span></span>
                     </a>
                   ))}
                 </div>
@@ -166,6 +167,12 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
 
   document.addEventListener('click', (event) => {
     if (!coarsePointer.matches) return;
+    const favourite = (event.target as Element).closest<HTMLElement>('[data-favourite-card]');
+    if (favourite && !favourite.hasAttribute('data-revealed')) {
+      event.preventDefault();
+      document.querySelectorAll<HTMLElement>('[data-favourite-card]').forEach((item) => item.toggleAttribute('data-revealed', item === favourite));
+      return;
+    }
     const card = (event.target as Element).closest<HTMLElement>('[data-book-card]');
 
     if (!card) {
@@ -225,6 +232,13 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   .favourite-covers { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); justify-items:center; align-items:start; align-content:start; flex:1 1 auto; min-height:0; gap:clamp(7px, 1vh, 12px); max-height:none; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding:0 4px 8px 0; }
   .favourite-covers a { display:block; width:min(100%, 112px); height:auto; min-width:0; aspect-ratio:2 / 3; }
   :global(.favourite-covers img) { display:block; width:100%; height:100%; object-fit:cover; background:var(--s-bg); box-shadow:0 2px 8px rgba(20,18,10,.12); }
+  .favourite-card { position:relative; overflow:hidden; isolation:isolate; box-shadow:0 3px 13px rgba(20,18,10,.16); transition:transform 180ms ease, box-shadow 180ms ease; }
+  .favourite-card:hover, .favourite-card:focus-visible, .favourite-card[data-revealed] { transform:translateY(-3px) rotate(-.2deg); box-shadow:0 7px 18px rgba(20,18,10,.19); }
+  .favourite-overlay { position:absolute; inset:0; z-index:3; display:flex; flex-direction:column; padding:12px 10px; background:var(--card-color); transform:translateY(101%); transition:transform 220ms cubic-bezier(.22,.75,.28,1); }
+  .favourite-card:hover .favourite-overlay, .favourite-card:focus-visible .favourite-overlay, .favourite-card[data-revealed] .favourite-overlay { transform:translateY(0); }
+  .favourite-title { font-family:var(--s-serif); font-size:18px; font-weight:600; line-height:.98; }
+  .favourite-author { margin-top:7px; font-family:var(--s-mono); font-size:8px; line-height:1.35; }
+  @media (prefers-reduced-motion: reduce) { .favourite-card, .favourite-overlay { transition:none; } .favourite-card:hover, .favourite-card:focus-visible, .favourite-card[data-revealed] { transform:none; } }
   .goodreads-link { display:inline-block; margin-top:14px; }
 
   .shelf-wrap {
@@ -319,5 +333,9 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
     .favourite-covers a { width:min(100%, 112px); height:auto; }
     .covers { grid-template-rows: repeat(2, 184px); grid-auto-columns: 114px; }
     .book-card { width: 114px; height: 171px; }
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .favourite-card[data-revealed] .favourite-overlay { transform:translateY(0); }
   }
 </style>

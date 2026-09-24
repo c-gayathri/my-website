@@ -69,7 +69,7 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
 ---
 
 <StudioLayout title={`${d.title} — Studio`} slim>
-  <article class:list={['project', `size-${d.size}`, `layout-${d.pageLayout}`]}>
+  <article class:list={['project', `size-${d.size}`, `layout-${d.pageLayout}`, d.preserveBreaks ? 'preserve-breaks' : '']}>
     <aside class="rail">
       <nav class="crumbs s-meta" aria-label="Breadcrumb">
         <a href={`${base}/studio/`}>← constellation</a>
@@ -395,6 +395,10 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     font-style: italic;
     line-height: 1.5;
     max-width: 30ch;
+    white-space: pre-line;
+  }
+
+  .project.preserve-breaks .mdx-body :global(p) {
     white-space: pre-line;
   }
 

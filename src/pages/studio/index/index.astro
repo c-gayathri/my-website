@@ -61,7 +61,7 @@ const projectMedia = (project: (typeof projects)[number]) =>
   project.data.thumbnail ?? project.data.hero ?? project.data.gallery[0] ?? project.data.videoPoster;
 
 const clusterItems = await Promise.all(
-  clusters.map(async (cluster) => {
+  clusters.slice(0, 9).map(async (cluster) => {
     const related = projects.filter((project) => project.data.clusters.includes(cluster.id));
     const order = projectOrder[cluster.id] ?? [];
     related.sort((a, b) => {
@@ -126,7 +126,6 @@ const formatDate = (date: Date) =>
           <span class="number s-meta">01</span>
           <h2 id="clusters-heading">Clusters</h2>
         </div>
-        <a class="all-link s-meta" href={sectionLink('/studio/index/clusters/')}>view all <span aria-hidden="true">↗</span></a>
       </header>
       <div class="cluster-grid">
         {clusterItems.map(({ cluster, count, preview }) => (
@@ -139,6 +138,7 @@ const formatDate = (date: Date) =>
           </a>
         ))}
       </div>
+      <a class="panel-more s-meta" href={sectionLink('/studio/index/clusters/')}>view all clusters <span aria-hidden="true">↗</span></a>
     </section>
 
     <section class="panel projects-panel" aria-labelledby="projects-heading">
@@ -147,7 +147,6 @@ const formatDate = (date: Date) =>
           <span class="number s-meta">02</span>
           <h2 id="projects-heading">Projects</h2>
         </div>
-        <a class="all-link s-meta" href={sectionLink('/studio/index/projects/')}>view all <span aria-hidden="true">↗</span></a>
       </header>
       <div class="rows project-rows">
         {projectItems.map(({ project, preview }, index) => (
@@ -163,6 +162,7 @@ const formatDate = (date: Date) =>
           </a>
         ))}
       </div>
+      <a class="panel-more s-meta" href={sectionLink('/studio/index/projects/')}>view all projects <span aria-hidden="true">↗</span></a>
     </section>
 
     <section class="panel writing-panel" aria-labelledby="writing-heading">
@@ -171,7 +171,6 @@ const formatDate = (date: Date) =>
           <span class="number s-meta">03</span>
           <h2 id="writing-heading">{studioConfig.writingLabel}</h2>
         </div>
-        <a class="all-link s-meta" href={sectionLink('/studio/writing/')}>view all <span aria-hidden="true">↗</span></a>
       </header>
       <div class="writing-grid">
         {writingItems.map(({ entry, preview }) => (
@@ -185,6 +184,7 @@ const formatDate = (date: Date) =>
           </a>
         ))}
       </div>
+      <a class="panel-more s-meta" href={sectionLink('/studio/writing/')}>view all writing <span aria-hidden="true">↗</span></a>
     </section>
 
     <section class="panel reading-panel" aria-labelledby="reading-heading">
@@ -193,7 +193,6 @@ const formatDate = (date: Date) =>
           <span class="number s-meta">04</span>
           <h2 id="reading-heading">Reading</h2>
         </div>
-        <a class="all-link s-meta" href={sectionLink('/studio/bookshelf/')}>view all <span aria-hidden="true">↗</span></a>
       </header>
       <div class="book-grid">
         {readingItems.map(({ book, cover }) => (
@@ -206,6 +205,7 @@ const formatDate = (date: Date) =>
           </a>
         ))}
       </div>
+      <a class="panel-more s-meta" href={sectionLink('/studio/bookshelf/')}>view all reading <span aria-hidden="true">↗</span></a>
     </section>
   </div>
 </StudioLayout>
@@ -216,7 +216,8 @@ const formatDate = (date: Date) =>
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.18fr);
     grid-template-rows: auto auto auto;
     align-content: start;
-    gap: clamp(18px, 2.2vw, 34px);
+    column-gap: clamp(12px, 1.5vh, 18px);
+    row-gap: clamp(24px, 3vh, 36px);
     min-height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 56px);
     padding: 0 0 8px;
   }
@@ -234,11 +235,6 @@ const formatDate = (date: Date) =>
     min-width: 0;
     overflow: hidden;
     border-top: 1px solid var(--s-ink);
-  }
-
-  .writing-panel,
-  .reading-panel {
-    margin-top: clamp(42px, 6vh, 78px);
   }
 
   .panel-head,
@@ -266,13 +262,14 @@ const formatDate = (date: Date) =>
     line-height: 1;
   }
 
-  .all-link {
+  .panel-more {
+    display: block;
+    width: max-content;
+    margin: 8px 0 0 auto;
     color: var(--s-ink);
     text-decoration: none;
-    white-space: nowrap;
   }
-
-  .all-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .panel-more:hover { text-decoration: underline; text-underline-offset: 3px; }
 
   .cluster-grid {
     display: grid;

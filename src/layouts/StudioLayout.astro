@@ -48,7 +48,7 @@ const elsewhere = Object.entries(externalLinks).filter(
 ---
 
 <BaseLayout title={title} description={description}>
-  <div class:list={['studio', { 'studio-full': fullBleed, 'studio-detail': detail, 'studio-viewport-fit': viewportFit }]}>
+  <div class:list={['studio', { 'studio-full': fullBleed, 'studio-detail': detail, 'studio-viewport-fit': viewportFit, 'studio-writing-pad': route === '/studio/writing' }]}>
     <StudioNav variant={fullBleed ? 'full' : 'compact'} section={section} />
     <main class:list={['studio-main', { 's-page': !fullBleed }]}>
       <slot />
@@ -145,6 +145,10 @@ const elsewhere = Object.entries(externalLinks).filter(
     background: var(--s-bg);
   }
 
+  .studio-writing-pad .studio-footer {
+    position: static;
+  }
+
   .footer-left {
     display: flex;
     align-items: baseline;
@@ -189,6 +193,10 @@ const elsewhere = Object.entries(externalLinks).filter(
     }
 
     .studio-footer {
+      position: static;
+      left: auto;
+      right: auto;
+      bottom: auto;
       grid-template-columns: 1fr;
       gap: 12px;
       padding-top: 18px;

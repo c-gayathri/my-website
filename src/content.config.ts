@@ -73,6 +73,8 @@ const projects = defineCollection({
       galleryColumns: z.enum(['2', '3']).default('3'),
       /** explicit layout mode — do not infer from content */
       layoutMode: z.enum(['image-first', 'writing-first']).default('image-first'),
+      /** Render source line breaks in poem-like MDX body text. */
+      preserveBreaks: z.boolean().default(false),
       /** image-first sizing */
       size: z.enum(['small', 'medium', 'large', 'full-content']).default('large'),
       fit: z.enum(['contain', 'cover']).default('contain'),
