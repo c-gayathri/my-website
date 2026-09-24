@@ -2,7 +2,7 @@
 demo: false
 title: "Wuthering Heights"
 author: "Emily Brontë"
-cover: "../../assets/studio/covers/book-cover-placeholder.svg"
+cover: "../../assets/studio/covers/library/wuthering-heights.jpg"
 shelf: others
 goodreadsShelf: read
 rating: 4

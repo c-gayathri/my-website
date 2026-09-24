@@ -1,8 +1,8 @@
 ---
 demo: false
-title: "LIES OUR MOTHERS TOLD US The Indian Woman’s Burden"
+title: "The Lies Our Mothers Told Us"
 author: "Nilanjana Bhowmick"
-cover: "https://covers.openlibrary.org/b/isbn/9789391047733-L.jpg?default=false"
+cover: "../../assets/studio/covers/book-cover-placeholder.svg"
 shelf: year
 goodreadsShelf: read
 yearRead: 2024

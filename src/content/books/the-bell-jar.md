@@ -2,7 +2,7 @@
 demo: false
 title: "The Bell Jar"
 author: "Sylvia Plath"
-cover: "../../assets/studio/covers/book-cover-placeholder.svg"
+cover: "../../assets/studio/covers/library/the-bell-jar.jpg"
 shelf: others
 goodreadsShelf: read
 coverLookup: true

@@ -2,7 +2,7 @@
 demo: false
 title: "Animal Farm"
 author: "George Orwell"
-cover: "../../assets/studio/covers/book-cover-placeholder.svg"
+cover: "../../assets/studio/covers/library/animal-farm.jpg"
 shelf: others
 goodreadsShelf: read
 rating: 5

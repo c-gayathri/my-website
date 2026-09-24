@@ -73,9 +73,7 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     <aside class="rail">
       <nav class="crumbs s-meta" aria-label="Breadcrumb">
         <a href={`${base}/studio/`}>← constellation</a>
-        {primaryCluster && <a href={`${base}/studio/clusters/${primaryCluster.id}/`}>← Index</a>}
-        {!primaryCluster && <a href={`${base}/studio/index/`}>← Index</a>}
-        <a href={`${base}/studio/index/projects/`}>← All projects</a>
+        <a href={`${base}/studio/index/projects/`}>← all projects</a>
       </nav>
       {clusterLinks.length > 0 && (
         <div class="cluster-list s-meta">

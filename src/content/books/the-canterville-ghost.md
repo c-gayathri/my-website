@@ -2,7 +2,7 @@
 demo: false
 title: "The Canterville Ghost"
 author: "Oscar Wilde"
-cover: "../../assets/studio/covers/book-cover-placeholder.svg"
+cover: "../../assets/studio/covers/library/the-canterville-ghost.jpg"
 shelf: others
 goodreadsShelf: read
 coverLookup: true

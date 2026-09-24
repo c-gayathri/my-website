@@ -32,6 +32,7 @@ const others = books
     const shelfOrder = (a.data.goodreadsShelf === 'to-read' ? 1 : 0) - (b.data.goodreadsShelf === 'to-read' ? 1 : 0);
     return shelfOrder || a.data.title.localeCompare(b.data.title);
   });
+const visibleBookCount = byYear.reduce((count, { list }) => count + list.length, 0) + others.length;
 const panels = [
   ...byYear.map(({ year, list, goal }, yearIndex) => ({
     key: String(year), label: String(year), list, goal, yearIndex,
@@ -57,7 +58,7 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   <div class="bookshelf-page">
     <header class="shelf-intro">
       <h1>{studioConfig.bookshelfLabel}</h1>
-    <p class="s-meta">{books.length} books</p>
+    <p class="s-meta">{visibleBookCount} books</p>
     </header>
 
     <nav class="year-switcher" aria-label="Reading year">

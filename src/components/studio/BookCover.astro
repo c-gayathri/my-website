@@ -83,7 +83,7 @@ const imageHeight = height ?? (localCover ? cover.height : 900);
     }
   };
 
-  const coverImages = [...document.querySelectorAll<HTMLImageElement>('[data-book-cover-search]')];
+const coverImages = [...document.querySelectorAll<HTMLImageElement>('[data-book-cover-search]')];
   coverImages.forEach((img) => {
     img.addEventListener('error', () => {
       if (img.dataset.coverFallback) img.src = img.dataset.coverFallback;

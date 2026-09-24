@@ -2,7 +2,7 @@
 demo: false
 title: "Uncle Tom’s Cabin"
 author: "Harriet Beecher Stowe"
-cover: "../../assets/studio/covers/book-cover-placeholder.svg"
+cover: "../../assets/studio/covers/library/uncle-toms-cabin.jpg"
 shelf: others
 goodreadsShelf: read
 rating: 3
