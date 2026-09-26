@@ -122,25 +122,30 @@ const isPhotography = d.clusters.includes('photography');
 const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-columns:${d.collageColumns ?? (d.galleryColumns === '2' ? 2 : 3)};${d.singleImageWidthPx ? `--single-image-width:${d.singleImageWidthPx}px;` : ''}${d.collageColumnRatios?.length ? `--collage-tracks:${d.collageColumnRatios.map((n) => `${n}fr`).join(' ')};` : ''}${d.collageRowRatios?.length ? `--collage-rows:${d.collageRowRatios.map((n) => `${n}fr`).join(' ')};` : ''}`;
 ---
 
-<StudioLayout title={`${d.title} — Studio`} slim dark={isPhotography}>
-  <article class:list={['project', `size-${d.size}`, `layout-${d.pageLayout}`, d.preserveBreaks ? 'preserve-breaks' : '', d.viewportFitImage ? 'project--viewport-image' : '', isPhotography ? 'project--photography' : '']}>
+<StudioLayout title={`${d.title} — Studio`} slim dark={isPhotography} section={isPhotography ? 'Photography' : undefined}>
+  <article class:list={['project', `size-${d.size}`, `layout-${d.pageLayout}`, d.preserveBreaks ? 'preserve-breaks' : '', d.viewportFitImage ? 'project--viewport-image' : '', isPhotography ? 'project--photography' : '']} style={`--project-image-background:${d.whiteBackground ? '#fff' : 'transparent'}`}>
     <aside class="rail">
       <nav class="crumbs s-meta" aria-label="Breadcrumb">
-        <a href={`${base}/studio/`}>← constellation</a>
-        <a href={`${base}/studio/index/projects/`}>← all projects</a>
+        {isPhotography ? (
+          <a href={`${base}/studio/photography/`}>← all photography</a>
+        ) : (
+          <>
+            <a href={`${base}/studio/`}>← constellation</a>
+            <a href={`${base}/studio/index/projects/`}>← all projects</a>
+          </>
+        )}
       </nav>
       <h1>{d.title}</h1>
 
       <dl class="meta s-meta">
-        {d.medium.length > 0 && <div><dt>media</dt><dd>{d.medium.join(', ')}</dd></div>}
-        {(clusterLinks.length > 0 || isPhotography) && (
+        {!isPhotography && d.medium.length > 0 && <div><dt>media</dt><dd>{d.medium.join(', ')}</dd></div>}
+        {clusterLinks.length > 0 && (
           <div class="meta-clusters">
             <dt>clusters</dt>
             <dd>
               {clusterLinks.map((c, i) => (
-                <><a href={`${base}/studio/clusters/${c.id}/`}>{c.data.title}</a>{i < clusterLinks.length - 1 || isPhotography ? ' · ' : ''}</>
+                <><a href={`${base}/studio/clusters/${c.id}/`}>{c.data.title}</a>{i < clusterLinks.length - 1 ? ' · ' : ''}</>
               ))}
-              {isPhotography && <a href={`${base}/studio/photography/`}>Photography</a>}
             </dd>
           </div>
         )}
@@ -432,7 +437,7 @@ const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-column
   .meta-clusters a:hover,
   .meta-clusters a:focus-visible {
     text-decoration-color: currentColor;
-    text-decoration-thickness: 2px;
+    text-decoration-thickness: 1px;
   }
 
   .note {
@@ -448,6 +453,22 @@ const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-column
     overflow-y: auto;
     overscroll-behavior: contain;
     white-space: pre-line;
+  }
+
+  .note a {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-color: color-mix(in srgb, currentColor 42%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: text-decoration-color 150ms ease, text-decoration-thickness 150ms ease;
+  }
+
+  .note a:hover,
+  .note a:focus-visible {
+    text-decoration-color: currentColor;
+    text-decoration-thickness: 2px;
   }
 
   .pn {
@@ -491,9 +512,9 @@ const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-column
   }
 
   .related a:hover {
-    text-decoration-style: double;
+    text-decoration-style: solid;
     text-decoration-color: var(--s-ink);
-    text-decoration-thickness: 2px;
+    text-decoration-thickness: 1px;
   }
 
   /* right stage — artwork centred, fits the viewport */
@@ -522,7 +543,7 @@ const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-column
     box-shadow: 0 3px 30px rgba(20, 18, 10, 0.13);
   }
 
-  .stage > img { background: #fff; }
+  .stage > img { background: var(--project-image-background, #fff); }
 
   .youtube-list {
     display: grid;
@@ -611,6 +632,10 @@ const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-column
     grid-template-columns: repeat(var(--collage-columns, 3), minmax(0, 1fr));
   }
 
+  /* Tall photography galleries start at the top so their first row is never
+     hidden by the fixed-height project frame. */
+  .project--photography .gallery { align-self: start; }
+
   .gallery--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .gallery--two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .gallery--explicit-columns { grid-template-columns: repeat(var(--collage-columns), minmax(0, 1fr)); }
@@ -628,7 +653,7 @@ const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-column
     height: auto;
     max-height: none;
     display: block;
-    background: #fff;
+    background: var(--project-image-background, #fff);
   }
 
   /* 2-image case: side by side, full width */
@@ -654,7 +679,7 @@ const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-column
   .gallery--masonry .masonry-item { display: block; width: 100%; margin: 0; }
   .gallery--masonry { display: block; }
   .gallery--masonry :global(.thumb img),
-  .gallery--masonry .masonry-item img { display: block; width: 100%; height: auto; background: #fff; box-shadow: 0 3px 30px rgba(20,18,10,.13); }
+  .gallery--masonry .masonry-item img { display: block; width: 100%; height: auto; background: var(--project-image-background, #fff); box-shadow: 0 3px 30px rgba(20,18,10,.13); }
   .gallery--masonry .youtube-embed { width: 100%; margin: 0; aspect-ratio: var(--embed-aspect, 1); }
   .gallery--one { max-height: calc(100dvh - 190px); }
   .gallery--one :global(.thumb img) { max-height: calc(100dvh - 190px); width: auto; max-width: 100%; margin-inline: auto; box-shadow: 0 3px 30px rgba(20,18,10,.13); }
@@ -670,7 +695,7 @@ const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-column
     margin: auto;
   }
   .custom-tile { grid-row: var(--tile-row) / span var(--tile-row-span); grid-column: var(--tile-column) / span var(--tile-column-span); min-width: 0; margin: 0; }
-  .custom-tile img, .custom-tile video { display: block; width: 100%; height: auto; background: #fff; box-shadow: 0 3px 30px rgba(20,18,10,.13); }
+  .custom-tile img, .custom-tile video { display: block; width: 100%; height: auto; background: var(--project-image-background, #fff); box-shadow: 0 3px 30px rgba(20,18,10,.13); }
   .custom-tile figcaption { margin-top: 6px; }
 
   .gallery--one :global(.thumb img) {
@@ -722,6 +747,27 @@ const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-column
 
   /* The lead image in writing-first pieces shares the text's left edge. */
   .mdx-body > :global(.place:first-child) img { margin-left: 0; margin-right: 0; }
+
+  /* Subliminal's lead image follows the text edge instead of being centered
+     within the wide writing column. Its final two images form one row. */
+  .mdx-body :global(.subliminal-lead) {
+    align-self: flex-start;
+    width: 100%;
+    margin-inline: 0;
+  }
+  .mdx-body :global(.subliminal-lead) img {
+    margin-inline: 0;
+  }
+  .mdx-body :global(.subliminal-pair) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    width: 100%;
+  }
+  .mdx-body :global(.subliminal-pair > .place) {
+    grid-column: auto !important;
+    min-width: 0;
+  }
 
   .project--viewport-image .mdx-body :global(img) {
     display: block;
@@ -804,6 +850,11 @@ const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-column
   }
 
   .project--photography { color: #f1f0eb; }
+  .project--photography { height: auto; min-height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 12px); overflow: visible; }
+  /* Let the photography gallery flow below the fixed nav so its first row
+     remains fully visible instead of being clipped by the detail stage. */
+  .project--photography .stage { overflow: visible; padding-top: 42px; }
+  .project--photography .gallery { overflow: visible; }
   .project--photography .rail :global(a), .project--photography .rail h1,
   .project--photography .meta dd, .project--photography .pn a { color: #f1f0eb; }
   .project--photography .note, .project--photography .meta dt { color: #b9b7b1; }

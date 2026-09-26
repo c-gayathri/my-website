@@ -102,6 +102,8 @@ const projects = defineCollection({
       /** image-first sizing */
       size: z.enum(['small', 'medium', 'large', 'full-content']).default('large'),
       fit: z.enum(['contain', 'cover']).default('contain'),
+      /** Whether transparent artwork should sit on a white backing. */
+      whiteBackground: z.boolean().default(true),
       previewType: z
         .enum(['image', 'gallery', 'video', 'text', 'media-text', 'custom'])
         .default('image'),

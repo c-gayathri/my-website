@@ -7,6 +7,9 @@ import { studioConfig } from '../../../data/studioConfig';
 import { clusterOrder } from '../../../data/clusterOrder';
 import { projectOrder } from '../../../data/projectOrder';
 import { sortWritingEntries } from '../../../data/writingOrder';
+import { sortPhotographyProjects } from '../../../data/photographyOrder';
+import { bookFavouriteOrder } from '../../../data/bookFavouriteOrder';
+import { projectPreviewImages } from '../../../utils/projectPreviewImages';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const allClusters = await getCollection('clusters');
@@ -23,7 +26,10 @@ const clusters = [...allClusters].filter((cluster) => cluster.id !== 'photograph
 
 // Index total list: walk clusterOrder top→bottom, emit project only first time seen
 const allProjects = await getCollection('projects');
-const byId = new Map(allProjects.map((p) => [p.id, p]));
+// Photography has a dedicated gallery. It remains available there and via
+// its canonical project route, but is omitted from the general project index.
+const generalProjects = allProjects.filter((project) => !project.data.clusters.includes('photography'));
+const byId = new Map(generalProjects.map((p) => [p.id, p]));
 const seen = new Set<string>();
 const orderedProjects: typeof allProjects = [];
 for (const cid of clusterOrder) {
@@ -36,7 +42,7 @@ for (const cid of clusterOrder) {
   }
 }
 // Append any projects not in any order (new ones)
-for (const p of allProjects) {
+for (const p of generalProjects) {
   if (!seen.has(p.id)) {
     orderedProjects.push(p);
     seen.add(p.id);
@@ -47,18 +53,24 @@ const projects = orderedProjects;
 const allWriting = await getCollection('writing');
 const writing = sortWritingEntries(allWriting);
 const allBooks = await getCollection('books');
-const books = [...allBooks].sort((a, b) => {
-  const aYear = a.data.yearRead ?? Number.NEGATIVE_INFINITY;
-  const bYear = b.data.yearRead ?? Number.NEGATIVE_INFINITY;
-  if (aYear !== bYear) return bYear - aYear;
-  const aHasDate = Boolean(a.data.dateFinished);
-  const bHasDate = Boolean(b.data.dateFinished);
-  if (aHasDate !== bHasDate) return aHasDate ? -1 : 1;
-  return (b.data.dateFinished ?? b.data.title).localeCompare(a.data.dateFinished ?? b.data.title);
-});
+const favouritePositions = new Map(bookFavouriteOrder.map((id, index) => [id, index] as const));
+const favourites = allBooks
+  .filter((book) => book.data.featured)
+  .sort((a, b) => (favouritePositions.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (favouritePositions.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+    || a.data.title.localeCompare(b.data.title));
+const currentYear = Math.max(...allBooks.map((book) => book.data.yearRead ?? Number.NEGATIVE_INFINITY));
+const currentYearBooks = allBooks
+  .filter((book) => book.data.shelf !== 'others' && book.data.yearRead === currentYear)
+  .sort((a, b) => {
+    const aHasDate = Boolean(a.data.dateFinished);
+    const bHasDate = Boolean(b.data.dateFinished);
+    if (aHasDate !== bHasDate) return aHasDate ? -1 : 1;
+    return (a.data.dateFinished ?? a.data.title).localeCompare(b.data.dateFinished ?? b.data.title);
+  });
+const books = [...favourites, ...currentYearBooks.filter((book) => !favourites.some((favourite) => favourite.id === book.id))];
 
 const projectMedia = (project: (typeof projects)[number]) =>
-  project.data.thumbnail ?? project.data.hero ?? project.data.gallery[0] ?? project.data.videoPoster;
+  projectPreviewImages(project.data)[0];
 
 const clusterItems = await Promise.all(
   clusters.slice(0, 6).map(async (cluster) => {
@@ -92,7 +104,9 @@ const projectItems = await Promise.all(
   }),
 );
 
-const photographyProjects = projects.filter((project) => project.data.clusters.includes('photography')).slice(0, 4);
+const photographyProjects = sortPhotographyProjects(
+  allProjects.filter((project) => project.data.clusters.includes('photography')),
+).slice(0, 4);
 const photographyItems = await Promise.all(photographyProjects.map(async (project) => {
   const media = project.data.gallery[0] ?? project.data.hero ?? project.data.thumbnail;
   return { project, preview: media ? await getImage({ src: media, width: 180 }) : undefined };
@@ -181,7 +195,7 @@ const formatDate = (date: Date) =>
           </a>
         ))}
       </div>
-      <a class="panel-more s-meta" href={sectionLink('/studio/photography/')}>view photography <span aria-hidden="true">↗</span></a>
+      <a class="panel-more s-meta" href={sectionLink('/studio/photography/')}>view all photography <span aria-hidden="true">↗</span></a>
     </section>
 
     <section class="panel writing-panel" aria-labelledby="writing-heading">
@@ -208,7 +222,7 @@ const formatDate = (date: Date) =>
     <section class="panel reading-panel" aria-labelledby="bookshelves-heading">
       <header class="panel-head">
         <div>
-          <h2 id="bookshelves-heading"><a href={sectionLink('/studio/bookshelf/')}>Bookshelves</a></h2>
+          <h2 id="bookshelves-heading"><a href={sectionLink('/studio/bookshelf/')}>Bookshelf</a></h2>
         </div>
       </header>
       <div class="book-grid">
@@ -222,7 +236,7 @@ const formatDate = (date: Date) =>
           </a>
         ))}
       </div>
-      <a class="panel-more s-meta" href={sectionLink('/studio/bookshelf/')}>view all bookshelves <span aria-hidden="true">↗</span></a>
+      <a class="panel-more s-meta" href={sectionLink('/studio/bookshelf/')}>view bookshelves <span aria-hidden="true">↗</span></a>
     </section>
   </div>
 </StudioLayout>
@@ -366,7 +380,7 @@ const formatDate = (date: Date) =>
   }
   .cluster small { display:-webkit-box; margin-top: 5px; overflow:hidden; font-size:9px; line-height:1.35; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; }
 
-  .writing-panel, .photography-panel, .reading-panel { margin-top:clamp(24px,3.8vh,42px); }
+  .writing-panel, .photography-panel, .reading-panel { margin-top:clamp(12px,2vh,22px); }
   .cluster:hover strong, .row-title:hover { text-decoration: underline; }
 
   .rows { display: grid; }

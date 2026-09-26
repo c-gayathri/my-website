@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { projectOrder } from '../../../data/projectOrder';
 import { summaryParts as parseSummaryParts } from '../../../utils/summaryLinks';
+import { projectPreviewImages } from '../../../utils/projectPreviewImages';
 
 export async function getStaticPaths() {
   const clusters = await getCollection('clusters');
@@ -11,7 +12,9 @@ export async function getStaticPaths() {
 
 const { cluster } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
-const all = await getCollection('projects');
+const all = (await getCollection('projects')).filter(
+  (project) => !project.data.clusters.includes('photography'),
+);
 const order = projectOrder[cluster.id] ?? [];
 const projects = all
   .filter((p) => p.data.clusters.includes(cluster.id))
@@ -40,9 +43,8 @@ const galleryPreviewImages = (project: (typeof projects)[number]) => {
   const d = project.data;
   const youtubeId = d.youtubeUrls[0]?.match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/)([A-Za-z0-9_-]{11})/)?.[1];
   const youtubePoster = youtubeId ? { src: `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`, width: 480, height: 360 } : undefined;
-  const candidates = d.previewType === 'video'
-    ? [d.thumbnail ?? d.videoPoster ?? d.hero ?? d.gallery[0] ?? youtubePoster].filter(Boolean) as NonNullable<typeof d.hero>[]
-    : [d.hero, ...d.gallery].filter(Boolean) as NonNullable<typeof d.hero>[];
+  const candidates = projectPreviewImages(d) as NonNullable<typeof d.hero>[];
+  if (!candidates.length && youtubePoster) candidates.push(youtubePoster as NonNullable<typeof d.hero>);
   return candidates.filter((image, index) => candidates.findIndex((other) => other.src === image.src) === index);
 };
 
@@ -99,7 +101,7 @@ const cards = projects;
                   <span>“{d.textExcerpt ?? d.summary ?? d.title}”</span>
                 </a>
               ) : previews.length ? (
-                <span class="media">
+                <span class="media" style={`--project-image-background:${d.whiteBackground ? '#fff' : 'transparent'}`}>
                   <a class="media-link" href={href} aria-label={`Open ${d.title}`}>
                   {previews.length === 1 ? (
                     <img
@@ -153,10 +155,12 @@ const cards = projects;
   .cluster-header h1 {
     font-family: var(--s-serif);
     font-weight: 500;
-    font-size: clamp(34px, 3.7vw, 56px);
+    font-size: clamp(28px, 3.25vw, 52px);
     line-height: 0.96;
     letter-spacing: 0.01em;
     margin: 0;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
   }
 
   .sub {
@@ -239,7 +243,7 @@ const cards = projects;
   .text-tile {
     aspect-ratio: 1;
     overflow: hidden;
-    background: #fff;
+    background: var(--project-image-background, #fff);
   }
 
   .media img {
@@ -249,7 +253,7 @@ const cards = projects;
     max-height: none;
     object-fit: cover;
     display: block;
-    background: #fff;
+    background: var(--project-image-background, #fff);
     box-shadow: 0 3px 30px rgba(20, 18, 10, 0.13);
   }
 
@@ -314,7 +318,7 @@ const cards = projects;
   }
 
   @media (min-width: 901px) {
-    .cluster-page { display:grid; grid-template-columns:minmax(180px, .42fr) minmax(0, 2.58fr); column-gap:clamp(30px,3.5vw,60px); height:calc(100dvh - var(--studio-header-height) - var(--studio-footer-height)); overflow:hidden; }
+    .cluster-page { display:grid; grid-template-columns:minmax(220px, .52fr) minmax(0, 2.48fr); column-gap:clamp(34px,3.5vw,60px); height:calc(100dvh - var(--studio-header-height) - var(--studio-footer-height)); overflow:hidden; }
     .cluster-sidebar { padding-top:0; }
     .cards { overflow-y:auto; overscroll-behavior:contain; padding:24px 4px 32px 0; scrollbar-gutter:stable; }
   }

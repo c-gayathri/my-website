@@ -11,7 +11,9 @@ const projects = sortPhotographyProjects(
 );
 const items = await Promise.all(projects.map(async (project) => {
   const firstPhoto = project.data.gallery[0] ?? project.data.hero ?? project.data.thumbnail;
-  const image = firstPhoto ? await getImage({ src: firstPhoto, width: 620, height: 620, fit: 'cover' }) : undefined;
+  // Keep the square tile while showing the complete preview image. This is
+  // especially important for portrait and panoramic photographs.
+  const image = firstPhoto ? await getImage({ src: firstPhoto, width: 620, height: 620, fit: 'inside' }) : undefined;
   return { project, image, featured: photographyOrder.includes(project.id) };
 }));
 ---
@@ -20,17 +22,19 @@ const items = await Promise.all(projects.map(async (project) => {
   <article class="photography">
     <header class="heading">
       <h1>Photography</h1>
-      <p class="s-meta">{items.length} projects</p>
+      <div class="heading-copy">
+        <p class="subtitle">{studioConfig.photographySubtitle}</p>
+      </div>
     </header>
 
     <div class="photo-grid">
-      {items.map(({ project, image }) => (
+      {items.map(({ project, image, featured }) => (
         <a class="photo" href={`${base}/studio/projects/${project.id}/`} aria-label={`${project.data.title}, ${project.data.year}`}>
           <span class="image-frame">
             {image && <img src={image.src} alt="" width={image.attributes.width} height={image.attributes.height} loading="lazy" />}
           </span>
           <span class="caption">
-            <span class="title">{project.data.title}</span>
+            <span class="title">{project.data.title}{featured ? ' ★' : ''}</span>
             <time class="s-meta year">{project.data.year}</time>
           </span>
         </a>
@@ -41,9 +45,11 @@ const items = await Promise.all(projects.map(async (project) => {
 
 <style>
   .photography { max-width: 1760px; margin: 0 auto; }
-  .heading { position: sticky; top: calc(var(--studio-header-height) + 8px); z-index: 20; align-self: start; display: flex; align-items: baseline; justify-content: space-between; gap: 24px; padding: 0 0 16px; margin-bottom: 26px; background: var(--s-bg); border-bottom: 1px solid var(--s-line); }
+  .heading { position: sticky; top: calc(var(--studio-header-height) + 8px); z-index: 20; align-self: start; display: flex; align-items: baseline; justify-content: space-between; gap: 24px; padding: 0 0 16px; margin-bottom: 26px; background: var(--s-bg); }
   h1 { margin: 0; font-family: var(--s-serif); font-size: var(--studio-page-title-size); font-weight: 500; line-height: 1; }
+  .heading-copy { display: grid; gap: 5px; justify-items: end; max-width: 48ch; text-align: right; }
   .heading p { margin: 0; }
+  .subtitle { color: var(--s-grey); font-family: var(--s-mono); font-size: 11px; line-height: 1.55; }
   .photo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(18px, 2.4vw, 38px); }
   .photo { display: block; min-width: 0; color: var(--s-ink); text-decoration: none; }
   .image-frame { display: block; aspect-ratio: 1; overflow: hidden; background: #2b2d30; }

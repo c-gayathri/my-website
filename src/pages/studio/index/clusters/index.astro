@@ -5,6 +5,7 @@ import StudioLayout from '../../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../../data/studioConfig';
 import { clusterOrder } from '../../../../data/clusterOrder';
 import { projectOrder } from '../../../../data/projectOrder';
+import { projectPreviewImages } from '../../../../utils/projectPreviewImages';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const allClusters = await getCollection('clusters');
@@ -16,10 +17,12 @@ const clusters = [...allClusters].filter((cluster) => cluster.id !== 'photograph
   if (ib === -1) return -1;
   return ia - ib;
 });
-const projects = await getCollection('projects');
+const projects = (await getCollection('projects')).filter(
+  (project) => !project.data.clusters.includes('photography'),
+);
 const mediaFor = (project: (typeof projects)[number]) => {
   const d = project.data;
-  return d.thumbnail ?? d.hero ?? d.gallery[0] ?? d.videoPoster;
+  return projectPreviewImages(d)[0];
 };
 
 const items = await Promise.all(clusters.map(async (cluster) => {
@@ -73,7 +76,7 @@ const items = await Promise.all(clusters.map(async (cluster) => {
 
 <style>
   .listing { max-width: 1500px; margin: 0 auto; }
-  .listing-head { position: sticky; top: calc(var(--studio-header-height) + 8px); z-index: 20; align-self: start; display: flex; justify-content: space-between; align-items: end; gap: 24px; padding: 0 0 16px; background: var(--s-bg); border-bottom: 1px solid var(--s-line); }
+  .listing-head { position: sticky; top: calc(var(--studio-header-height) + 8px); z-index: 20; align-self: start; display: flex; justify-content: space-between; align-items: end; gap: 24px; padding: 0 0 16px; background: var(--s-bg); }
   .listing-head h1 { margin: 0; font-family: var(--s-serif); font-size: clamp(34px, 4vw, 54px); font-weight: 500; line-height: 1; }
   .listing-head p { margin: 8px 0 0; }
   .cluster-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:clamp(34px,4vw,68px); row-gap:28px; padding-top:28px; }

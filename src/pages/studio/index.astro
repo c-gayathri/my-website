@@ -9,10 +9,13 @@ import Constellation from '../../components/studio/Constellation';
 import { generateClusterAnchors, studioConfig } from '../../data/studioConfig';
 import { clusterOrder } from '../../data/clusterOrder';
 import { projectOrder } from '../../data/projectOrder';
+import { projectPreviewImages } from '../../utils/projectPreviewImages';
 import '../../styles/constellation.css';
 
 const clusters = (await getCollection('clusters')).filter((cluster) => cluster.id !== 'photography');
-const projects = await getCollection('projects');
+const projects = (await getCollection('projects')).filter(
+  (project) => !project.data.clusters.includes('photography'),
+);
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 
 // World MUST match generateClusterAnchors() scaling so star-field bounds
@@ -62,13 +65,7 @@ const data = await Promise.all(
 
     type ProjectImage = NonNullable<(typeof allForCluster)[number]['data']['hero']>;
     const pickImage = (project: (typeof allForCluster)[number]): ProjectImage | null => {
-      const feat = project.data.featuredImage;
-      if (feat) {
-        const pool = [project.data.hero, project.data.thumbnail, project.data.videoPoster, ...project.data.gallery].filter(Boolean) as ProjectImage[];
-        const hit = pool.find((img: any) => String(img.src).includes(feat));
-        if (hit) return hit as ProjectImage;
-      }
-      const image = project.data.thumbnail ?? project.data.hero ?? project.data.gallery[0] ?? project.data.videoPoster;
+      const image = projectPreviewImages(project.data)[0];
       return image ? (image as ProjectImage) : null;
     };
 

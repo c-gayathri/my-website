@@ -46,6 +46,7 @@ npm run build     # generates static site in dist/
 - **Cluster text/colour/preview:** edit `src/content/clusters/<id>.md` (`title`, `description`, `hoverDescription`, `hoverColor`). `previewImage` is optional; without it, the first project's lead image is used. Project order is in `src/data/projectOrder.ts`. No script needed — just `npm run check`.
 - **Project images/text:** edit `src/content/projects/<slug>.mdx`. `gallery` is the image list; `hero` is optional and can override which image leads previews. If `hero` is omitted, the first gallery image is used in previews. Repeating that image as both `hero` and `gallery[0]` is safe and appears only once. `summary` is a short blurb directly below the project title, separate from image captions. Use `layoutMode: "writing-first"` for a long written piece and put its prose and image blocks in the MDX body; use `image-first` for image-led pages. Gallery images open in a full-size lightbox.
 - **Writing:** `image` = first-image fallback for the Writing Pad card, `preview.image` = optional card override, and `gallery[0]` is used when no cover image exists. `gallery` = inline images rendered as full-width blocks below the prose. Place additional `<Image>`/`<Gallery>` blocks directly in the MDX body for mid-text placement. `src/data/writingOrder.ts` is the featured subset and its display order; unlisted pieces follow in descending `date` order. The same order appears on the Writing Pad and the Index. `pageLayout: essay|poem|fragment` controls text style.
+- **Photography:** Photography projects are listed only in `/studio/photography/` and retain their individual `/studio/projects/<slug>/` pages. They are intentionally excluded from the constellation, cluster pages, and the general All Projects listing; the Photography page is the gallery entry point, while the individual routes remain canonical destinations. The dedicated gallery is sorted by the ids in `src/data/photographyOrder.ts` first, in that exact order; all remaining photography projects follow by descending `year`, then alphabetical `title`. To feature photographs, add their project slugs to `photographyOrder` in the desired display order. The current example is `['nam', 'lollipops', 'witching-hour']`, so `'nam'` appears first, followed by `'lollipops'` and `'witching-hour'`; move, add, or remove ids to change the featured sequence. The list may be empty, and slugs omitted from it remain in the automatic year/title order.
 - **Research links:** GitHub/LinkedIn/Scholar in `src/data/profile.ts` open in a new tab (`target="_blank"` in `Hero.astro`).
 - After any content edit: `npm run check` then `npm run build`.
 
@@ -75,6 +76,7 @@ npm run build     # generates static site in dist/
 | `/studio/writing/[slug]/` | Individual writing entry |
 | `/studio/bookshelf/` | Year-switchable Bookshelf and all-time favourites |
 | `/studio/bookshelf/[slug]/` | Individual book/review |
+| `/studio/photography/` | Photography gallery, with featured projects followed by year/title ordering |
 | `/studio/index/` | Studio overview |
 | `/studio/index/clusters/` | Complete cluster listing |
 | `/studio/index/projects/` | Complete project listing |
@@ -174,7 +176,7 @@ connections:
 | `desktop` | No | `{x, y, width, driftRadius, depth}` | **Manual world-space override.** Only add for deliberate placement. `x,y` in world units (0–2600, 0–1700), `width` default 420, `driftRadius` 10, `depth` 0.6–1.4 (parallax). |
 | `generatedThenOverrideable` | No | `{x:0..1, y:0..1, width:0.05..0.4}` | Normalized override applied after deterministic generation (0..1 anchors). Prefer over `desktop` for small nudges. |
 
-**10 canonical clusters** currently: `album-art`, `eyes`, `color-pop`, `minimalism`, `photo-edits`, `photography`, `realism`, `watercolours`, `women-eyes`, `writing-art`. Each top-level folder in `assets/studio/clusters/` maps to one.
+The constellation currently contains the canonical creative clusters listed in `src/data/clusterOrder.ts`. Photography is maintained as a separate gallery and is deliberately not part of the constellation or the general cluster/project listings. Each top-level folder in `assets/studio/clusters/` maps to one or more project assets.
 
 > **Dedup rule:** If the same image or subfolder (e.g. `Meenakshi` 5 PNGs) appears under multiple cluster folders, create **one** project and list all clusters in its `clusters: [eyes, color-pop, women-eyes]`.
 

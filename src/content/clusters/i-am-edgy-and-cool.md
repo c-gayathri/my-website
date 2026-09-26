@@ -1,5 +1,5 @@
 ---
-title: "i am edgy and cool"
+title: "i am so edgy and cool"
 description: "Yes, I had that era. Indulge me."
 previewImage: "../../assets/studio/clusters/i am edgy and cool/Cover.jpeg"
 hoverDescription: "Diaristic, dark, and experimental work."

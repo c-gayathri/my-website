@@ -10,7 +10,7 @@ const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const portraitImage = await getImage({ src: aboutPhoto, width: 560 });
 const elsewhere = Object.entries(externalLinks).filter(([key, href]) => key !== 'research' && href);
 const sampleImages = import.meta.glob<{ default: import('astro').ImageMetadata }>(
-  '../../assets/studio/Influences/*.{png,jpg,jpeg,webp}',
+  '../../assets/studio/Influences/*',
   { eager: true },
 );
 
@@ -145,7 +145,7 @@ const influences = await Promise.all(
 
   .intro {
     display: grid;
-    grid-template-columns: minmax(400px, 1.1fr) minmax(210px, .9fr);
+    grid-template-columns: minmax(0, 1.05fr) minmax(180px, .75fr);
     align-items: start;
     gap: clamp(30px, 5vw, 90px);
     min-height: 0;
@@ -168,7 +168,14 @@ const influences = await Promise.all(
     object-position: center top;
   }
 
-  .copy { min-width: 0; max-width: 650px; }
+  .copy {
+    min-width: 0;
+    max-width: 56ch;
+    max-height: 100%;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--s-line) transparent;
+  }
 
   .statement {
     max-width: 20ch;
@@ -177,6 +184,7 @@ const influences = await Promise.all(
     font-size: clamp(28px, 3vw, 45px);
     font-weight: 500;
     line-height: 1.04;
+    overflow-wrap: anywhere;
   }
 
   .paragraphs {
@@ -193,6 +201,7 @@ const influences = await Promise.all(
     font-size: 10px;
     line-height: 1.55;
     max-width: 62ch;
+    overflow-wrap: anywhere;
   }
 
   .band {

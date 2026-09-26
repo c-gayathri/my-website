@@ -7,7 +7,7 @@ interface Props {
   section?: string;
 }
 
-const { variant = 'compact' } = Astro.props;
+const { variant = 'compact', section } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const path = Astro.url.pathname.replace(/\/+$/, '');
 
@@ -22,7 +22,9 @@ const navItems = [
 
 const isActive = (item: (typeof navItems)[number]) =>
   item.label === 'Constellation'
-    ? path === item.href || path.startsWith(`${item.href}/projects`) || path.startsWith(`${item.href}/clusters`)
+    ? section !== 'Photography' && (path === item.href || path.startsWith(`${item.href}/projects`) || path.startsWith(`${item.href}/clusters`))
+    : item.label === 'Photography' && section === 'Photography'
+      ? true
     : item.exact ? path === item.href : path === item.href || path.startsWith(item.href);
 ---
 

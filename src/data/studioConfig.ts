@@ -10,6 +10,7 @@ export const studioConfig = {
   writingLabel: 'Writing pad',
   bookshelfLabel: 'Bookshelf',
   indexLabel: 'Index',
+  photographySubtitle: 'Shadows and light. Twilight blues and sodium vapour yellows. This is just a personal repository of frames I think are pretty. All unedited photos.',
 
   // Constellation world space (authored coordinates live in this box).
   world: { width: 2600, height: 1700 },

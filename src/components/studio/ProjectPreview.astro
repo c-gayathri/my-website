@@ -162,5 +162,18 @@ const summaryParts = d.summary ? parseSummaryParts(d.summary) : [];
     max-width: 42ch;
     white-space: pre-line;
   }
-  .summary a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  .summary a {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 42%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: text-decoration-color 150ms ease, text-decoration-thickness 150ms ease;
+  }
+
+  .summary a:hover,
+  .summary a:focus-visible {
+    text-decoration-color: currentColor;
+    text-decoration-thickness: 2px;
+  }
 </style>

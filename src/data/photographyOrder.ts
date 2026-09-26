@@ -1,6 +1,9 @@
 // Projects listed here are featured at the top of Photography in this order.
 // Other photography projects follow by descending year, then title.
-export const photographyOrder: string[] = [];
+// Add project ids here to feature them at the top of Photography. The order
+// in this list is the display order for featured projects. This small example
+// keeps three real projects in a visible, editable sequence.
+export const photographyOrder: string[] = ['aah-said-the-startled-green-being', 'earthen', 'gloaming', 'reaching', 'witching-hour', 'bleeding-stars'];
 
 const positions = new Map(photographyOrder.map((id, index) => [id, index] as const));
 

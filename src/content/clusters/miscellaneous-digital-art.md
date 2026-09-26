@@ -1,6 +1,6 @@
 ---
 title: "Miscellaneous digital art"
-description: "The ones I can't neatly bracket into any of my specific styles, but am still kind of proud of :)"
+description: "The ones I can't neatly bracket into any of my specific styles, but still kind of want to show off :)"
 previewImage: "../../assets/studio/clusters/miscellaneous digital art/IMG_0666.PNG"
 hoverDescription: "Independent digital paintings and studies."
 hoverColor: '#554eb4'

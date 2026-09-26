@@ -75,5 +75,6 @@ export const studioAbout: {
     { file: 'andy-warhol-marilyn.webp', title: 'Andy Warhol', href: 'https://www.warhol.org/andy-warhols-life/' },
     { file: 'LaColonneBrisee-2_900x.jpg', title: 'Frida Kahlo', href: 'https://www.museofridakahlo.org.mx/frida/?lang=en' },
     { file: 'images.jpeg', title: 'Kandinsky', href: 'https://en.wikipedia.org/wiki/Wassily_Kandinsky' },
+    { file: 'billie.jpg', title: 'Billie Eilish', href: 'https://open.spotify.com/artist/6qqNVTkY8uBg9cP3Jd7DA' },
   ],
 };
