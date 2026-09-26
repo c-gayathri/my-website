@@ -46,7 +46,7 @@ const route = Astro.url.pathname.replace(base, '').replace(/\/+$/, '');
 const viewportFit = Astro.props.viewportFit ?? (route === '/studio/about' || route === '/studio/index');
 const detail = slim || (!fullBleed && !section);
 const elsewhere = Object.entries(externalLinks).filter(
-  ([key, href]) => key !== 'research' && href,
+  ([key, href]) => key !== 'research' && key !== 'blog' && href,
 );
 ---
 
@@ -71,7 +71,9 @@ const elsewhere = Object.entries(externalLinks).filter(
             </a>
           ))
         }
-        <a class="s-link" href={`${base}${externalLinks.research}`} target="_blank">research ↗</a>
+        {externalLinks.blog && (
+          <a class="s-link" href={externalLinks.blog} rel="external" target="_blank">WordPress ↗</a>
+        )}
       </div>
       <span class="footer-right s-meta">© {new Date().getFullYear()} {studioConfig.name}</span>
     </footer>
@@ -134,7 +136,9 @@ const elsewhere = Object.entries(externalLinks).filter(
   }
 
   .studio-footer {
-    position: fixed;
+    /* Listing and detail pages keep the footer in normal document flow. The
+       full-bleed constellation page opts into the overlay treatment below. */
+    position: static;
     left: 0;
     right: 0;
     bottom: 0;
@@ -146,6 +150,13 @@ const elsewhere = Object.entries(externalLinks).filter(
     min-height: calc(var(--studio-footer-height) + env(safe-area-inset-bottom));
     padding: 14px var(--studio-gutter) calc(14px + env(safe-area-inset-bottom));
     background: var(--s-bg);
+  }
+
+  .studio-full .studio-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
 
   .studio-writing-pad .studio-footer {

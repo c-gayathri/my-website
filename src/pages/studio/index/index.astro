@@ -248,7 +248,7 @@ const formatDate = (date: Date) =>
     grid-template-rows: auto auto auto;
     align-content: start;
     column-gap: clamp(40px, 5vw, 80px);
-    row-gap: clamp(30px, 4.2vh, 48px);
+    row-gap: clamp(20px, 3vh, 34px);
     min-height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 56px);
     padding: 0 0 8px;
   }
@@ -380,7 +380,7 @@ const formatDate = (date: Date) =>
   }
   .cluster small { display:-webkit-box; margin-top: 5px; overflow:hidden; font-size:9px; line-height:1.35; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; }
 
-  .writing-panel, .photography-panel, .reading-panel { margin-top:clamp(12px,2vh,22px); }
+  .writing-panel, .photography-panel, .reading-panel { margin-top:clamp(8px,1.5vh,16px); }
   .cluster:hover strong, .row-title:hover { text-decoration: underline; }
 
   .rows { display: grid; }
@@ -491,6 +491,15 @@ const formatDate = (date: Date) =>
     .clusters-panel, .projects-panel { grid-column: span 1; }
     .writing-panel, .photography-panel, .reading-panel { grid-column: span 1; margin-top: 0; }
     .panel { overflow: visible; }
+  }
+
+  /* The directory is designed to be visible at once on a small laptop display. */
+  @media (min-width: 1001px) and (max-height: 850px) {
+    .directory { row-gap: 16px; }
+    .panel-head { min-height: 36px; padding-bottom: 5px; }
+    .photography-grid { padding-top: 5px; }
+    .writing-panel, .photography-panel, .reading-panel { margin-top: 3px; }
+    .panel-more { padding-top: 4px; }
   }
 
   @media (max-width: 620px) {

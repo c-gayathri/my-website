@@ -35,7 +35,10 @@ const items = await Promise.all(projects.map(async (project) => {
           </span>
           <span class="caption">
             <span class="title">{project.data.title}{featured ? ' ★' : ''}</span>
-            <time class="s-meta year">{project.data.year}</time>
+            <span class="caption-meta">
+              {project.data.gallery.length > 1 && <span class="s-meta photo-count">+{project.data.gallery.length - 1} photos</span>}
+              <time class="s-meta year">{project.data.year}</time>
+            </span>
           </span>
         </a>
       ))}
@@ -47,7 +50,7 @@ const items = await Promise.all(projects.map(async (project) => {
   .photography { max-width: 1760px; margin: 0 auto; }
   .heading { position: sticky; top: calc(var(--studio-header-height) + 8px); z-index: 20; align-self: start; display: flex; align-items: baseline; justify-content: space-between; gap: 24px; padding: 0 0 16px; margin-bottom: 26px; background: var(--s-bg); }
   h1 { margin: 0; font-family: var(--s-serif); font-size: var(--studio-page-title-size); font-weight: 500; line-height: 1; }
-  .heading-copy { display: grid; gap: 5px; justify-items: end; max-width: 48ch; text-align: right; }
+  .heading-copy { display: grid; gap: 5px; justify-items: end; max-width: 64ch; text-align: right; }
   .heading p { margin: 0; }
   .subtitle { color: var(--s-grey); font-family: var(--s-mono); font-size: 11px; line-height: 1.55; }
   .photo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(18px, 2.4vw, 38px); }
@@ -58,6 +61,8 @@ const items = await Promise.all(projects.map(async (project) => {
   .title { font-family: var(--s-mono); font-size: 11px; line-height: 1.45; }
   .photo:hover .title { text-decoration: underline; text-underline-offset: 3px; }
   .year { flex: 0 0 auto; font-size: 9px; }
+  .caption-meta { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 7px; flex: 0 0 auto; }
+  .photo-count { font-size: 9px; color: var(--s-grey); }
   @media (max-width: 1050px) { .photo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (max-width: 720px) { .photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 12px; } .heading { align-items: end; } }
   @media (max-width: 420px) { .photo-grid { grid-template-columns: 1fr 1fr; } .title { font-size: 10px; } }

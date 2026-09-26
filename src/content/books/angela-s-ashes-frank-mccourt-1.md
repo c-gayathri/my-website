@@ -8,5 +8,6 @@ goodreadsShelf: read
 yearRead: 2022
 dateFinished: "12 Jun 2022"
 coverLookup: true
+featured: true
 goodreadsLink: "https://www.goodreads.com/book/show/252577"
 ---

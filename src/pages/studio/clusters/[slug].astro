@@ -149,17 +149,23 @@ const cards = projects;
     text-decoration: underline;
   }
 
-  .cluster-sidebar { min-width:0; }
+  .cluster-sidebar {
+    min-width: 0;
+    container-type: inline-size;
+  }
   .cluster-header { margin-top:18px; }
 
   .cluster-header h1 {
     font-family: var(--s-serif);
     font-weight: 500;
-    font-size: clamp(28px, 3.25vw, 52px);
+    /* Scale from the actual sidebar width so long titles remain legible on
+       smaller laptops instead of relying only on the viewport width. */
+    font-size: clamp(24px, 12cqw, 52px);
     line-height: 0.96;
     letter-spacing: 0.01em;
     margin: 0;
     overflow-wrap: anywhere;
+    word-break: break-word;
     text-wrap: balance;
   }
 

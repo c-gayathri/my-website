@@ -121,6 +121,7 @@ export const projectOrder: Record<string, string[]> = {
   "non-watercolour-paintings": [
   ],
   "animation": [
+    "tirkhit-dha",
     "desi-it-all",
     "bitch-coded",
     "lip-sticks",
