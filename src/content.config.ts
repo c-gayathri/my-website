@@ -71,10 +71,34 @@ const projects = defineCollection({
       galleryLayout: z.enum(['grid', 'scattered']).default('grid'),
       /** gallery columns when >2 images: '2' or '3' (default '3'). 1 image → full width, 2 → two columns. */
       galleryColumns: z.enum(['2', '3']).default('3'),
+      /** Project collage renderer. Custom tiles position gallery images by zero-based gallery index. */
+      collageMode: z.enum(['grid', 'masonry', 'custom']).default('grid'),
+      /** Optional explicit masonry column for each gallery/video item, in source order. */
+      masonryColumns: z.array(z.number().int().nonnegative()).optional(),
+      collageWidthPercent: z.number().int().min(1).max(100).default(100),
+      collageColumns: z.number().int().min(1).max(6).optional(),
+      /** Relative custom-grid column widths, e.g. [56, 44]. */
+      collageColumnRatios: z.array(z.number().positive()).optional(),
+      collageRowRatios: z.array(z.number().positive()).optional(),
+      collageTiles: z.array(z.object({
+        name: z.string(),
+        type: z.enum(['image', 'video']),
+        imageIndex: z.number().int().nonnegative().optional(),
+        videoSrc: z.string().optional(),
+        youtubeUrl: z.string().url().optional(),
+        row: z.number().int().positive(),
+        column: z.number().int().positive(),
+        rowSpan: z.number().int().positive().default(1),
+        columnSpan: z.number().int().positive().default(1),
+      })).default([]),
       /** explicit layout mode — do not infer from content */
       layoutMode: z.enum(['image-first', 'writing-first']).default('image-first'),
       /** Render source line breaks in poem-like MDX body text. */
       preserveBreaks: z.boolean().default(false),
+      /** Keep the main artwork within the height of a normal screen. */
+      viewportFitImage: z.boolean().default(false),
+      /** Optional displayed width for a single, low-resolution artwork. */
+      singleImageWidthPx: z.number().int().positive().optional(),
       /** image-first sizing */
       size: z.enum(['small', 'medium', 'large', 'full-content']).default('large'),
       fit: z.enum(['contain', 'cover']).default('contain'),
@@ -93,6 +117,9 @@ const projects = defineCollection({
       videoSrc: z.string().optional(),
       videoPoster: image().optional(),
       youtubeUrls: z.array(z.string().url()).default([]),
+      // Native display aspect ratios for embedded YouTube videos. This lets
+      // portrait phone videos keep their portrait frame inside masonry.
+      youtubeAspectRatios: z.array(z.number().positive()).default([]),
       audioSrc: z.string().optional(),
       audioUrls: z.array(z.string().url()).default([]),
       textExcerpt: z.string().optional(),
@@ -102,6 +129,8 @@ const projects = defineCollection({
       pageLayout: z.enum(['image-dominant', 'side-caption', 'offset']).default('image-dominant'),
       customComponent: z.string().optional(),
       relatedWriting: z.array(z.string()).default([]),
+      /** Project ids to surface as related works on this project's page. */
+      relatedProjects: z.array(z.string()).default([]),
       /** manual placement inside the cluster page (optional override) */
       clusterPreview: z
         .object({

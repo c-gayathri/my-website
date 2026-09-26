@@ -1,6 +1,6 @@
 ---
-title: "Photo Edits"
-description: "A collection of works in photo edits."
+title: "Photo edits"
+description: "Why stop at just clicking photos?"
 hoverDescription: "Works from Photo Edits."
 hoverColor: '#7a2bff'
 featured: false

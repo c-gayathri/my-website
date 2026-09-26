@@ -55,7 +55,6 @@ const influences = await Promise.all(
     <div class="band">
       <section class="band-section education" aria-labelledby="education-title">
         <header class="section-head">
-          <span class="s-meta">01</span>
           <h2 id="education-title">Education</h2>
         </header>
         {studioAbout.education.map((item) => (
@@ -69,7 +68,6 @@ const influences = await Promise.all(
 
       <section class="band-section news" aria-labelledby="news-title">
         <header class="section-head">
-          <span class="s-meta">02</span>
           <h2 id="news-title">News</h2>
         </header>
         <div class="news-scroll" tabindex="0" aria-label="News, scroll for more">
@@ -88,7 +86,6 @@ const influences = await Promise.all(
 
       <section class="band-section elsewhere" aria-labelledby="elsewhere-title">
         <header class="section-head">
-          <span class="s-meta">03</span>
           <h2 id="elsewhere-title">Elsewhere</h2>
         </header>
         <div class="link-list">
@@ -105,8 +102,7 @@ const influences = await Promise.all(
 
       <section class="band-section influence-section" aria-labelledby="influences-title" data-influences>
         <header class="section-head">
-          <span class="s-meta">04</span>
-          <h2 id="influences-title">My Muses</h2>
+          <h2 id="influences-title">Inspired by</h2>
         </header>
         <div class="influence-grid">
           {influences.map((influence) => (

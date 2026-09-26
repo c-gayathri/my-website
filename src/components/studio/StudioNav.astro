@@ -14,13 +14,16 @@ const path = Astro.url.pathname.replace(/\/+$/, '');
 const navItems = [
   { label: 'Constellation', href: base + '/studio', exact: true },
   { label: studioConfig.writingLabel, href: base + '/studio/writing', exact: false },
+  { label: 'Photography', href: base + '/studio/photography', exact: false },
   { label: studioConfig.bookshelfLabel, href: base + '/studio/bookshelf', exact: false },
   { label: studioConfig.indexLabel, href: base + '/studio/index', exact: false },
-  { label: 'About', href: base + '/studio/about', exact: false },
+  { label: 'About', href: base + '/studio/about', exact: false, dividerBefore: true },
 ];
 
 const isActive = (item: (typeof navItems)[number]) =>
-  item.exact ? path === item.href : path === item.href || path.startsWith(item.href);
+  item.label === 'Constellation'
+    ? path === item.href || path.startsWith(`${item.href}/projects`) || path.startsWith(`${item.href}/clusters`)
+    : item.exact ? path === item.href : path === item.href || path.startsWith(item.href);
 ---
 
 <header class:list={['studio-nav', `nav-${variant}`]}>
@@ -32,7 +35,7 @@ const isActive = (item: (typeof navItems)[number]) =>
   <nav class="nav-right" aria-label="Studio">
     {navItems.map((item) => (
       <a
-        class:list={['s-link', { active: isActive(item) }]}
+        class:list={['s-link', { active: isActive(item), 'divider-before': 'dividerBefore' in item && item.dividerBefore }]}
         href={item.href + '/'}
         aria-current={isActive(item) ? 'page' : undefined}
       >
@@ -91,7 +94,7 @@ const isActive = (item: (typeof navItems)[number]) =>
   .nav-right {
     display: flex;
     align-items: baseline;
-    gap: clamp(18px, 3vw, 44px);
+    gap: clamp(14px, 2vw, 28px);
     flex-wrap: wrap;
     justify-content: flex-end;
   }
@@ -100,6 +103,8 @@ const isActive = (item: (typeof navItems)[number]) =>
     text-decoration: underline;
     text-underline-offset: 5px;
   }
+
+  .divider-before { border-left: 1px solid var(--s-line); padding-left: clamp(14px, 2vw, 28px); }
 
   @media (max-width: 900px) {
     .studio-nav {
@@ -113,6 +118,7 @@ const isActive = (item: (typeof navItems)[number]) =>
     }
 
     .nav-right { width: 100%; justify-content: flex-start; gap: 9px 16px; }
+    .divider-before { padding-left: 16px; }
     .nav-right .s-link { font-size: 10px; }
     .tagline { font-size: 9.5px; }
   }

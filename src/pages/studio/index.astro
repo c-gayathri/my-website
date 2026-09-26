@@ -11,14 +11,14 @@ import { clusterOrder } from '../../data/clusterOrder';
 import { projectOrder } from '../../data/projectOrder';
 import '../../styles/constellation.css';
 
-const clusters = await getCollection('clusters');
+const clusters = (await getCollection('clusters')).filter((cluster) => cluster.id !== 'photography');
 const projects = await getCollection('projects');
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 
 // World MUST match generateClusterAnchors() scaling so star-field bounds
 // and cluster anchors share the same box. Run `npm run constellation:update`
 // after adding/removing a cluster to verify coverage.
-const anchorScale = Math.max(1.35, Math.sqrt(Math.max(1, clusters.length) / 6) * 1.25);
+const anchorScale = Math.max(1.35, Math.sqrt(Math.max(1, clusters.length) / 6) * 1.38);
 const world = {
   width: studioConfig.world.width * anchorScale,
   height: studioConfig.world.height * anchorScale,
@@ -120,16 +120,15 @@ const data = await Promise.all(
       y: normalizedOverride?.y !== undefined
         ? normalizedOverride.y * world.height
         : legacyOverride?.y ?? generated.y,
-      width: normalizedOverride?.width !== undefined
+      width: 1.25 * (normalizedOverride?.width !== undefined
         ? normalizedOverride.width * world.width
-        : legacyOverride?.width ?? generated.width * 1.4,
-      driftRadius: legacyOverride?.driftRadius ?? 10,
+        : legacyOverride?.width ?? generated.width * 1.4),
+      driftRadius: legacyOverride?.driftRadius ?? 15,
       depth: legacyOverride?.depth ?? 1,
-      color:
-        c.data.hoverColor ??
-        studioConfig.palette[hashStr(c.id) % studioConfig.palette.length],
+      color: studioConfig.palette[hashStr(c.id) % studioConfig.palette.length],
       projectCount: allForCluster.length,
-      hoverDescription: c.data.hoverDescription ?? c.data.description,
+      // The hover panel repeats the authored cluster description exactly.
+      hoverDescription: c.data.description,
       featured: clusterOrder.slice(0, 6).includes(c.id),
       images,
     };

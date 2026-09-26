@@ -8,7 +8,7 @@ import { projectOrder } from '../../../../data/projectOrder';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const allClusters = await getCollection('clusters');
-const clusters = [...allClusters].sort((a, b) => {
+const clusters = [...allClusters].filter((cluster) => cluster.id !== 'photography').sort((a, b) => {
   const ia = clusterOrder.indexOf(a.id);
   const ib = clusterOrder.indexOf(b.id);
   if (ia === -1 && ib === -1) return a.id.localeCompare(b.id);
@@ -17,8 +17,10 @@ const clusters = [...allClusters].sort((a, b) => {
   return ia - ib;
 });
 const projects = await getCollection('projects');
-const mediaFor = (project: (typeof projects)[number]) =>
-  project.data.thumbnail ?? project.data.hero ?? project.data.gallery[0] ?? project.data.videoPoster;
+const mediaFor = (project: (typeof projects)[number]) => {
+  const d = project.data;
+  return d.thumbnail ?? d.hero ?? d.gallery[0] ?? d.videoPoster;
+};
 
 const items = await Promise.all(clusters.map(async (cluster) => {
   const related = projects.filter((project) => project.data.clusters.includes(cluster.id));
@@ -34,8 +36,10 @@ const items = await Promise.all(clusters.map(async (cluster) => {
     const featured = Number(b.data.featured) - Number(a.data.featured);
     return featured || a.id.localeCompare(b.id);
   });
-  const media = cluster.data.previewImage ?? related.map(mediaFor).find(Boolean);
-  return { cluster, count: related.length, preview: media ? await getImage({ src: media, width: 240 }) : undefined };
+  const candidates = [cluster.data.previewImage, ...related.map(mediaFor)].filter(Boolean);
+  const unique = candidates.filter((image, index) => candidates.findIndex((other) => other?.src === image?.src) === index).slice(0, 4);
+  const previews = await Promise.all(unique.map((media) => getImage({ src: media!, width: 360, height: 360, fit: 'cover' })));
+  return { cluster, count: related.length, previews };
 }));
 ---
 
@@ -48,15 +52,19 @@ const items = await Promise.all(clusters.map(async (cluster) => {
       </div>
       <a class="s-link" href={`${base}/studio/index/`}>← index</a>
     </header>
-    <div class="rows">
-      {items.map(({ cluster, count, preview }, index) => (
-        <a class="row" href={`${base}/studio/clusters/${cluster.id}/`}>
-          <span class="s-meta number">{String(index + 1).padStart(2, '0')}</span>
-          {preview ? <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} /> : <span class="placeholder" />}
-          <strong>{cluster.data.title}</strong>
-          <span class="description s-meta">{cluster.data.description}</span>
-          <span class="s-meta">{count} {count === 1 ? 'project' : 'projects'}</span>
-          <span class="arrow" aria-hidden="true">→</span>
+    <div class="cluster-grid">
+      {items.map(({ cluster, count, previews }) => (
+        <a class="cluster-card" href={`${base}/studio/clusters/${cluster.id}/`}>
+          <span class:list={['gallery', `count-${previews.length}`]}>
+            {previews.length ? previews.map((preview) => (
+              <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="lazy" />
+            )) : <span class="placeholder" />}
+          </span>
+          <span class="copy">
+            <span class="title-line"><strong>{cluster.data.title}</strong><span class="arrow" aria-hidden="true">→</span></span>
+            <span class="description s-meta">{cluster.data.description}</span>
+            <span class="count s-meta">{count} {count === 1 ? 'project' : 'projects'}</span>
+          </span>
         </a>
       ))}
     </div>
@@ -65,14 +73,24 @@ const items = await Promise.all(clusters.map(async (cluster) => {
 
 <style>
   .listing { max-width: 1500px; margin: 0 auto; }
-  .listing-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--s-ink); }
+  .listing-head { position: sticky; top: calc(var(--studio-header-height) + 8px); z-index: 20; align-self: start; display: flex; justify-content: space-between; align-items: end; gap: 24px; padding: 0 0 16px; background: var(--s-bg); border-bottom: 1px solid var(--s-line); }
   .listing-head h1 { margin: 0; font-family: var(--s-serif); font-size: clamp(34px, 4vw, 54px); font-weight: 500; line-height: 1; }
   .listing-head p { margin: 8px 0 0; }
-  .row { display: grid; grid-template-columns: 34px 108px minmax(160px,.7fr) minmax(260px,1.4fr) 100px 22px; align-items: center; gap: clamp(12px,2vw,30px); min-height: 112px; padding: 10px 0; border-bottom: 1px solid var(--s-line); color: inherit; text-decoration: none; }
-  .row img, .placeholder { display:block; width:108px; height:90px; object-fit:cover; background:var(--s-line); }
-  .row strong { font-family:var(--s-serif); font-size:clamp(20px,2vw,28px); font-weight:500; }
-  .description { line-height:1.6; }
-  .row:hover strong { text-decoration:underline; text-underline-offset:4px; }
-  .arrow { justify-self:end; font-size:20px; }
-  @media (max-width:760px) { .row { grid-template-columns:24px 72px minmax(0,1fr) 18px; min-height:86px; } .row img,.placeholder { width:72px;height:64px; } .description,.row > .s-meta:nth-last-child(2) { display:none; } }
+  .cluster-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:clamp(34px,4vw,68px); row-gap:28px; padding-top:28px; }
+  .cluster-card { display:grid; grid-template-columns:minmax(170px,.85fr) minmax(190px,1.15fr); gap:clamp(20px,2.2vw,36px); min-width:0; min-height:260px; padding-bottom:28px; border-bottom:1px solid var(--s-line); color:inherit; text-decoration:none; }
+  .gallery { display:grid; grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(2,1fr); gap:5px; width:100%; aspect-ratio:1; overflow:hidden; background:#fff; align-self:start; }
+  .gallery.count-1 { display:block; }
+  .gallery.count-2 { grid-template-rows:1fr; }
+  .gallery.count-3 img:first-child { grid-row:1 / -1; }
+  .gallery img,.placeholder { display:block; width:100%; height:100%; object-fit:cover; background:#fff; }
+  .copy { display:flex; flex-direction:column; min-width:0; }
+  .title-line { display:flex; align-items:baseline; justify-content:space-between; gap:14px; }
+  .cluster-card strong { font-family:var(--s-serif); font-size:clamp(23px,2.15vw,32px); line-height:1.08; font-weight:500; }
+  .description { display:block; margin-top:16px; line-height:1.7; }
+  .count { display:block; margin-top:auto; padding-top:18px; }
+  .cluster-card:hover strong { text-decoration:underline; text-underline-offset:4px; }
+  .arrow { flex:0 0 auto; font-size:20px; }
+  @media (max-width:1100px) { .cluster-card { grid-template-columns:140px minmax(0,1fr); min-height:210px; } }
+  @media (max-width:820px) { .cluster-grid { grid-template-columns:1fr; } .cluster-card { grid-template-columns:minmax(140px,.7fr) minmax(0,1.3fr); } }
+  @media (max-width:520px) { .cluster-card { grid-template-columns:1fr; } .gallery { max-width:280px; } .count { margin-top:14px; } }
 </style>

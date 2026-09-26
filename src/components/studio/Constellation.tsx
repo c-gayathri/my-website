@@ -6,8 +6,8 @@
  * - Marks are NODES: every star/dot drifts constantly on its own two sines;
  *   lines are drawn between drifted node positions (with breaks/joints), so
  *   the whole web moves independently and never freezes.
- * - Cursor physics: marks near the cursor are PUSHED in the direction of
- *   cursor movement (dragged through the field) and relax slowly back.
+ * - Cursor physics: marks in the narrow trail already crossed by the cursor
+ *   are pulled in its direction and relax slowly back. Marks ahead stay put.
  * - Hover: camera zooms to the cluster; everything else is removed; the
  *   field turns white with violent twinkle; the header goes white; an info
  *   block anchors beside the cluster; the colour splotch grows from the
@@ -23,7 +23,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   GLOBAL_VIEWBOX,
   generateGlobalConstellation,
-  generateLocalConstellation,
   glintPath,
   ornamentPoints,
   type GlyphName,
@@ -131,8 +130,8 @@ function makeNode(
     size,
     tips,
     render,
-    t1: 9 + rand() * 11,
-    t2: 5 + rand() * 6,
+    t1: 7.5 + rand() * 9.5,
+    t2: 4.5 + rand() * 5.5,
     p1: rand() * Math.PI * 2,
     p2: rand() * Math.PI * 2,
     a1: amp * (0.6 + rand() * 0.8),
@@ -146,7 +145,7 @@ function buildField(config: CConfig): Field {
   // New stars/lines are generated across the full cluster world — density
   // scales with world area so coverage matches cluster spread (no stretch).
   const areaRatio = (config.world.width * config.world.height) / (2600 * 1700);
-  const extraStars = Math.round(Math.max(0, areaRatio - 1) * 120);
+  const extraStars = Math.round(Math.max(0, areaRatio - 1) * 155);
   const model = generateGlobalConstellation(`studio-home:${config.seed}`, { extraStars });
   const rand = mulberry32(hashStr(`${model.seed}:motion`));
   const W = config.world.width;
@@ -154,13 +153,21 @@ function buildField(config: CConfig): Field {
   const nodes: FieldNode[] = [];
   const edges: FieldEdge[] = [];
 
-  const visibleEdges = model.logicalEdges.filter((edge) => edge.visible);
+  const authoredEdges = model.logicalEdges.filter((edge) => edge.visible);
+  // Keep the hand-drawn runs as the backbone, then reveal a small, stable
+  // selection of their otherwise hidden branches. This adds connective tissue
+  // without turning the field into a dense network.
+  const lineRand = mulberry32(hashStr(`${model.seed}:extra-lines`));
+  const extraEdges = model.logicalEdges.filter((edge) => !edge.visible && lineRand() < 0.18);
+  const visibleEdges = [...authoredEdges, ...extraEdges];
   const visibleNodeIds = new Set(visibleEdges.flatMap((edge) => [edge.from, edge.to]));
   const endpoints = new Map(
     model.stars.filter((star) => star.endpoint).map((star) => [`${star.componentId}:${star.x}:${star.y}`, star]),
   );
   const nodeIndexes = new Map<string, number>();
-  const markScale = W / GLOBAL_VIEWBOX.width;
+  // The world grows with the collection, but individual marks should not.
+  // Damp the viewbox scale so added clusters yield more sky, not huge stars.
+  const markScale = (W / GLOBAL_VIEWBOX.width) * 0.78;
 
   for (const node of model.nodes) {
     const endpoint = endpoints.get(`${node.componentId}:${node.x}:${node.y}`);
@@ -171,7 +178,7 @@ function buildField(config: CConfig): Field {
       node.y * H,
       endpoint?.glyph ?? 'dot',
       (endpoint?.sizePx ?? 1.2) * markScale,
-      1.2 + rand() * 2,
+      1.7 + rand() * 2.8,
       endpoint?.tips,
       Boolean(endpoint) || !visibleNodeIds.has(node.id),
     ));
@@ -185,10 +192,10 @@ function buildField(config: CConfig): Field {
     });
   }
   for (const star of model.stars.filter((item) => !item.endpoint)) {
-    nodes.push(makeNode(rand, star.x * W, star.y * H, star.glyph, star.sizePx * markScale, 1.2 + rand() * 2.2, star.tips));
+    nodes.push(makeNode(rand, star.x * W, star.y * H, star.glyph, star.sizePx * markScale, 1.7 + rand() * 3, star.tips));
   }
   for (const ornament of model.ornaments) {
-    nodes.push(makeNode(rand, ornament.x * W, ornament.y * H, 'ornament', ornament.sizePx * markScale, 1.8 + rand() * 2));
+    nodes.push(makeNode(rand, ornament.x * W, ornament.y * H, 'ornament', ornament.sizePx * markScale, 2.2 + rand() * 2.8));
   }
 
   return { nodes, edges };
@@ -310,67 +317,84 @@ type HoverStar = {
 type HoverStars = { nodes: HoverStar[]; edges: Array<[number, number]> };
 
 function hoverStarsFor(c: CCluster, boxH: number): HoverStars {
-  const model = generateLocalConstellation(c.id, 'big-plus-two');
   const rand = mulberry32(hashStr(c.id + ':hover-motion'));
   const cw = c.width;
   const ch = boxH * c.width;
-  /* anchor just outside one seeded corner of the collage */
+  /* Anchor close to one seeded corner of the collage. */
   const corner = Math.floor(rand() * 4);
   const sideX = corner === 0 || corner === 2 ? 1 : -1;
   const sideY = corner === 0 || corner === 1 ? -1 : 1;
-  const ax = sideX * (cw * 0.52 + 36 + rand() * 30);
-  const ay = sideY * (ch * 0.52 + 26 + rand() * 24);
-  const box = model.layout.fragBBox!;
-  // Loud hover constellation: same vocabulary as the field, bigger +
-  // more violent twinkle, anchored beside the collage.
-  const scale = 0.5;
+  const ax = sideX * (cw * 0.49 + 14 + rand() * 12);
+  const ay = sideY * (ch * 0.45 + 10 + rand() * 10);
   const nodes: HoverStar[] = [];
-  const nodeIndexes = new Map<string, number>();
-  const visible = model.logicalEdges.filter((edge) => edge.visible);
-  const visibleIds = new Set(visible.flatMap((edge) => [edge.from, edge.to]));
-  const endpoints = new Map(model.stars.filter((star) => star.endpoint).map((star) => [`${star.componentId}:${star.x}:${star.y}`, star]));
-  const point = (x: number, y: number) => ({ x: ax + (x - box.cx) * scale, y: ay + (y - box.cy) * scale });
-  for (const node of model.nodes) {
-    const endpoint = endpoints.get(`${node.componentId}:${node.x}:${node.y}`);
-    if (!endpoint && visibleIds.has(node.id)) {
-      nodeIndexes.set(node.id, -1);
-      continue;
+  // The active fragment should feel like a real patch of sky beside the
+  // collage. Keep the marks the same size, but spread them over a much wider
+  // oval and add a few more of them so the shape has a visible perimeter.
+  const major = 214 + rand() * 42;
+  const minor = 132 + rand() * 32;
+  const tilt = rand() * Math.PI;
+
+  const addGroup = (
+    centerX: number,
+    centerY: number,
+    count: number,
+    groupMajor: number,
+    groupMinor: number,
+    minimumGap: number,
+  ) => {
+    const start = nodes.length;
+    let attempts = 0;
+    while (nodes.length < start + count && attempts < count * 45) {
+      attempts += 1;
+      // sqrt produces even area coverage; jitter keeps the outline organic.
+      const radius = Math.sqrt(rand()) * (0.72 + rand() * 0.28);
+      const angle = rand() * Math.PI * 2;
+      const ex = Math.cos(angle) * groupMajor * radius;
+      const ey = Math.sin(angle) * groupMinor * radius;
+      const groupTilt = start === 0 ? tilt : tilt + (rand() - 0.5) * 0.9;
+      const x = centerX + ex * Math.cos(groupTilt) - ey * Math.sin(groupTilt);
+      const y = centerY + ex * Math.sin(groupTilt) + ey * Math.cos(groupTilt);
+      if (nodes.some((other) => Math.hypot(other.x - x, other.y - y) < minimumGap)) continue;
+      const glyphRoll = rand();
+      const glyph: HoverStar['glyph'] = glyphRoll < 0.52 ? 'dot' : glyphRoll < 0.76 ? 'tiny' : glyphRoll < 0.92 ? 'small' : 'cross';
+      nodes.push({
+        x, y, glyph,
+        size: glyph === 'dot' ? 2 + rand() * 2.3 : 3.9 + rand() * 5,
+        tips: [0.8 + rand() * 0.4, 0.8 + rand() * 0.4, 0.8 + rand() * 0.4, 0.8 + rand() * 0.4],
+        delay: rand() * 0.8,
+        dur: 0.75 + rand() * 0.65,
+      });
     }
-    const p = point(node.x, node.y);
-    nodeIndexes.set(node.id, nodes.length);
-    nodes.push({
-      ...p,
-      glyph: endpoint?.glyph ?? 'dot',
-      size: (endpoint?.sizePx ?? 1.2) * 2.2,
-      tips: endpoint?.tips ?? [1, 1, 1, 1],
-      delay: rand() * 0.6,
-      dur: 0.5 + rand() * 0.3,
-    });
+  };
+
+  addGroup(ax, ay, 30 + Math.floor(rand() * 7), major, minor, 24);
+
+  // A smaller companion appears only for some clusters. It is deterministic
+  // per cluster, so changing the seed or adding a cluster does not make the
+  // constellation flicker between renders.
+  if (rand() < 0.34) {
+    const secondaryX = ax + sideX * (major * (0.72 + rand() * 0.22));
+    const secondaryY = ay + sideY * (minor * (0.52 + rand() * 0.2));
+    addGroup(secondaryX, secondaryY, 8 + Math.floor(rand() * 5), 74 + rand() * 22, 48 + rand() * 14, 21);
   }
-  const edges = visible.map((edge) => {
-    const from = model.nodes.find((node) => node.id === edge.from)!;
-    const to = model.nodes.find((node) => node.id === edge.to)!;
-    let a = nodeIndexes.get(edge.from)!;
-    let b = nodeIndexes.get(edge.to)!;
-    if (a < 0) {
-      const p = point(from.x, from.y);
-      a = nodes.push({ ...p, glyph: 'dot', size: 0, tips: [1, 1, 1, 1], delay: 0, dur: 1 }) - 1;
-      nodeIndexes.set(edge.from, a);
+
+  // A sparse nearest-neighbour web supplies a few lines without turning the
+  // fragment into a chain or a single linear formation.
+  const edgeKeys = new Set<string>();
+  const edges: Array<[number, number]> = [];
+  for (let i = 0; i < nodes.length; i += 1) {
+    if (rand() > 0.58) continue;
+    const nearest = nodes
+      .map((node, j) => ({ j, d: i === j ? Infinity : Math.hypot(node.x - nodes[i].x, node.y - nodes[i].y) }))
+      .sort((a, b) => a.d - b.d)[0];
+    if (!nearest || nearest.d > 154) continue;
+    const a = Math.min(i, nearest.j);
+    const b = Math.max(i, nearest.j);
+    const key = `${a}:${b}`;
+    if (!edgeKeys.has(key)) {
+      edgeKeys.add(key);
+      edges.push([a, b]);
     }
-    if (b < 0) {
-      const p = point(to.x, to.y);
-      b = nodes.push({ ...p, glyph: 'dot', size: 0, tips: [1, 1, 1, 1], delay: 0, dur: 1 }) - 1;
-      nodeIndexes.set(edge.to, b);
-    }
-    return [a, b] as [number, number];
-  });
-  for (const star of model.stars.filter((item) => !item.endpoint)) {
-    const p = point(star.x, star.y);
-    nodes.push({ ...p, glyph: star.glyph, size: star.sizePx * 2.2, tips: star.tips, delay: rand() * 0.6, dur: 0.5 + rand() * 0.3 });
-  }
-  for (const ornament of model.ornaments) {
-    const p = point(ornament.x, ornament.y);
-    nodes.push({ ...p, glyph: 'ornament', size: ornament.sizePx * 2.2, tips: [1, 1, 1, 1], delay: rand() * 0.6, dur: 0.5 + rand() * 0.3 });
   }
   return { nodes, edges };
 }
@@ -521,7 +545,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
       x1 = Math.max(x1, layout.c.x + halfW);
       y1 = Math.max(y1, layout.c.y + halfH);
     }
-    const pad = 100;
+    const pad = 42;
     return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
   }, [layouts]);
 
@@ -581,9 +605,9 @@ export default function Constellation({ clusters, config, basePath }: Props) {
     const cx = (box.x0 + box.x1) / 2;
     const cy = (box.y0 + box.y1) / 2;
     const scale = clamp(
-      Math.min(vp.w / (box.x1 - box.x0), vp.h / (box.y1 - box.y0)) * 0.94,
+      Math.min(vp.w / (box.x1 - box.x0), vp.h / (box.y1 - box.y0)) * 0.99,
       minScale,
-      1.1,
+      1.2,
     );
     cam.current = { cx, cy, scale };
     camTarget.current = { cx, cy, scale };
@@ -801,8 +825,12 @@ export default function Constellation({ clusters, config, basePath }: Props) {
     let running = true;
     let svx = 0;
     let svy = 0;
-    const PUSH_R = 240;
-    const PUSH_MAX = 26;
+    // The cursor leaves a wider, more visible wake behind it. The test still
+    // stays one-sided (`along <= 0`), so marks ahead of the pointer remain
+    // untouched while the crossed region follows the movement more clearly.
+    const PUSH_R = 330;
+    const PUSH_ACROSS = 116;
+    const PUSH_MAX = 48;
     const RELAX = 1.25; /* per-second exponential relax factor */
 
     const tick = (now: number) => {
@@ -906,18 +934,24 @@ export default function Constellation({ clusters, config, basePath }: Props) {
         const sx = n.x + dx;
         const sy = n.y + dy;
 
-        /* screen-space proximity to cursor */
+        /* A one-sided cursor trail: only marks already crossed by the
+           pointer move. Ahead-of-cursor marks are deliberately untouched. */
         const ssx = sx * c.scale + tx;
         const ssy = sy * c.scale + ty;
         const ddx = ssx - cursor.current.x;
         const ddy = ssy - cursor.current.y;
-        const dist = Math.hypot(ddx, ddy);
-        if (!reduced.current && dist < PUSH_R) {
-          const prox = (1 - dist / PUSH_R) ** 2;
-          svx = vel.current.vx;
-          svy = vel.current.vy;
-          n.ox += svx * prox * pushK * dt * 34;
-          n.oy += svy * prox * pushK * dt * 34;
+        svx = vel.current.vx;
+        svy = vel.current.vy;
+        const speed = Math.hypot(svx, svy);
+        const ux = speed > 0.3 ? svx / speed : 0;
+        const uy = speed > 0.3 ? svy / speed : 0;
+        const along = ddx * ux + ddy * uy;
+        const across = Math.abs(ddx * -uy + ddy * ux);
+        const inTrail = speed > 0.3 && along <= 0 && along > -PUSH_R && across < PUSH_ACROSS;
+        if (!reduced.current && inTrail) {
+          const prox = (1 - Math.abs(along) / PUSH_R) ** 2 * (1 - across / PUSH_ACROSS);
+          n.ox += svx * prox * pushK * dt * 48;
+          n.oy += svy * prox * pushK * dt * 48;
           const mag = Math.hypot(n.ox, n.oy);
           if (mag > PUSH_MAX) {
             n.ox *= PUSH_MAX / mag;
@@ -977,7 +1011,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
         }
       }
 
-      /* clusters: masonry boxes + drift + push + camera.
+      /* clusters: masonry boxes + drift + subtle cursor trail + camera.
          All drift freezes while any cluster is hovered, so the constellation
          returns to exactly the same place when the hover ends. */
       for (const { c: cl, phase } of layouts) {
@@ -985,16 +1019,20 @@ export default function Constellation({ clusters, config, basePath }: Props) {
         if (!el) continue;
         const { dx, dy } = driftOf(cl, phase);
 
-        /* cluster push — much gentler than marks */
+        /* Cluster trail is much gentler than the marks. */
         const sxRaw = vp.w / 2 + (cl.x + dx - c.cx) * c.scale;
         const syRaw = vp.h / 2 + (cl.y + dy - c.cy) * c.scale;
         const ddx = sxRaw - cursor.current.x;
         const ddy = syRaw - cursor.current.y;
-        const dist = Math.hypot(ddx, ddy);
         let px = 0;
         let py = 0;
-        if (!reduced.current && dist < PUSH_R * 1.4) {
-          const prox = (1 - dist / (PUSH_R * 1.4)) ** 2 * 0.15;
+        const speed = Math.hypot(vel.current.vx, vel.current.vy);
+        const ux = speed > 0.3 ? vel.current.vx / speed : 0;
+        const uy = speed > 0.3 ? vel.current.vy / speed : 0;
+        const along = ddx * ux + ddy * uy;
+        const across = Math.abs(ddx * -uy + ddy * ux);
+        if (!reduced.current && speed > 0.3 && along <= 0 && along > -PUSH_R && across < PUSH_ACROSS) {
+          const prox = (1 - Math.abs(along) / PUSH_R) ** 2 * (1 - across / PUSH_ACROSS) * 0.1;
           px = vel.current.vx * prox * 0.3;
           py = vel.current.vy * prox * 0.3;
         }
@@ -1123,7 +1161,7 @@ export default function Constellation({ clusters, config, basePath }: Props) {
                     className="breathe"
                     style={{
                       animationDelay: (-n.p1 * 1.4).toFixed(2) + 's',
-                      animationDuration: (n.t2 * 1.7).toFixed(2) + 's',
+                      animationDuration: (n.t2 * 1.35).toFixed(2) + 's',
                     }}
                   >
                   {n.render ? glyphMark(n.glyph, n.size, n.tips) : null}
@@ -1278,14 +1316,11 @@ export default function Constellation({ clusters, config, basePath }: Props) {
           </div>
 
           {activeCluster && (
-            <div ref={infoRef} className="cluster-info">
-              <p className="ci-kicker">
-                ● cluster {String(clusters.findIndex((x) => x.id === activeCluster.id) + 1).padStart(2, '0')}
-              </p>
+          <div ref={infoRef} className="cluster-info">
               <h2 className="ci-title">{activeCluster.title}</h2>
               <p className="ci-desc">{activeCluster.hoverDescription}</p>
               <p className="ci-meta">{activeCluster.projectCount} projects</p>
-              <p className="ci-hint">click on the cluster to view the projects in the cluster</p>
+              <p className="ci-hint">click to view projects</p>
             </div>
           )}
         </>

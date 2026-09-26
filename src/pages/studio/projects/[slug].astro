@@ -7,6 +7,10 @@ import { getCollection, render } from 'astro:content';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import Lightbox from '../../../components/studio/Lightbox.astro';
 import { studioBlocks } from '../../../components/studio/blocks';
+import { clusterOrder } from '../../../data/clusterOrder';
+import { projectOrder } from '../../../data/projectOrder';
+import { sortPhotographyProjects } from '../../../data/photographyOrder';
+import { summaryParts } from '../../../utils/summaryLinks';
 
 export async function getStaticPaths() {
   const projects = await getCollection('projects');
@@ -17,15 +21,32 @@ const { project } = Astro.props;
 const d = project.data;
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const allClusters = await getCollection('clusters');
-const clusterLinks = allClusters.filter((c) => d.clusters.includes(c.id));
-const primaryCluster = clusterLinks[0];
+const relatedClusters = allClusters.filter((c) => d.clusters.includes(c.id)).sort((a, b) => {
+  const aPriority = clusterOrder.indexOf(a.id);
+  const bPriority = clusterOrder.indexOf(b.id);
+  return (aPriority < 0 ? Infinity : aPriority) - (bPriority < 0 ? Infinity : bPriority);
+});
+const clusterLinks = relatedClusters.filter((c) => c.id !== 'photography');
+const primaryCluster = relatedClusters[0];
+const allProjects = await getCollection('projects');
+const relatedProjects = allProjects.filter((p) => d.relatedProjects.includes(p.id));
+const allWriting = await getCollection('writing');
+const writingById = new Map(allWriting.map((entry) => [entry.id, entry]));
 const siblings = primaryCluster
-  ? (await getCollection('projects')).filter((p) => p.data.clusters.includes(primaryCluster.id))
+  ? primaryCluster.id === 'photography'
+    ? sortPhotographyProjects(allProjects.filter((p) => p.data.clusters.includes('photography')))
+    : allProjects.filter((p) => p.data.clusters.includes(primaryCluster.id)).sort((a, b) => {
+      const order = projectOrder[primaryCluster.id] ?? [];
+      const ai = order.indexOf(a.id);
+      const bi = order.indexOf(b.id);
+      if (ai >= 0 || bi >= 0) return ai < 0 ? 1 : bi < 0 ? -1 : ai - bi;
+      return Number(b.data.featured) - Number(a.data.featured) || a.id.localeCompare(b.id);
+    })
   : [];
 const sibIndex = siblings.findIndex((p) => p.id === project.id);
 const prev = siblings[(sibIndex - 1 + siblings.length) % siblings.length];
 const next = siblings[(sibIndex + 1) % siblings.length];
-const img = d.thumbnail ?? d.hero;
+const img = d.previewType === 'video' ? d.hero : d.thumbnail ?? d.hero;
 const { Content } = await render(project);
 const isModular = d.pageType === 'mdx';
 const isWritingFirst = d.layoutMode === 'writing-first';
@@ -63,36 +84,95 @@ function youtubeEmbedUrl(value: string): string {
 }
 
 const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
-  src: youtubeEmbedUrl(url),
+  src: `${youtubeEmbedUrl(url)}?controls=0&playsinline=1&modestbranding=1&rel=0`,
   title: d.youtubeUrls.length > 1 ? `${d.title} — video ${index + 1}` : `${d.title} — video`,
 }));
+const masonryYoutubeEmbeds = d.collageMode === 'masonry' ? youtubeEmbeds : [];
+const masonryItems = [
+  ...uniqGallery.map((image, index) => ({
+    kind: 'image' as const,
+    image,
+    index,
+    ratio: image.width / image.height,
+  })),
+  ...masonryYoutubeEmbeds.map((video, index) => ({
+    kind: 'video' as const,
+    video,
+    index,
+    ratio: d.youtubeAspectRatios[index] ?? 1,
+  })),
+];
+const masonryColumnCount = d.collageColumns ?? (d.galleryColumns === '2' ? 2 : 3);
+const masonryColumns = Array.from({ length: masonryColumnCount }, () => [] as typeof masonryItems);
+const masonryHeights = Array.from({ length: masonryColumnCount }, () => 0);
+for (const item of masonryItems) {
+  const requestedColumn = d.masonryColumns?.[masonryItems.indexOf(item)];
+  const target = requestedColumn !== undefined && requestedColumn < masonryColumnCount
+    ? requestedColumn
+    : masonryHeights.indexOf(Math.min(...masonryHeights));
+  masonryColumns[target].push(item);
+  masonryHeights[target] += 1 / item.ratio;
+}
+const customTiles = d.collageTiles.map((tile) => {
+  const image = tile.type === 'image' && tile.imageIndex !== undefined ? d.gallery[tile.imageIndex] : undefined;
+  return { ...tile, image, video: tile.videoSrc ? `${base}${tile.videoSrc}` : undefined,
+    embed: tile.youtubeUrl ? `${youtubeEmbedUrl(tile.youtubeUrl)}?controls=0&playsinline=1&modestbranding=1&rel=0` : undefined };
+}).filter((tile) => tile.type === 'video' || tile.image);
+const isPhotography = d.clusters.includes('photography');
+const collageStyle = `--collage-width:${d.collageWidthPercent}%;--collage-columns:${d.collageColumns ?? (d.galleryColumns === '2' ? 2 : 3)};${d.singleImageWidthPx ? `--single-image-width:${d.singleImageWidthPx}px;` : ''}${d.collageColumnRatios?.length ? `--collage-tracks:${d.collageColumnRatios.map((n) => `${n}fr`).join(' ')};` : ''}${d.collageRowRatios?.length ? `--collage-rows:${d.collageRowRatios.map((n) => `${n}fr`).join(' ')};` : ''}`;
 ---
 
-<StudioLayout title={`${d.title} — Studio`} slim>
-  <article class:list={['project', `size-${d.size}`, `layout-${d.pageLayout}`, d.preserveBreaks ? 'preserve-breaks' : '']}>
+<StudioLayout title={`${d.title} — Studio`} slim dark={isPhotography}>
+  <article class:list={['project', `size-${d.size}`, `layout-${d.pageLayout}`, d.preserveBreaks ? 'preserve-breaks' : '', d.viewportFitImage ? 'project--viewport-image' : '', isPhotography ? 'project--photography' : '']}>
     <aside class="rail">
       <nav class="crumbs s-meta" aria-label="Breadcrumb">
         <a href={`${base}/studio/`}>← constellation</a>
         <a href={`${base}/studio/index/projects/`}>← all projects</a>
       </nav>
-      {clusterLinks.length > 0 && (
-        <div class="cluster-list s-meta">
-          <span>In: </span>
-          {clusterLinks.map((c, i) => (
-            <a href={`${base}/studio/clusters/${c.id}/`}>{c.data.title}{i < clusterLinks.length - 1 ? ' · ' : ''}</a>
-          ))}
-        </div>
-      )}
-
       <h1>{d.title}</h1>
-
-      {d.summary && <p class="note">{d.summary}</p>}
 
       <dl class="meta s-meta">
         {d.medium.length > 0 && <div><dt>media</dt><dd>{d.medium.join(', ')}</dd></div>}
+        {(clusterLinks.length > 0 || isPhotography) && (
+          <div class="meta-clusters">
+            <dt>clusters</dt>
+            <dd>
+              {clusterLinks.map((c, i) => (
+                <><a href={`${base}/studio/clusters/${c.id}/`}>{c.data.title}</a>{i < clusterLinks.length - 1 || isPhotography ? ' · ' : ''}</>
+              ))}
+              {isPhotography && <a href={`${base}/studio/photography/`}>Photography</a>}
+            </dd>
+          </div>
+        )}
         <div><dt>year</dt><dd>{d.year}</dd></div>
       </dl>
 
+      {d.summary && <p class="note">{summaryParts(d.summary).map((part) => part.href ? <a href={part.href} target="_blank" rel="noopener noreferrer">{part.text}</a> : part.text)}</p>}
+
+      {
+        d.relatedWriting.length > 0 && (
+          <div class="related">
+            <span class="s-meta">related writing</span>
+            {d.relatedWriting.map((slug) => (
+              <a class="s-meta" href={`${base}/studio/writing/${slug}/`}>
+                {writingById.get(slug)?.data.title ?? slug.replace(/-/g, ' ')}
+              </a>
+            ))}
+          </div>
+        )
+      }
+      {
+        relatedProjects.length > 0 && (
+          <div class="related">
+            <span class="s-meta">related projects</span>
+            {relatedProjects.map((relatedProject) => (
+              <a class="s-meta" href={`${base}/studio/projects/${relatedProject.id}/`}>
+                {relatedProject.data.title}
+              </a>
+            ))}
+          </div>
+        )
+      }
       <div class="pn">
         {
           prev && prev.id !== project.id && (
@@ -109,19 +189,6 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
           )
         }
       </div>
-
-      {
-        d.relatedWriting.length > 0 && (
-          <div class="related">
-            <span class="s-meta">related writing</span>
-            {d.relatedWriting.map((slug) => (
-              <a class="s-meta" href={`${base}/studio/writing/${slug}/`}>
-                {slug.replace(/-/g, ' ')}
-              </a>
-            ))}
-          </div>
-        )
-      }
     </aside>
 
     <div class="stage">
@@ -132,6 +199,15 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
       ) : isModular && d.layoutMode !== 'image-first' ? (
         <div class="mdx-body">
           <Content components={studioBlocks} />
+        </div>
+      ) : d.collageMode === 'custom' && customTiles.length > 0 ? (
+        <div class="custom-collage" style={collageStyle}>
+          {customTiles.map((tile) => (
+            <figure class="custom-tile" style={`--tile-row:${tile.row};--tile-column:${tile.column};--tile-row-span:${tile.rowSpan};--tile-column-span:${tile.columnSpan};`}>
+              {tile.type === 'image' && tile.image ? <img src={tile.image.src} alt={tile.name} width={tile.image.width} height={tile.image.height} loading="lazy" /> : tile.video ? <video src={tile.video} poster={d.videoPoster?.src} controls playsinline preload="metadata" /> : tile.embed ? <div class="youtube-embed youtube-embed--square"><iframe src={tile.embed} title={`${d.title} — ${tile.name}`} loading="lazy" allow="encrypted-media; picture-in-picture; web-share" allowfullscreen /></div> : null}
+              <figcaption class="s-meta">{tile.name}</figcaption>
+            </figure>
+          ))}
         </div>
       ) : d.previewType === 'text' ? (
         <blockquote class="text-piece">
@@ -148,11 +224,32 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
         <div
           class:list={[
             'gallery',
+            d.collageMode === 'masonry' ? 'gallery--masonry' : '',
             uniqGallery.length === 1 ? 'gallery--one' : uniqGallery.length === 2 ? 'gallery--two' : d.galleryColumns === '2' ? 'gallery--two-col' : 'gallery--three',
+            uniqGallery.length === 1 && d.singleImageWidthPx ? 'gallery--scaled-single' : '',
+            d.collageColumns ? 'gallery--explicit-columns' : '',
+            uniqGallery.length > 1 && uniqGallery.length <= (d.collageColumns ?? (d.galleryColumns === '2' ? 2 : 3)) ? 'gallery--single-row' : '',
             uniqGallery.length > 2 && uniqGallery.length < 9 ? 'gallery--centered' : '',
           ]}
+          style={collageStyle}
         >
-          <Lightbox images={lightboxImages} title={d.title} />
+          {d.collageMode === 'masonry' ? (
+            <div class="masonry-grid" style={`--masonry-columns:${masonryColumnCount}`}>
+              {masonryColumns.map((column) => (
+                <div class="masonry-column">
+                  {column.map((item) => item.kind === 'image' ? (
+                    <figure class="masonry-item">
+                      <img src={item.image.src} alt={captionBySrc.get(item.image.src) || `${d.title}, image ${item.index + 1}`} width={item.image.width} height={item.image.height} loading={item.index === 0 ? 'eager' : 'lazy'} />
+                    </figure>
+                  ) : (
+                    <div class="youtube-embed masonry-item" style={`--embed-aspect:${item.ratio}`}>
+                      <iframe src={item.video.src} title={item.video.title} loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; web-share" allowfullscreen />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : <Lightbox images={lightboxImages} title={d.title} />}
         </div>
       ) : (
         img && (
@@ -163,12 +260,13 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
             height={img.height}
             loading="eager"
             fetchpriority="high"
+            style={d.singleImageWidthPx ? `width:min(100%, ${d.singleImageWidthPx}px)` : undefined}
           />
         )
       )}
       {uniqGallery.length > 0 && d.galleryCaption && <p class="gallery-caption s-meta">{d.galleryCaption}</p>}
 
-      {youtubeEmbeds.length > 0 && (
+      {youtubeEmbeds.length > 0 && d.collageMode !== 'masonry' && (
         <div class="youtube-list">
           {youtubeEmbeds.map((video) => (
             <div class="youtube-embed">
@@ -199,7 +297,55 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
       )}
     </div>
   </article>
+  <dialog class="project-zoom" aria-label={`${d.title} image viewer`}>
+    <img alt="" />
+    <div class="project-zoom-controls">
+      <button type="button" data-previous aria-label="Previous image">←</button>
+      <span class="s-meta" data-count></span>
+      <button type="button" data-next aria-label="Next image">→</button>
+      <button type="button" data-close aria-label="Close image">✕</button>
+    </div>
+  </dialog>
 </StudioLayout>
+
+<script>
+  const stage = document.querySelector<HTMLElement>('.project .stage');
+  const viewer = document.querySelector<HTMLDialogElement>('.project-zoom');
+  const viewerImage = viewer?.querySelector<HTMLImageElement>('img');
+  const images = Array.from(stage?.querySelectorAll<HTMLImageElement>('img') ?? [])
+    .filter((image) => !image.closest('.thumb') && !image.closest('dialog'));
+  let shown = 0;
+  const show = (index: number) => {
+    if (!viewer || !viewerImage || images.length === 0) return;
+    shown = (index + images.length) % images.length;
+    const source = images[shown];
+    viewerImage.src = source.currentSrc || source.src;
+    viewerImage.alt = source.alt;
+    const count = viewer.querySelector<HTMLElement>('[data-count]');
+    if (count) count.textContent = `${shown + 1} / ${images.length}`;
+    if (!viewer.open) viewer.showModal();
+  };
+  images.forEach((image, index) => {
+    image.tabIndex = 0;
+    image.setAttribute('role', 'button');
+    image.setAttribute('aria-label', `Open image ${index + 1} of ${images.length}`);
+    image.addEventListener('click', () => show(index));
+    image.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        show(index);
+      }
+    });
+  });
+  viewer?.querySelector('[data-previous]')?.addEventListener('click', () => show(shown - 1));
+  viewer?.querySelector('[data-next]')?.addEventListener('click', () => show(shown + 1));
+  viewer?.querySelector('[data-close]')?.addEventListener('click', () => viewer.close());
+  viewer?.addEventListener('click', (event) => { if (event.target === viewer) viewer.close(); });
+  viewer?.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowLeft') show(shown - 1);
+    if (event.key === 'ArrowRight') show(shown + 1);
+  });
+</script>
 
 <style>
   .project {
@@ -210,9 +356,10 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     justify-content: center;
     width: 100%;
     max-width: min(1680px, 94vw);
-    min-height: min(760px, calc(100dvh - 120px));
+    height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 12px);
+    min-height: 0;
     margin: 0 auto;
-    padding-bottom: 32px;
+    overflow: hidden;
   }
 
   /* left rail */
@@ -221,12 +368,15 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     flex-direction: column;
     gap: 0;
     padding-top: 34px;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .crumbs {
     display: flex;
     flex-wrap: wrap;
     gap: 8px 18px;
+    margin-bottom: 4px;
   }
 
   .crumbs a {
@@ -243,7 +393,6 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     font-weight: 500;
     font-size: clamp(28px, 2.8vw, 40px);
     line-height: 1.05;
-    text-transform: uppercase;
     letter-spacing: 0.015em;
     margin: 30px 0 0;
   }
@@ -270,6 +419,22 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     color: var(--s-ink);
   }
 
+  .meta-clusters dd { line-height: 1.7; }
+  .meta-clusters a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: color-mix(in srgb, currentColor 38%, transparent);
+    transition: text-decoration-color 150ms ease, text-decoration-thickness 150ms ease;
+  }
+
+  .meta-clusters a:hover,
+  .meta-clusters a:focus-visible {
+    text-decoration-color: currentColor;
+    text-decoration-thickness: 2px;
+  }
+
   .note {
     font-family: var(--s-mono);
     font-size: 12.5px;
@@ -277,12 +442,17 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     color: var(--s-grey);
     margin: 26px 0 0;
     max-width: 40ch;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     white-space: pre-line;
   }
 
   .pn {
     margin-top: auto;
-    padding-top: 40px;
+    padding-top: 24px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -304,7 +474,7 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
   }
 
   .related {
-    margin-top: 26px;
+    margin-top: 22px;
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -313,20 +483,32 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
 
   .related a {
     color: var(--s-grey);
-    text-decoration: none;
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-color: color-mix(in srgb, var(--s-grey) 52%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
   }
 
   .related a:hover {
-    text-decoration: underline;
+    text-decoration-style: double;
+    text-decoration-color: var(--s-ink);
+    text-decoration-thickness: 2px;
   }
 
   /* right stage — artwork centred, fits the viewport */
   .stage {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    /* Tall work starts at the top. Centering a taller-than-viewport flex item
+       overflowed equally above and below the stage, cutting off its first row. */
+    justify-content: flex-start;
     padding: 24px 0;
     min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
   }
 
   .stage > img,
@@ -339,6 +521,8 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     margin: 0 auto;
     box-shadow: 0 3px 30px rgba(20, 18, 10, 0.13);
   }
+
+  .stage > img { background: #fff; }
 
   .youtube-list {
     display: grid;
@@ -355,11 +539,14 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
   .youtube-embed {
     position: relative;
     overflow: hidden;
-    width: 100%;
-    aspect-ratio: 16 / 9;
+    width: min(100%, 720px);
+    aspect-ratio: 1;
+    margin-inline: auto;
     background: #111;
     box-shadow: 0 3px 30px rgba(20, 18, 10, 0.13);
   }
+
+  .youtube-embed--square { aspect-ratio: 1; width: min(100%, 720px); margin-inline: auto; }
 
   .youtube-embed iframe {
     position: absolute;
@@ -414,14 +601,19 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
   .gallery {
     display: grid;
     gap: clamp(14px, 1.5vw, 22px);
-    margin-top: 26px;
+    margin-top: 0;
     align-content: start;
     align-items: start;
-    width: 100%;
+    width: min(100%, var(--collage-width, 100%));
+    margin-inline: auto;
+    justify-self: center;
+    align-self: center;
+    grid-template-columns: repeat(var(--collage-columns, 3), minmax(0, 1fr));
   }
 
   .gallery--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .gallery--two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gallery--explicit-columns { grid-template-columns: repeat(var(--collage-columns), minmax(0, 1fr)); }
 
   .gallery--centered {
     align-content: center;
@@ -434,27 +626,59 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
   .gallery :global(.thumb img) {
     width: 100%;
     height: auto;
-    object-fit: contain;
+    max-height: none;
     display: block;
+    background: #fff;
   }
 
   /* 2-image case: side by side, full width */
   .gallery--two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
+    width: min(100%, var(--collage-width, 100%));
   }
 
   .gallery--one {
     grid-template-columns: 1fr;
-    width: min(100%, 720px);
+    width: min(100%, var(--single-image-width, 720px));
     margin-inline: auto;
   }
+
+  .gallery--masonry :global(.thumbs),
+  .gallery--masonry .masonry-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--masonry-columns, var(--collage-columns, 3)), minmax(0, 1fr));
+    gap: clamp(14px, 1.5vw, 22px);
+  }
+  .gallery--masonry .masonry-column { display: flex; flex-direction: column; gap: clamp(14px, 1.5vw, 22px); min-width: 0; }
+  .gallery--masonry :global(.thumb),
+  .gallery--masonry .masonry-item { display: block; width: 100%; margin: 0; }
+  .gallery--masonry { display: block; }
+  .gallery--masonry :global(.thumb img),
+  .gallery--masonry .masonry-item img { display: block; width: 100%; height: auto; background: #fff; box-shadow: 0 3px 30px rgba(20,18,10,.13); }
+  .gallery--masonry .youtube-embed { width: 100%; margin: 0; aspect-ratio: var(--embed-aspect, 1); }
+  .gallery--one { max-height: calc(100dvh - 190px); }
+  .gallery--one :global(.thumb img) { max-height: calc(100dvh - 190px); width: auto; max-width: 100%; margin-inline: auto; box-shadow: 0 3px 30px rgba(20,18,10,.13); }
+  .gallery--single-row :global(.thumb img) { max-height: calc(100dvh - 220px); width: auto; max-width: 100%; margin-inline: auto; object-fit: contain; }
+
+  .custom-collage {
+    display: grid;
+    grid-template-columns: var(--collage-tracks, repeat(var(--collage-columns, 2), minmax(0, 1fr)));
+    grid-template-rows: var(--collage-rows, none);
+    grid-auto-rows: minmax(0, auto);
+    gap: clamp(14px, 1.5vw, 22px);
+    width: min(100%, var(--collage-width, 100%));
+    margin: auto;
+  }
+  .custom-tile { grid-row: var(--tile-row) / span var(--tile-row-span); grid-column: var(--tile-column) / span var(--tile-column-span); min-width: 0; margin: 0; }
+  .custom-tile img, .custom-tile video { display: block; width: 100%; height: auto; background: #fff; box-shadow: 0 3px 30px rgba(20,18,10,.13); }
+  .custom-tile figcaption { margin-top: 6px; }
 
   .gallery--one :global(.thumb img) {
     height: auto;
     max-height: min(80vh, 720px);
     object-fit: contain;
   }
+  .gallery--scaled-single :global(.thumb img) { width: 100%; }
 
   .gallery-caption { margin: 10px 0 0; }
 
@@ -496,6 +720,24 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     object-fit: contain;
   }
 
+  /* The lead image in writing-first pieces shares the text's left edge. */
+  .mdx-body > :global(.place:first-child) img { margin-left: 0; margin-right: 0; }
+
+  .project--viewport-image .mdx-body :global(img) {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: calc(100dvh - 190px);
+    margin-inline: auto;
+  }
+
+  .custom-tile img, .mdx-body :global(img), .stage > img, .gallery--masonry .masonry-item img { cursor: zoom-in; }
+  .project-zoom { border: 0; padding: 0; background: #151515; color: #fff; max-width: 94vw; max-height: 94dvh; }
+  .project-zoom::backdrop { background: rgba(0,0,0,.8); }
+  .project-zoom > img { display: block; width: auto; height: auto; max-width: 94vw; max-height: calc(94dvh - 56px); object-fit: contain; background: #fff; }
+  .project-zoom-controls { display: flex; justify-content: center; align-items: center; gap: 14px; padding: 8px; }
+  .project-zoom-controls button { font: inherit; color: inherit; background: transparent; border: 1px solid #777; padding: 5px 10px; cursor: pointer; }
+
   .mdx-body :global(.pair) { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   .mdx-body :global(.pair img) { max-height: none; width: 100%; }
   .mdx-body :global(figure) { margin: 0; }
@@ -509,6 +751,8 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
     .project {
       grid-template-columns: 1fr;
       min-height: 0;
+      height: auto;
+      overflow: visible;
       gap: 28px;
     }
 
@@ -522,6 +766,7 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
 
     .stage {
       padding: 0;
+      overflow: visible;
     }
 
     .stage > img,
@@ -539,6 +784,13 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
       max-width: none !important;
     }
 
+    .gallery { width: 100% !important; }
+    .gallery--masonry :global(.thumbs), .gallery--masonry .masonry-grid { grid-template-columns: 1fr; }
+    .custom-collage { display: flex; flex-direction: column; width: 100%; }
+    .custom-tile { width: 100%; }
+    .gallery--one { max-height: none; }
+    .gallery--one :global(.thumb img) { max-height: 72vh; }
+
     .gallery :global(.thumb img) {
       height: auto;
     }
@@ -550,4 +802,9 @@ const youtubeEmbeds = d.youtubeUrls.map((url, index) => ({
       width: 100%;
     }
   }
+
+  .project--photography { color: #f1f0eb; }
+  .project--photography .rail :global(a), .project--photography .rail h1,
+  .project--photography .meta dd, .project--photography .pn a { color: #f1f0eb; }
+  .project--photography .note, .project--photography .meta dt { color: #b9b7b1; }
 </style>

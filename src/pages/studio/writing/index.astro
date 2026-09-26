@@ -63,12 +63,18 @@ const formatDate = (date: Date) =>
 
 <style>
   .pad-intro {
+    position: sticky;
+    top: calc(var(--studio-header-height) + 8px);
+    z-index: 20;
+    align-self: start;
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 24px;
     margin: 0 0 18px;
     padding-bottom: 14px;
+    background: var(--s-bg);
+    border-bottom: 1px solid var(--s-line);
   }
 
   .pad-intro p {

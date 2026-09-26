@@ -6,11 +6,11 @@ import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
 import { clusterOrder } from '../../../data/clusterOrder';
 import { projectOrder } from '../../../data/projectOrder';
-import { isFeaturedWriting, sortWritingEntries } from '../../../data/writingOrder';
+import { sortWritingEntries } from '../../../data/writingOrder';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const allClusters = await getCollection('clusters');
-const clusters = [...allClusters].sort((a, b) => {
+const clusters = [...allClusters].filter((cluster) => cluster.id !== 'photography').sort((a, b) => {
   const ia = clusterOrder.indexOf(a.id);
   const ib = clusterOrder.indexOf(b.id);
   if (ia !== -1 || ib !== -1) {
@@ -61,7 +61,7 @@ const projectMedia = (project: (typeof projects)[number]) =>
   project.data.thumbnail ?? project.data.hero ?? project.data.gallery[0] ?? project.data.videoPoster;
 
 const clusterItems = await Promise.all(
-  clusters.slice(0, 9).map(async (cluster) => {
+  clusters.slice(0, 6).map(async (cluster) => {
     const related = projects.filter((project) => project.data.clusters.includes(cluster.id));
     const order = projectOrder[cluster.id] ?? [];
     related.sort((a, b) => {
@@ -75,21 +75,28 @@ const clusterItems = await Promise.all(
       const featured = Number(b.data.featured) - Number(a.data.featured);
       return featured || a.id.localeCompare(b.id);
     });
-    const media = cluster.data.previewImage ?? related.map(projectMedia).find(Boolean);
-    const preview = media ? await getImage({ src: media, width: 112 }) : undefined;
-    return { cluster, count: related.length, preview };
+    const media = [cluster.data.previewImage, ...related.map(projectMedia)].filter(Boolean);
+    const unique = media.filter((image, index) => media.findIndex((other) => other?.src === image?.src) === index).slice(0, 4);
+    const previews = await Promise.all(unique.map((image) => getImage({ src: image!, width: 112, height: 112, fit: 'cover' })));
+    return { cluster, previews };
   }),
 );
 
 const projectItems = await Promise.all(
-  projects.slice(0, 5).map(async (project) => {
+  projects.slice(0, 9).map(async (project) => {
     const media = projectMedia(project);
     return {
       project,
-      preview: media ? await getImage({ src: media, width: 144 }) : undefined,
+      preview: media ? await getImage({ src: media, width: 112 }) : undefined,
     };
   }),
 );
+
+const photographyProjects = projects.filter((project) => project.data.clusters.includes('photography')).slice(0, 4);
+const photographyItems = await Promise.all(photographyProjects.map(async (project) => {
+  const media = project.data.gallery[0] ?? project.data.hero ?? project.data.thumbnail;
+  return { project, preview: media ? await getImage({ src: media, width: 180 }) : undefined };
+}));
 
 const writingItems = await Promise.all(
   writing.slice(0, 4).map(async (entry) => {
@@ -123,17 +130,18 @@ const formatDate = (date: Date) =>
     <section class="panel clusters-panel" aria-labelledby="clusters-heading">
       <header class="panel-head">
         <div>
-          <span class="number s-meta">01</span>
-          <h2 id="clusters-heading">Clusters</h2>
+          <h2 id="clusters-heading"><a href={sectionLink('/studio/index/clusters/')}>Clusters</a></h2>
         </div>
       </header>
       <div class="cluster-grid">
-        {clusterItems.map(({ cluster, count, preview }) => (
+        {clusterItems.map(({ cluster, previews }) => (
           <a class="cluster" href={sectionLink(`/studio/clusters/${cluster.id}/`)}>
-            {preview && <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="eager" />}
+            <span class:list={['cluster-gallery', `count-${previews.length}`]}>
+              {previews.map((preview) => <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="eager" />)}
+            </span>
             <span class="cluster-copy">
               <strong>{cluster.data.title}</strong>
-              <small class="s-meta">{count} {count === 1 ? 'project' : 'projects'}</small>
+              <small class="s-meta">{cluster.data.description}</small>
             </span>
           </a>
         ))}
@@ -144,32 +152,42 @@ const formatDate = (date: Date) =>
     <section class="panel projects-panel" aria-labelledby="projects-heading">
       <header class="panel-head">
         <div>
-          <span class="number s-meta">02</span>
-          <h2 id="projects-heading">Projects</h2>
+          <h2 id="projects-heading"><a href={sectionLink('/studio/index/projects/')}>Projects</a></h2>
         </div>
       </header>
-      <div class="rows project-rows">
-        {projectItems.map(({ project, preview }, index) => (
-          <a class="project-row" href={sectionLink(`/studio/projects/${project.id}/`)}>
-            <span class="row-index s-meta">{String(index + 1).padStart(2, '0')}</span>
-            {preview ? (
-              <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="eager" />
-            ) : <span class="image-placeholder" aria-hidden="true" />}
-            <span class="row-title">{project.data.title}</span>
-            <span class="row-detail s-meta">{project.data.medium.join(' · ')}</span>
-            <time class="s-meta">{project.data.year}</time>
-            <span aria-hidden="true">→</span>
+      <div class="project-grid">
+        {projectItems.map(({ project, preview }) => (
+          <a class="project-tile" href={sectionLink(`/studio/projects/${project.id}/`)}>
+            {preview ? <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="eager" /> : <span class="project-placeholder" aria-hidden="true" />}
+            <span class="project-caption">
+              <strong>{project.data.title}</strong>
+              <time class="s-meta">{project.data.year}</time>
+            </span>
           </a>
         ))}
       </div>
       <a class="panel-more s-meta" href={sectionLink('/studio/index/projects/')}>view all projects <span aria-hidden="true">↗</span></a>
     </section>
 
+    <section class="panel photography-panel" aria-labelledby="photography-heading">
+      <header class="panel-head"><div><h2 id="photography-heading"><a href={sectionLink('/studio/photography/')}>Photography</a></h2></div></header>
+      <div class="photography-grid">
+        {photographyItems.map(({ project, preview }) => (
+          <a class="photography-tile" href={sectionLink(`/studio/projects/${project.id}/`)}>
+            <span class="photography-media">
+              {preview ? <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="lazy" /> : <span class="project-placeholder" aria-hidden="true" />}
+            </span>
+            <span class="project-caption"><strong>{project.data.title}</strong><time class="s-meta">{project.data.year}</time></span>
+          </a>
+        ))}
+      </div>
+      <a class="panel-more s-meta" href={sectionLink('/studio/photography/')}>view photography <span aria-hidden="true">↗</span></a>
+    </section>
+
     <section class="panel writing-panel" aria-labelledby="writing-heading">
       <header class="panel-head">
         <div>
-          <span class="number s-meta">03</span>
-          <h2 id="writing-heading">{studioConfig.writingLabel}</h2>
+          <h2 id="writing-heading"><a href={sectionLink('/studio/writing/')}>{studioConfig.writingLabel}</a></h2>
         </div>
       </header>
       <div class="writing-grid">
@@ -177,8 +195,8 @@ const formatDate = (date: Date) =>
           <a class="writing-card" href={sectionLink(`/studio/writing/${entry.id}/`)}>
             {preview && <img src={preview.src} alt="" width={preview.attributes.width} height={preview.attributes.height} loading="lazy" />}
             <span class="writing-copy">
-              <span class="s-meta">{entry.data.type} · {formatDate(entry.data.date)}{isFeaturedWriting(entry.id) ? ' · featured' : ''}</span>
               <strong>{entry.data.title ?? entry.id.replace(/-/g, ' ')}</strong>
+              <span class="s-meta">{formatDate(entry.data.date)}</span>
               {entry.data.excerpt && <small>{entry.data.excerpt}</small>}
             </span>
           </a>
@@ -187,11 +205,10 @@ const formatDate = (date: Date) =>
       <a class="panel-more s-meta" href={sectionLink('/studio/writing/')}>view all writing <span aria-hidden="true">↗</span></a>
     </section>
 
-    <section class="panel reading-panel" aria-labelledby="reading-heading">
+    <section class="panel reading-panel" aria-labelledby="bookshelves-heading">
       <header class="panel-head">
         <div>
-          <span class="number s-meta">04</span>
-          <h2 id="reading-heading">Reading</h2>
+          <h2 id="bookshelves-heading"><a href={sectionLink('/studio/bookshelf/')}>Bookshelves</a></h2>
         </div>
       </header>
       <div class="book-grid">
@@ -205,7 +222,7 @@ const formatDate = (date: Date) =>
           </a>
         ))}
       </div>
-      <a class="panel-more s-meta" href={sectionLink('/studio/bookshelf/')}>view all reading <span aria-hidden="true">↗</span></a>
+      <a class="panel-more s-meta" href={sectionLink('/studio/bookshelf/')}>view all bookshelves <span aria-hidden="true">↗</span></a>
     </section>
   </div>
 </StudioLayout>
@@ -213,17 +230,18 @@ const formatDate = (date: Date) =>
 <style>
   .directory {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.18fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     grid-template-rows: auto auto auto;
     align-content: start;
-    column-gap: clamp(12px, 1.5vh, 18px);
-    row-gap: clamp(24px, 3vh, 36px);
+    column-gap: clamp(40px, 5vw, 80px);
+    row-gap: clamp(30px, 4.2vh, 48px);
     min-height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 56px);
     padding: 0 0 8px;
   }
 
   .page-title {
     grid-column: 1 / -1;
+    order: -1;
     margin: 0;
     font-family: var(--s-serif);
     font-size: var(--studio-page-title-size);
@@ -231,10 +249,20 @@ const formatDate = (date: Date) =>
     line-height: 1;
   }
 
+  .clusters-panel, .projects-panel { grid-column: span 3; order: 0; }
+  .writing-panel, .photography-panel { grid-column: span 2; }
+  .reading-panel { grid-column: span 2; }
+  .writing-panel { order: 1; }
+  .photography-panel { order: 2; }
+  .reading-panel { order: 3; }
+
   .panel {
+    display: flex;
+    flex-direction: column;
     min-width: 0;
     overflow: hidden;
-    border-top: 1px solid var(--s-ink);
+    border-top: 0;
+    border-bottom: 0;
   }
 
   .panel-head,
@@ -246,13 +274,13 @@ const formatDate = (date: Date) =>
   .panel-head {
     justify-content: space-between;
     gap: 20px;
-    min-height: 48px;
-    padding: 8px 0 7px;
-    border-bottom: 1px solid var(--s-line);
+    min-height: 42px;
+    padding: 0 0 7px;
+    /* Keep the section divisions visible on the light index background. */
+    border-bottom: 1px solid #bdbbb4;
   }
 
   .panel-head > div { gap: 12px; }
-  .number { color: var(--s-faint); }
 
   h2 {
     margin: 0;
@@ -262,39 +290,68 @@ const formatDate = (date: Date) =>
     line-height: 1;
   }
 
+  h2 a { color: inherit; text-decoration: none; }
+  h2 a:hover { text-decoration: underline; text-underline-offset: 4px; }
+
   .panel-more {
     display: block;
     width: max-content;
-    margin: 8px 0 0 auto;
+    margin: auto 0 0 auto;
+    padding-top: 8px;
     color: var(--s-ink);
     text-decoration: none;
   }
   .panel-more:hover { text-decoration: underline; text-underline-offset: 3px; }
 
-  .cluster-grid {
+  .cluster-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); column-gap:clamp(14px,1.7vw,26px); row-gap:8px; }
+  .project-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); column-gap:clamp(12px,1.7vw,26px); }
+
+  .photography-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(8px, 1vw, 14px);
+    padding-top: 10px;
   }
 
+  .project-tile,
   .cluster {
     display: flex;
     min-width: 0;
     min-height: 66px;
     align-items: center;
     gap: 9px;
-    padding: 6px 8px 6px 0;
-    border-bottom: 1px solid var(--s-line);
+    padding: 6px 0;
     color: inherit;
     text-decoration: none;
   }
 
-  .cluster img {
+  .photography-tile { display: block; min-width: 0; color: inherit; text-decoration: none; }
+  .photography-media { display: block; overflow: hidden; aspect-ratio: 1; background: #fff; }
+  .photography-media img, .photography-media .project-placeholder { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .project-tile img,
+  .project-tile .project-placeholder {
+    display: block;
     width: 52px;
     height: 52px;
     flex: 0 0 auto;
     object-fit: cover;
-    filter: saturate(.82);
   }
+  .project-tile img, .photography-tile img { background: #fff; }
+  .project-placeholder { background: var(--s-line); }
+  .project-caption { display: flex; min-width: 0; flex-direction: column; }
+  .project-caption strong { overflow: hidden; font-family: var(--s-serif); font-size: 16px; font-weight: 500; line-height: 1.05; text-overflow: ellipsis; white-space: nowrap; }
+  .project-caption time { margin-top: 3px; font-size: 9px; }
+  .photography-tile .project-caption { display: flex; flex-direction: row; justify-content: space-between; align-items: baseline; gap: 5px; margin-top: 5px; }
+  .photography-tile .project-caption strong { font-size: 11px; }
+  .photography-tile .project-caption time { flex: 0 0 auto; margin-top: 0; font-size: 8px; }
+  .project-tile:hover strong, .photography-tile:hover strong { text-decoration: underline; }
+
+  .cluster { padding-right: 0; align-items:flex-start; }
+  .cluster-gallery { display:grid; grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(2,1fr); gap:3px; width:58px; height:58px; flex:0 0 auto; overflow:hidden; background:#fff; }
+  .cluster-gallery.count-1 { display:block; }
+  .cluster-gallery.count-2 { grid-template-rows:1fr; }
+  .cluster-gallery.count-3 img:first-child { grid-row:1 / -1; }
+  .cluster-gallery img { display:block; width:100%; height:100%; object-fit:cover; background:#fff; filter:saturate(.82); }
 
   .cluster-copy, .book > span, .writing-copy { min-width: 0; }
   .cluster strong, .cluster small, .book strong, .book small { display: block; }
@@ -307,7 +364,9 @@ const formatDate = (date: Date) =>
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .cluster small { margin-top: 3px; font-size: 9px; }
+  .cluster small { display:-webkit-box; margin-top: 5px; overflow:hidden; font-size:9px; line-height:1.35; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; }
+
+  .writing-panel, .photography-panel, .reading-panel { margin-top:clamp(24px,3.8vh,42px); }
   .cluster:hover strong, .row-title:hover { text-decoration: underline; }
 
   .rows { display: grid; }
@@ -317,7 +376,6 @@ const formatDate = (date: Date) =>
     align-items: center;
     gap: 10px;
     min-height: 42px;
-    border-bottom: 1px solid var(--s-line);
     color: inherit;
     text-decoration: none;
   }
@@ -349,7 +407,6 @@ const formatDate = (date: Date) =>
     height: 86px;
     gap: 10px;
     padding: 9px 0;
-    border-bottom: 1px solid var(--s-line);
     color: inherit;
     text-decoration: none;
   }
@@ -415,17 +472,20 @@ const formatDate = (date: Date) =>
   }
 
   @media (max-width: 1000px) {
-    .directory { grid-template-columns: 1fr; grid-template-rows: auto; min-height: 0; }
-    .page-title { grid-column: 1; }
-    .writing-panel, .reading-panel { margin-top: 0; }
+    .directory { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; min-height: 0; }
+    .page-title { grid-column: 1 / -1; }
+    .clusters-panel, .projects-panel { grid-column: span 1; }
+    .writing-panel, .photography-panel, .reading-panel { grid-column: span 1; margin-top: 0; }
     .panel { overflow: visible; }
   }
 
   @media (max-width: 620px) {
-    .directory { gap: 32px; padding-top: 18px; }
-    .cluster-grid { grid-template-columns: 1fr; }
+    .directory { grid-template-columns: 1fr; gap: 32px; padding-top: 18px; }
+    .clusters-panel, .projects-panel, .writing-panel, .photography-panel, .reading-panel { grid-column: 1; }
+    .cluster-grid, .project-grid { grid-template-columns: 1fr; }
     .project-row { grid-template-columns: 20px 48px minmax(0, 1fr) 34px 14px; }
     .project-row .row-detail { display: none; }
+    .photography-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .writing-grid { grid-template-columns: 1fr; }
     .writing-card { height: auto; min-height: 86px; }
     .book-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }

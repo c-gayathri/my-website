@@ -21,11 +21,25 @@ export const studioConfig = {
 
   // Ambient drift. Deterministic per cluster; positions always return to
   // their authored anchor. Amplified while a cluster is hovered.
-  drift: { periodSeconds: 14, hoverMultiplier: 2.2, parallax: 6 },
+  // A little more visible at rest so the constellation feels alive without
+  // competing with the stronger pointer and hover interactions.
+  drift: { periodSeconds: 11.5, hoverMultiplier: 2.2, parallax: 6 },
 
   // Seeded shuffling for deterministic default layouts. Change the seed to
-  // try a different automatic arrangement; keep the one you like.
+  // try a different automatic arrangement; then run
+  // `npm run constellation:update` to verify and record it.
   layoutSeed: 19,
+
+  // Automatic anchor generation. The generous edge margin leaves ambient
+  // stars beyond the outermost collages; focusRadius spreads the first six
+  // clusters without changing their size or the camera's zoom limits.
+  constellationLayout: {
+    worldScale: 1.38,
+    minimumWorldScale: 1.35,
+    edgeMarginFraction: 0.065,
+    focusRadiusFraction: 0.29,
+    collisionGap: 185,
+  },
 
   // Curated hover palette (used in order per cluster hash unless the
   // cluster specifies hoverColor). Chosen so white type stays readable.
@@ -77,10 +91,11 @@ export function generateClusterAnchors(
   const baseW = studioConfig.world.width;
   const baseH = studioConfig.world.height;
   const n = clusters.length || 10;
-  const scale = Math.sqrt(n / 6) * 1.25;
-  const worldWidth = baseW * Math.max(1.35, scale);
-  const worldHeight = baseH * Math.max(1.35, scale);
-  const padding = 90;
+  const layout = studioConfig.constellationLayout;
+  const scale = Math.sqrt(n / 6) * layout.worldScale;
+  const worldWidth = baseW * Math.max(layout.minimumWorldScale, scale);
+  const worldHeight = baseH * Math.max(layout.minimumWorldScale, scale);
+  const edgePadding = Math.max(160, Math.min(worldWidth, worldHeight) * layout.edgeMarginFraction);
 
   const placed: Array<ClusterAnchor & { height: number }> = [];
   const result: Record<string, ClusterAnchor> = {};
@@ -117,12 +132,15 @@ export function generateClusterAnchors(
       if (isFocus) {
         // Central window for focus clusters — larger disc to avoid crowding
         const angle = random() * Math.PI * 2;
-        const r = random() * Math.min(worldWidth, worldHeight) * 0.30;
+        // Avoid the crowded bullseye: use an annulus, with a small seeded
+        // wobble, rather than allowing several anchors to pile at radius 0.
+        const focusRadius = Math.min(worldWidth, worldHeight) * layout.focusRadiusFraction;
+        const r = focusRadius * (0.28 + random() * 0.72);
         x = centerX + Math.cos(angle) * r;
         y = centerY + Math.sin(angle) * r;
         // Clamp inside world
-        x = Math.max(width / 2 + padding, Math.min(worldWidth - width / 2 - padding, x));
-        y = Math.max(height / 2 + padding, Math.min(worldHeight - height / 2 - padding, y));
+        x = Math.max(width / 2 + edgePadding, Math.min(worldWidth - width / 2 - edgePadding, x));
+        y = Math.max(height / 2 + edgePadding, Math.min(worldHeight - height / 2 - edgePadding, y));
       } else {
         // Outer rings: radius grows with order index
         const ring = Math.floor((idx - 6) / 3) + 1; // 3 per ring
@@ -133,15 +151,15 @@ export function generateClusterAnchors(
         x = centerX + Math.cos(angle) * r;
         y = centerY + Math.sin(angle) * r;
         // Clamp inside world
-        x = Math.max(width / 2 + padding, Math.min(worldWidth - width / 2 - padding, x));
-        y = Math.max(height / 2 + padding, Math.min(worldHeight - height / 2 - padding, y));
+        x = Math.max(width / 2 + edgePadding, Math.min(worldWidth - width / 2 - edgePadding, x));
+        y = Math.max(height / 2 + edgePadding, Math.min(worldHeight - height / 2 - edgePadding, y));
       }
 
       const candidate = { x, y, width };
       const collides = placed.some(
         (other) =>
-          Math.abs(candidate.x - other.x) < (width + other.width) / 2 + padding &&
-          Math.abs(candidate.y - other.y) < (height + other.height) / 2 + padding,
+          Math.abs(candidate.x - other.x) < (width + other.width) / 2 + layout.collisionGap &&
+          Math.abs(candidate.y - other.y) < (height + other.height) / 2 + layout.collisionGap,
       );
       if (collides) continue;
       const clearance = placed.length

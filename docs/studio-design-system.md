@@ -27,8 +27,9 @@ do not casually redesign them.
 - Marks are **nodes**: every star/dot drifts constantly on its own two sines;
   lines join drifted node positions with breaks/joints (hand-drawn feel).
   No arcs, no lattices, no orbital rings.
-- Cursor: marks near the cursor are **pushed in the direction of cursor
-  movement** (proximity-weighted, capped) and relax slowly back.
+- Cursor: marks in the narrow region the cursor has **already crossed** are
+  pulled in its direction (trail-weighted, capped) and relax slowly back;
+  marks ahead of the cursor do not move.
 - Hover: camera zooms to the cluster; other clusters fully removed; whole
   field turns white; violent pointillist twinkle (spawn/despawn) + line
   shimmer; info block anchored beside the cluster; header text turns white;
@@ -41,6 +42,15 @@ do not casually redesign them.
   **focus** and **map** legible above the field. Focus restores the authored
   framing; map reveals the whole world.
 - Debug: `/studio/?hover=<cluster-id>` and `/studio/?view=map`.
+
+### Regenerating the constellation
+
+The automatic layout is reproducible. Change `layoutSeed` in
+`src/data/studioConfig.ts`, then run `npm run constellation:update`. The same
+seed, cluster order, titles, and descriptions always produce the same anchor
+layout. The command writes `src/data/constellationMeta.json` and fails if the
+ambient star field no longer extends beyond every cluster. Keep the generated
+metadata with the chosen seed so a future cluster addition can be audited.
 
 ## Cluster pages
 

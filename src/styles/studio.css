@@ -20,6 +20,14 @@
   --studio-page-title-size: clamp(40px, 4vw, 54px);
 }
 
+.studio-photo-theme {
+  --s-bg: #202124;
+  --s-ink: #f3f3f1;
+  --s-grey: #bbbdbf;
+  --s-faint: #8f9295;
+  --s-line: #494c50;
+}
+
 .studio * {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--s-grey) 68%, transparent) transparent;

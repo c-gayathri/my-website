@@ -29,8 +29,7 @@
   transition: color 0.45s ease;
 }
 
-/* global field fades out on hover so only the loud local constellation
-   (1-2 clusters beside the collage) remains visible on the colour bg */
+/* During hover, keep only the local animated constellation beside the collage. */
 .field-group {
   transition: opacity 0.4s ease;
 }
@@ -46,8 +45,6 @@
   transition: opacity 0.4s ease;
 }
 
-/* hide the old full-world tiny-star twinkle on hover — the loud local
-   cluster provides the violent twinkle instead */
 .constellation.hovered .twinkle-layer {
   opacity: 0;
 }
@@ -77,6 +74,7 @@
 
 .constellation.hovered .star-layer {
   color: #fff;
+  z-index: 2;
 }
 
 .constellation.hovered .star-layer path.ln {
@@ -284,10 +282,10 @@
 
 @keyframes mark-breathe {
   from {
-    transform: scale(0.95);
+    transform: translate(-2px, -1px) scale(0.93);
   }
   to {
-    transform: scale(1.07);
+    transform: translate(2px, 2px) scale(1.09);
   }
 }
 
@@ -400,7 +398,7 @@ body[data-studio-hover] .hint {
 
 .hover-star-cluster .loud {
   transform-origin: 0 0;
-  animation: hover-star-twinkle 0.9s ease-in-out infinite alternate;
+  animation: hover-star-twinkle 1.15s ease-in-out infinite alternate;
 }
 
 .hover-star-cluster .loud:nth-child(2n) {
@@ -413,12 +411,12 @@ body[data-studio-hover] .hint {
 
 @keyframes hover-star-twinkle {
   from {
-    opacity: 0.15;
-    transform: scale(0.75);
+    opacity: 0.25;
+    transform: scale(0.82);
   }
   to {
     opacity: 1;
-    transform: scale(1.25);
+    transform: scale(1.14);
   }
 }
 

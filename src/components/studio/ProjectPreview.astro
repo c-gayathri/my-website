@@ -2,6 +2,7 @@
 // A project preview in its many possible shapes. Used on cluster pages and
 // the Index. Heterogeneous by design: not every project looks the same.
 import type { CollectionEntry } from 'astro:content';
+import { summaryParts as parseSummaryParts } from '../../utils/summaryLinks';
 
 interface Props {
   project: CollectionEntry<'projects'>;
@@ -14,10 +15,19 @@ const href = `${base}/studio/projects/${project.id}/`;
 
 const img = d.thumbnail ?? d.hero ?? d.gallery[0];
 const isVideo = d.previewType === 'video';
-const poster = d.videoPoster ?? d.hero ?? d.gallery[0];
+const youtubeId = (value: string) => {
+  try {
+    const url = new URL(value);
+    if (url.hostname.endsWith('youtu.be')) return url.pathname.split('/').filter(Boolean)[0];
+    return url.searchParams.get('v') ?? url.pathname.split('/').filter(Boolean).at(-1);
+  } catch { return undefined; }
+};
+const ytId = d.youtubeUrls.map(youtubeId).find(Boolean);
+const poster = d.thumbnail ?? d.videoPoster ?? d.hero ?? d.gallery[0] ?? (ytId ? { src: `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`, width: 480, height: 360 } : undefined);
 const mediumLine = [d.medium.join(', '), d.year ? String(d.year) : '']
   .filter(Boolean)
   .join(' · ');
+const summaryParts = d.summary ? parseSummaryParts(d.summary) : [];
 ---
 
 <article class:list={['preview', `type-${d.previewType}`]}>
@@ -48,7 +58,7 @@ const mediumLine = [d.medium.join(', '), d.year ? String(d.year) : '']
   <div class="caption">
     <a class="title" href={href}>{d.title}</a>
     {mediumLine && <span class="s-meta">{mediumLine}</span>}
-    {d.summary && <p class="summary">{d.summary}</p>}
+    {d.summary && <p class="summary">{summaryParts.map((part) => part.href ? <a href={part.href} target="_blank" rel="noopener noreferrer">{part.text}</a> : part.text)}</p>}
   </div>
 </article>
 
@@ -61,14 +71,20 @@ const mediumLine = [d.medium.join(', '), d.year ? String(d.year) : '']
   .media {
     display: block;
     position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
     color: inherit;
     text-decoration: none;
+    background: #fff;
   }
 
   img {
     width: 100%;
-    height: auto;
+    height: 100%;
     display: block;
+    background: #fff;
+    object-fit: cover;
+    box-shadow: 0 3px 30px rgba(20, 18, 10, 0.13);
   }
 
   /* video stills get a small, quiet play indicator */
@@ -146,4 +162,5 @@ const mediumLine = [d.medium.join(', '), d.year ? String(d.year) : '']
     max-width: 42ch;
     white-space: pre-line;
   }
+  .summary a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 </style>

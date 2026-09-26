@@ -27,6 +27,8 @@ interface Props {
   section?: string;
   /** constellation hint text, shown beside the STUDIO. wordmark */
   hint?: string;
+  /** Dark gallery treatment for Photography and its project pages. */
+  dark?: boolean;
 }
 
 const {
@@ -36,6 +38,7 @@ const {
   slim = false,
   section,
   hint,
+  dark = false,
 } = Astro.props;
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
@@ -48,7 +51,7 @@ const elsewhere = Object.entries(externalLinks).filter(
 ---
 
 <BaseLayout title={title} description={description}>
-  <div class:list={['studio', { 'studio-full': fullBleed, 'studio-detail': detail, 'studio-viewport-fit': viewportFit, 'studio-writing-pad': route === '/studio/writing' }]}>
+  <div class:list={['studio', { 'studio-full': fullBleed, 'studio-detail': detail, 'studio-viewport-fit': viewportFit, 'studio-writing-pad': route === '/studio/writing', 'studio-photo-theme': dark }]}>
     <StudioNav variant={fullBleed ? 'full' : 'compact'} section={section} />
     <main class:list={['studio-main', { 's-page': !fullBleed }]}>
       <slot />
