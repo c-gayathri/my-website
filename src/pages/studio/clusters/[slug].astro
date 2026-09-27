@@ -65,7 +65,7 @@ const cards = projects;
 <StudioLayout title={`${cluster.data.title} — Studio`}>
   <article class="cluster-page">
     <aside class="cluster-sidebar">
-      <nav class="crumbs s-meta" aria-label="Breadcrumb">
+      <nav class="crumbs top-crumbs s-meta" aria-label="Breadcrumb">
         <a href={`${base}/studio/`}>← constellation</a>
         <a href={`${base}/studio/index/clusters/`}>← all clusters</a>
       </nav>
@@ -76,6 +76,10 @@ const cards = projects;
       </div>
       <p class="desc">{cluster.data.description}</p>
       </header>
+      <nav class="crumbs bottom-crumbs s-meta" aria-label="More cluster navigation">
+        <a href={`${base}/studio/`}>← constellation</a>
+        <a href={`${base}/studio/index/clusters/`}>← all clusters</a>
+      </nav>
     </aside>
 
     <section class="cards" aria-label={`${cluster.data.title} projects`}>
@@ -85,12 +89,13 @@ const cards = projects;
           const href = `${base}/studio/projects/${p.id}/`;
           const previews = galleryPreview(p);
           const previewImageCount = galleryPreviewImages(p).length;
+          const youtubePosterOnly = previewImageCount === 0 && d.youtubeUrls[0]?.includes('/shorts/');
           const previewText = parseSummaryParts(d.summary ?? d.textExcerpt ?? '')
             .map((part) => part.text)
             .join('')
             .trim();
           return (
-            <article class:list={['card', `type-${d.previewType}`]}>
+            <article class:list={['card', `type-${d.previewType}`, { 'video-short': youtubePosterOnly }]}>
               <h2>
                 <a href={href}>{d.title}</a>
                 {(order.includes(p.id) || d.featured || d.clusterPreview?.featured) && <span class="featured-mark" title="Featured project" aria-label="Featured project">★ featured</span>}
@@ -149,6 +154,10 @@ const cards = projects;
     text-decoration: underline;
   }
 
+  .top-crumbs { display:none; }
+
+  .bottom-crumbs { display:flex; gap:8px 18px; margin-top:18px; }
+
   .cluster-sidebar {
     min-width: 0;
     container-type: inline-size;
@@ -181,6 +190,8 @@ const cards = projects;
     max-width:36ch;
     margin:18px 0 0;
   }
+
+  .cluster-sidebar .bottom-crumbs { margin-top:18px; }
 
   .cards {
     display: grid;
@@ -263,6 +274,8 @@ const cards = projects;
     box-shadow: 0 3px 30px rgba(20, 18, 10, 0.13);
   }
 
+  .video-short .media img { transform:scale(1.8); }
+
   .mini-grid {
     width: 100%;
     height: 100%;
@@ -324,12 +337,13 @@ const cards = projects;
   }
 
   @media (min-width: 901px) {
-    .cluster-page { display:grid; grid-template-columns:minmax(220px, .52fr) minmax(0, 2.48fr); column-gap:clamp(34px,3.5vw,60px); height:calc(100dvh - var(--studio-header-height) - var(--studio-footer-height)); overflow:hidden; }
-    .cluster-sidebar { padding-top:0; }
-    .cards { overflow-y:auto; overscroll-behavior:contain; padding:24px 4px 32px 0; scrollbar-gutter:stable; }
+    .cluster-page { display:grid; grid-template-columns:minmax(220px, .52fr) minmax(0, 2.48fr); grid-template-rows:minmax(0,1fr) auto; column-gap:clamp(34px,3.5vw,60px); height:calc(100dvh - var(--studio-header-height) - var(--studio-footer-height)); overflow:hidden; }
+    .cluster-sidebar { grid-row:1; padding-top:0; }
+    .cards { grid-column:2; grid-row:1; overflow-y:auto; overscroll-behavior:contain; padding:24px 4px 32px 0; scrollbar-gutter:stable; }
   }
 
   @media (max-width: 900px) {
+    .top-crumbs { display:flex; }
     .cards { grid-template-columns: repeat(2, 1fr); column-gap: 28px; }
     .cards { margin-top: 22px; }
 

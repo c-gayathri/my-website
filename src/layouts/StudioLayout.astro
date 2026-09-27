@@ -51,7 +51,7 @@ const elsewhere = Object.entries(externalLinks).filter(
 ---
 
 <BaseLayout title={title} description={description}>
-  <div class:list={['studio', { 'studio-full': fullBleed, 'studio-detail': detail, 'studio-viewport-fit': viewportFit, 'studio-writing-pad': route === '/studio/writing', 'studio-photo-theme': dark }]}>
+  <div class:list={['studio', { 'studio-full': fullBleed, 'studio-detail': detail, 'studio-viewport-fit': viewportFit, 'studio-writing-pad': route === '/studio/writing', 'studio-photo-theme': dark, 'studio-scroll-footer': route === '/studio/photography' || route === '/studio/index/clusters' || route === '/studio/index/projects' }]}>
     <StudioNav variant={fullBleed ? 'full' : 'compact'} section={section} />
     <main class:list={['studio-main', { 's-page': !fullBleed }]}>
       <slot />
@@ -72,7 +72,7 @@ const elsewhere = Object.entries(externalLinks).filter(
           ))
         }
         {externalLinks.blog && (
-          <a class="s-link" href={externalLinks.blog} rel="external" target="_blank">WordPress ↗</a>
+          <a class="s-link" href={externalLinks.blog} rel="external" target="_blank">wordpress ↗</a>
         )}
       </div>
       <span class="footer-right s-meta">© {new Date().getFullYear()} {studioConfig.name}</span>
@@ -103,6 +103,10 @@ const elsewhere = Object.entries(externalLinks).filter(
 
   .studio-viewport-fit .studio-main {
     flex: 1;
+  }
+
+  .studio-viewport-fit .studio-main.s-page {
+    padding-bottom: calc(var(--studio-footer-height) + 4px);
   }
 
   /* full-bleed pages: the canvas owns the viewport; the footer overlays it */
@@ -136,9 +140,7 @@ const elsewhere = Object.entries(externalLinks).filter(
   }
 
   .studio-footer {
-    /* Listing and detail pages keep the footer in normal document flow. The
-       full-bleed constellation page opts into the overlay treatment below. */
-    position: static;
+    position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
@@ -161,6 +163,11 @@ const elsewhere = Object.entries(externalLinks).filter(
 
   .studio-writing-pad .studio-footer {
     position: static;
+  }
+
+  @media (min-width: 901px) {
+    .studio-scroll-footer .studio-footer { position: static; }
+    .studio-scroll-footer .studio-main.s-page { padding-bottom: 32px; }
   }
 
   .footer-left {
@@ -231,5 +238,10 @@ const elsewhere = Object.entries(externalLinks).filter(
     }
 
     .elsewhere .s-link { font-size: 10px; }
+  }
+
+  @media (max-width: 640px) {
+    .studio-full .studio-main { padding-bottom: 0; }
+    .studio-full .studio-footer { display: none; }
   }
 </style>

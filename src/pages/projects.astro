@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import ProjectEntry from '../components/ProjectEntry.astro';
+import { profile } from '../data/profile';
+import { projects } from '../data/projects';
+import '../styles/research.css';
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+---
+<BaseLayout title={`Research Projects — ${profile.name}`} description={`Research projects by ${profile.name}.`}>
+  <main class="all-content">
+    <SiteHeader />
+    <a href={`${base}/`} class="back">← home</a>
+    <h1 class="section-label">Research Projects</h1>
+    {projects.map((project) => <ProjectEntry project={project} />)}
+  </main>
+</BaseLayout>
+<style>
+  .all-content { max-width:1100px; margin:auto; padding:0 clamp(24px,4vw,72px) 72px; }
+  .back { display:inline-block; margin:24px 0; }
+  h1 { font-family:inherit; font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; margin:0 0 28px; color:var(--ink); }
+  :global(.entry-venue .text-link) { color:var(--ink-faint); text-decoration-color:var(--rule-strong); text-underline-offset:3px; }
+</style>

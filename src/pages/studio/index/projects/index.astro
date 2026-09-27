@@ -49,15 +49,17 @@ const items = await Promise.all(projects.map(async (project) => {
   const d = project.data;
   const youtubeId = project.data.youtubeUrls[0]?.match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/)([A-Za-z0-9_-]{11})/)?.[1];
   const youtubePoster = youtubeId ? { src: `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`, width: 480, height: 360, remote: true } : undefined;
+  const shortVideo = project.data.youtubeUrls[0]?.includes('/shorts/');
   const candidates = projectPreviewImages(d);
   const unique = candidates.filter((image, index) => candidates.findIndex((other) => other?.src === image?.src) === index).slice(0, 4);
   const previews = await Promise.all(unique.map(async (media) => {
     const image = await getImage({ src: media!, width: 420, height: 420, fit: 'cover' });
     return { src: image.src, width: image.attributes.width, height: image.attributes.height };
   }));
-  if (!previews.length && youtubePoster) previews.push(youtubePoster);
+  const youtubeOnlyPreview = previews.length === 0 && Boolean(youtubePoster);
+  if (youtubeOnlyPreview && youtubePoster) previews.push(youtubePoster);
   const previewText = summaryParts(d.summary ?? d.textExcerpt ?? '').map((part) => part.text).join('').trim();
-  return { project, previews, previewText };
+  return { project, previews, previewText, shortVideo: shortVideo && youtubeOnlyPreview };
 }));
 ---
 
@@ -68,8 +70,8 @@ const items = await Promise.all(projects.map(async (project) => {
       <a class="s-link" href={`${base}/studio/index/`}>← index</a>
     </header>
     <div class="project-grid">
-      {items.map(({ project, previews, previewText }) => (
-        <article class:list={['project', { 'has-writing': Boolean(previewText) }]}>
+      {items.map(({ project, previews, previewText, shortVideo }) => (
+        <article class:list={['project', { 'has-writing': Boolean(previewText), 'video-short': shortVideo }]}>
           <a class="image-frame" style={`--project-image-background:${project.data.whiteBackground ? '#fff' : 'transparent'}`} href={`${base}/studio/projects/${project.id}/`} aria-label={`Open ${project.data.title}`}>
             {previews.length === 1 ? (
               <img src={previews[0].src} alt="" width={previews[0].width} height={previews[0].height} loading="lazy" />
@@ -109,6 +111,7 @@ const items = await Promise.all(projects.map(async (project) => {
   .project { min-width:0; padding-bottom:12px; border-bottom:1px solid var(--s-line); }
   .image-frame { position:relative; display:block; aspect-ratio:1; overflow:hidden; background:#fff; color:inherit; text-decoration:none; }
   .image-frame img { display:block; width:100%; height:100%; object-fit:cover; background:var(--project-image-background,#fff); }
+  .video-short .image-frame img { transform:scale(1.8); }
   .placeholder { display:block; width:100%; height:100%; background:#fff; }
   .text-preview { display:grid; place-items:center; width:100%; height:100%; padding:clamp(18px,2.4vw,32px); box-sizing:border-box; border:1px solid var(--s-line); font-family:var(--s-serif); font-size:clamp(16px,1.25vw,20px); line-height:1.45; }
   .preview-grid { display:grid; grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(2,1fr); gap:5px; width:100%; height:100%; }

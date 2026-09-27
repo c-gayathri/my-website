@@ -84,30 +84,10 @@ const influences = await Promise.all(
         </div>
       </section>
 
-      <section class="band-section elsewhere" aria-labelledby="elsewhere-title">
-        <header class="section-head">
-          <h2 id="elsewhere-title">Elsewhere</h2>
-        </header>
-        <div class="link-list">
-          {elsewhere.map(([label, href]) => (
-            <a href={href} target="_blank" rel="external">
-              <span>{label}</span><span aria-hidden="true">↗</span>
-            </a>
-          ))}
-          {externalLinks.blog && (
-            <a href={externalLinks.blog} target="_blank" rel="external">
-              <span>WordPress</span><span aria-hidden="true">↗</span>
-            </a>
-          )}
-          <a href={`${base}${externalLinks.research}`} target="_blank">
-            <span>research</span><span aria-hidden="true">↗</span>
-          </a>
-        </div>
-      </section>
 
       <section class="band-section influence-section" aria-labelledby="influences-title" data-influences>
         <header class="section-head">
-          <h2 id="influences-title">Inspired by</h2>
+          <h2 id="influences-title">People I admire</h2>
         </header>
         <div class="influence-grid">
           {influences.map((influence) => (
@@ -127,6 +107,27 @@ const influences = await Promise.all(
           ))}
         </div>
       </section>
+
+      <section class="band-section elsewhere" aria-labelledby="elsewhere-title">
+        <header class="section-head">
+          <h2 id="elsewhere-title">Elsewhere</h2>
+        </header>
+        <div class="link-list">
+          {elsewhere.map(([label, href]) => (
+            <a href={href} target="_blank" rel="external">
+              <span>{label}</span><span aria-hidden="true">↗</span>
+            </a>
+          ))}
+          {externalLinks.blog && (
+            <a href={externalLinks.blog} target="_blank" rel="external">
+              <span>wordpress</span><span aria-hidden="true">↗</span>
+            </a>
+          )}
+          <a href={`${base}${externalLinks.research}`} target="_blank">
+            <span>research</span><span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </section>
     </div>
   </article>
 </StudioLayout>
@@ -135,7 +136,7 @@ const influences = await Promise.all(
   .about {
     display: grid;
     grid-template-rows: auto minmax(0, 1.15fr) minmax(190px, .85fr);
-    height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 40px);
+    height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 48px);
     min-height: 0;
     padding: 0 0 8px;
   }
@@ -186,7 +187,7 @@ const influences = await Promise.all(
     max-width: 34ch;
     margin: 0;
     font-family: var(--s-serif);
-    font-size: clamp(26px, 2.65vw, 40px);
+    font-size: clamp(25px, 2.4vw, 36px);
     font-weight: 500;
     line-height: 1.04;
     overflow-wrap: anywhere;
@@ -203,7 +204,7 @@ const influences = await Promise.all(
     margin: 0;
     color: var(--s-grey);
     font-family: var(--s-mono);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.55;
     max-width: 80ch;
     overflow-wrap: anywhere;
@@ -211,7 +212,7 @@ const influences = await Promise.all(
 
   .band {
     display: grid;
-    grid-template-columns: 1.15fr 1fr .62fr 1.65fr;
+    grid-template-columns: 1.15fr 1fr 1.65fr .62fr;
     min-height: 0;
   }
 

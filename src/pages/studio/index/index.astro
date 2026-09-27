@@ -9,6 +9,7 @@ import { projectOrder } from '../../../data/projectOrder';
 import { sortWritingEntries } from '../../../data/writingOrder';
 import { sortPhotographyProjects } from '../../../data/photographyOrder';
 import { bookFavouriteOrder } from '../../../data/bookFavouriteOrder';
+import { hiddenPhotographyProjectIds } from '../../../data/hiddenPhotographyProjects';
 import { projectPreviewImages } from '../../../utils/projectPreviewImages';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
@@ -105,7 +106,7 @@ const projectItems = await Promise.all(
 );
 
 const photographyProjects = sortPhotographyProjects(
-  allProjects.filter((project) => project.data.clusters.includes('photography')),
+  allProjects.filter((project) => project.data.clusters.includes('photography') && !hiddenPhotographyProjectIds.has(project.id)),
 ).slice(0, 4);
 const photographyItems = await Promise.all(photographyProjects.map(async (project) => {
   const media = project.data.gallery[0] ?? project.data.hero ?? project.data.thumbnail;
@@ -500,6 +501,14 @@ const formatDate = (date: Date) =>
     .photography-grid { padding-top: 5px; }
     .writing-panel, .photography-panel, .reading-panel { margin-top: 3px; }
     .panel-more { padding-top: 4px; }
+  }
+
+  @media (min-width: 1001px) and (max-height: 760px) {
+    .directory { row-gap: 10px; }
+    .panel-head { min-height: 34px; padding-top: 5px; padding-bottom: 4px; }
+    .cluster { min-height: 54px; padding-block: 3px; }
+    .cluster-gallery { width: 48px; height: 48px; }
+    .cluster small { -webkit-line-clamp: 2; line-clamp: 2; }
   }
 
   @media (max-width: 620px) {

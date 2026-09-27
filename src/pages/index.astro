@@ -14,6 +14,7 @@ import '../styles/research.css';
 
 import { profile, outsideResearch } from '../data/profile';
 import { projects } from '../data/projects';
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 
 const { name } = profile;
 const year = new Date().getFullYear();
@@ -36,6 +37,7 @@ const year = new Date().getFullYear();
         <div class="projects-scroll">
           {projects.map((project) => <ProjectEntry project={project} />)}
         </div>
+        <a class="view-all" href={`${base}/projects/`}>View all projects <span aria-hidden="true">↗</span></a>
       </section>
     </div>
 
@@ -104,6 +106,8 @@ const year = new Date().getFullYear();
     scrollbar-width: thin;
     scrollbar-color: var(--rule-strong) transparent;
   }
+
+  .view-all { display:block; width:max-content; margin:8px 12px 0 auto; font-size:12px; }
 
   /* Education | News | outside-research band */
   .band {
@@ -188,10 +192,29 @@ const year = new Date().getFullYear();
       overflow: visible;
     }
 
+    .projects-scroll :global(.entry-desc p:first-child) {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+    }
+
+    .projects-scroll :global(.entry-desc p + p) { display: none; }
+
     .projects-scroll {
-      overflow: visible;
-      padding-right: 0;
-      padding-bottom: 0;
+      height: clamp(280px, 40vh, 360px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding-right: 10px;
+      padding-bottom: 8px;
+      scrollbar-width: thin;
+    }
+
+    .news-panel :global(.news-scroll) {
+      height: 240px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
     }
 
     .band {

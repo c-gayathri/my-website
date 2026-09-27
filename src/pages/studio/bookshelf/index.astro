@@ -107,7 +107,7 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
           </aside>
 
           <div class="shelf-wrap">
-            <div class="covers" aria-label={`${label} books`}>
+            <div class="covers" id={`covers-${key}`} aria-label={`${label} books`}>
               {list.map((book, bookIndex) => {
                 const hasReview = Boolean(book.body?.trim());
                 const color = palette[(yearIndex * 3 + bookIndex) % palette.length];
@@ -139,6 +139,11 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
               })}
             </div>
           </div>
+          {list.length > 6 && (
+            <button class="view-all-books s-link" type="button" data-expand-books aria-expanded="false" aria-controls={`covers-${key}`}>
+              View all books <span aria-hidden="true">↓</span>
+            </button>
+          )}
         </section>
       ))
     }
@@ -161,6 +166,18 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   const syncHash = () => selectYear(location.hash.replace(/^#y/, ''), false);
   window.addEventListener('hashchange', syncHash);
   syncHash();
+
+
+  const bookExpandButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-expand-books]')];
+  bookExpandButtons.forEach((button) => button.addEventListener('click', () => {
+    const panel = button.closest<HTMLElement>('[data-year-panel]');
+    if (!panel) return;
+    const expanded = panel.classList.toggle('books-expanded');
+    button.setAttribute('aria-expanded', String(expanded));
+    button.innerHTML = expanded
+      ? 'Show fewer books <span aria-hidden="true">↑</span>'
+      : 'View all books <span aria-hidden="true">↓</span>';
+  }));
 
   const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)');
   const cards = [...document.querySelectorAll<HTMLElement>('[data-book-card]')];
@@ -189,8 +206,8 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
 
 <style>
   .bookshelf-page {
-    height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 24px);
-    min-height: 540px;
+    height: calc(100dvh - var(--studio-header-height) - var(--studio-footer-height) - 44px);
+    min-height: 0;
     overflow: hidden;
   }
 
@@ -218,7 +235,7 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
     gap: clamp(24px, 4vw, 64px);
     align-items: start;
     margin-top: 0;
-    height: calc(100% - 92px);
+    height: calc(100% - 110px);
   }
 
   .rail { position: sticky; left: 0; display:flex; flex-direction:column; height:100%; min-height:0; padding-top:3px; }
@@ -229,8 +246,8 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   .fill { height: 100%; background: var(--s-ink); }
   .favourites { display:flex; flex-direction:column; flex:1 1 auto; min-height:0; margin-top:28px; }
   .favourites h2 { margin:0 0 12px; font-family:var(--s-serif); font-size:22px; font-weight:500; }
-  .favourite-covers { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); justify-items:center; align-items:start; align-content:start; flex:1 1 auto; min-height:0; gap:clamp(7px, 1vh, 12px); max-height:none; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding:0 4px 8px 0; }
-  .favourite-covers a { display:block; width:min(100%, 112px); height:auto; min-width:0; aspect-ratio:2 / 3; }
+  .favourite-covers { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); justify-items:center; align-items:start; align-content:start; flex:1 1 auto; min-height:0; gap:clamp(4px, .8vh, 7px); max-height:none; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding:0 4px 8px 0; }
+  .favourite-covers a { display:block; width:min(100%, 56px); height:auto; min-width:0; aspect-ratio:2 / 3; }
   :global(.favourite-covers img) { display:block; width:100%; height:100%; object-fit:cover; background:var(--s-bg); box-shadow:0 2px 8px rgba(20,18,10,.12); }
   .favourite-card { position:relative; overflow:hidden; isolation:isolate; box-shadow:0 3px 13px rgba(20,18,10,.16); transition:transform 180ms ease, box-shadow 180ms ease; }
   .favourite-card:hover, .favourite-card:focus-visible, .favourite-card[data-revealed] { transform:translateY(-3px) rotate(-.2deg); box-shadow:0 7px 18px rgba(20,18,10,.19); }
@@ -240,6 +257,7 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
   .favourite-author { margin-top:7px; font-family:var(--s-mono); font-size:8px; line-height:1.35; }
   @media (prefers-reduced-motion: reduce) { .favourite-card, .favourite-overlay { transition:none; } .favourite-card:hover, .favourite-card:focus-visible, .favourite-card[data-revealed] { transform:none; } }
   .goodreads-link { display:inline-block; margin-top:14px; }
+  .view-all-books { display:none; }
 
   .shelf-wrap {
     min-width: 0;
@@ -251,12 +269,12 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
 
   .covers {
     display: grid;
-    --cover-height: clamp(132px, calc((100dvh - var(--studio-header-height) - var(--studio-footer-height) - 150px) / 3), 182px);
+    --cover-height: clamp(116px, calc((100dvh - var(--studio-header-height) - var(--studio-footer-height) - 190px) / 3), 172px);
     --cover-width: calc(var(--cover-height) * .667);
     grid-template-rows: repeat(3, var(--cover-height));
     grid-auto-flow: column;
     grid-auto-columns: var(--cover-width);
-    gap: 10px 15px;
+    gap: clamp(15px, 2vh, 22px) 18px;
     width: max-content;
   }
 
@@ -326,13 +344,20 @@ const ratingOf = (rating?: number) => rating == null ? 'not rated' : `${rating} 
     .bookshelf-page { height: auto; min-height: 0; overflow: visible; }
     .shelf-intro { display: block; }
     .shelf-intro p:last-child { margin-top: 8px; }
-    .year { grid-template-columns: 1fr; gap: 18px; height: auto; }
-    .rail { position:static; display:block; height:auto; }
-    .favourites { display:block; min-height:0; }
+    .year { display:flex; flex-direction:column; gap:18px; height:auto; }
+    .rail { position:static; display:contents; height:auto; }
+    .rail-label { order:0; margin-bottom:0; }
+    .challenge-num { order:1; }
+    .bar { order:2; }
+    .shelf-wrap { order:3; max-height:370px; overflow:hidden; padding:3px 0 10px; }
+    .year.books-expanded .shelf-wrap { max-height:none; overflow:visible; }
+    .view-all-books { display:block; order:4; align-self:flex-start; margin:0 0 8px; padding:3px 0; border:0; border-bottom:1px solid currentColor; background:none; font:10px var(--s-mono); cursor:pointer; }
+    .favourites { display:block; order:5; min-height:0; margin-top:10px; }
+    .goodreads-link { order:6; }
     .favourite-covers { grid-template-columns:repeat(2,minmax(0,1fr)); flex:initial; min-height:0; overflow-y:auto; }
     .favourite-covers a { width:min(100%, 112px); height:auto; }
-    .covers { grid-template-rows: repeat(2, 184px); grid-auto-columns: 114px; }
-    .book-card { width: 114px; height: 171px; }
+    .covers { width:100%; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:none; grid-auto-flow:row; grid-auto-columns:auto; grid-auto-rows:auto; gap:14px 12px; }
+    .book-card { width:100%; height:auto; aspect-ratio:2 / 3; }
   }
 
   @media (hover: none), (pointer: coarse) {

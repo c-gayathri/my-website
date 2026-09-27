@@ -72,6 +72,8 @@ const fmt = (dt: Date) =>
 
 <style>
   .reading {
+    width:100%;
+    min-width:0;
     max-width: 760px;
     margin: 0 auto;
   }
@@ -134,8 +136,13 @@ const fmt = (dt: Date) =>
   }
 
   .prose {
+    min-width:0;
+    max-width:100%;
     margin-top: 30px;
+    overflow-wrap:anywhere;
   }
+
+  .prose :global(p) { min-width:0; max-width:100%; overflow-wrap:anywhere; }
 
   /* Raw markdown images in the body: Astro emits width/height attributes
      and the global reset only caps max-width, so without height:auto a
@@ -208,7 +215,9 @@ const fmt = (dt: Date) =>
 
   @media (max-width: 760px) {
     .reading {
+      width:100%;
       max-width: 680px;
+      overflow-x:clip;
     }
 
     .detail-head {
@@ -235,5 +244,7 @@ const fmt = (dt: Date) =>
     .layout-fragment .prose {
       padding-top: 10px;
     }
+
+    .layout-fragment .prose { font-size:15px; line-height:1.9; }
   }
 </style>

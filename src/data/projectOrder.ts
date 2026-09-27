@@ -122,7 +122,9 @@ export const projectOrder: Record<string, string[]> = {
   ],
   "animation": [
     "tirkhit-dha",
+    "takeoff",
     "desi-it-all",
+    "falling-heart",
     "bitch-coded",
     "lip-sticks",
   ],
@@ -142,6 +144,7 @@ export const projectOrder: Record<string, string[]> = {
     "zaroorat",
   ],
   "i-am-edgy-and-cool": [
+    "takeoff",
     "looping-eyes",
     "healing",
     "ribs-for-dinner",

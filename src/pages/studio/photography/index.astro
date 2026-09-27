@@ -4,10 +4,11 @@ import { getImage } from 'astro:assets';
 import StudioLayout from '../../../layouts/StudioLayout.astro';
 import { studioConfig } from '../../../data/studioConfig';
 import { photographyOrder, sortPhotographyProjects } from '../../../data/photographyOrder';
+import { hiddenPhotographyProjectIds } from '../../../data/hiddenPhotographyProjects';
 
 const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
 const projects = sortPhotographyProjects(
-  (await getCollection('projects')).filter((project) => project.data.clusters.includes('photography')),
+  (await getCollection('projects')).filter((project) => project.data.clusters.includes('photography') && !hiddenPhotographyProjectIds.has(project.id)),
 );
 const items = await Promise.all(projects.map(async (project) => {
   const firstPhoto = project.data.gallery[0] ?? project.data.hero ?? project.data.thumbnail;
@@ -65,5 +66,6 @@ const items = await Promise.all(projects.map(async (project) => {
   .photo-count { font-size: 9px; color: var(--s-grey); }
   @media (max-width: 1050px) { .photo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (max-width: 720px) { .photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 12px; } .heading { align-items: end; } }
+  @media (max-width: 720px) { .heading { display: block; } .heading-copy { justify-items: start; max-width: none; margin-top: 8px; text-align: left; } }
   @media (max-width: 420px) { .photo-grid { grid-template-columns: 1fr 1fr; } .title { font-size: 10px; } }
 </style>
