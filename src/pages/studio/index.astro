@@ -157,8 +157,11 @@ const data = await Promise.all(
       <div class="advice-card">
         <button class="advice-close" type="button" aria-label="Close">×</button>
         <h2 id="mobile-advice-title">Best viewed on a bigger screen</h2>
-        <p>The constellation is easier to explore on a larger screen. On your phone, try the Index for a straightforward list of clusters and projects.</p>
-        <a href={`${base}/studio/index/`}>open the index ↗</a>
+        <p>The constellation is best explored on a larger screen. On a smaller screen, try the Index for a list of clusters and projects that's easier to navigate.</p>
+        <div class="advice-actions">
+          <a href={`${base}/studio/index/`}>open the index ↗</a>
+          <button class="advice-continue" type="button">continue to constellation</button>
+        </div>
         <label class="advice-optout"><input type="checkbox" data-advice-optout /> don’t show me again this session</label>
       </div>
     </aside>
@@ -168,6 +171,7 @@ const data = await Promise.all(
 <script>
   const advice = document.querySelector<HTMLElement>('[data-mobile-advice]');
   const closeAdvice = advice?.querySelector<HTMLButtonElement>('.advice-close');
+  const continueAdvice = advice?.querySelector<HTMLButtonElement>('.advice-continue');
   const smallScreen = window.matchMedia('(max-width: 640px)');
   const skipAdviceKey = 'constellation-mobile-advice-skip-session';
   const shouldShowAdvice = () => !sessionStorage.getItem(skipAdviceKey);
@@ -182,6 +186,7 @@ const data = await Promise.all(
     else sessionStorage.removeItem(skipAdviceKey);
   });
   closeAdvice?.addEventListener('click', () => { if (advice) advice.hidden = true; });
+  continueAdvice?.addEventListener('click', () => { if (advice) advice.hidden = true; });
 </script>
 
 <style>
@@ -196,7 +201,8 @@ const data = await Promise.all(
   .advice-card { position:relative; max-width:380px; padding:28px; background:var(--s-bg); box-shadow:0 12px 40px rgba(0,0,0,.18); }
   .advice-card h2 { margin:0 24px 12px 0; font:500 26px/1.05 var(--s-serif); }
   .advice-card p { font:11px/1.65 var(--s-mono); color:var(--s-grey); }
-  .advice-card a { display:inline-block; margin-top:8px; font:10px var(--s-mono); }
+  .advice-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; margin-top:8px; }
+  .advice-card a, .advice-continue { display:inline-block; margin:0; padding:0; border:0; background:none; color:var(--s-ink); font:10px var(--s-mono); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
   .advice-optout { display:flex; align-items:center; gap:8px; margin-top:16px; font:10px/1.4 var(--s-mono); color:var(--s-grey); }
   .advice-optout input { margin:0; accent-color:var(--s-ink); }
   .advice-close { position:absolute; top:12px; right:14px; border:0; background:none; font-size:24px; cursor:pointer; }

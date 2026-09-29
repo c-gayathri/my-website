@@ -201,6 +201,8 @@ const books = defineCollection({
     author: z.string(),
     /** A local cover or a large public cover URL. */
     cover: z.union([image(), z.string().url()]),
+    /** Optional public-path rescue for an image whose processed asset is stale. */
+    coverFallback: z.string().startsWith('/').optional(),
     /** Others shelf entries may not have a recorded finish year. */
     yearRead: z.number().int().optional(),
     shelf: z.enum(['year', 'others']).default('year'),

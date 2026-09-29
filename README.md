@@ -265,7 +265,7 @@ featured: false
 ---
 ```
 
-`title`, `author`, and `cover` are required. Other schema fields include `yearRead`, `shelf` (`year`/`others`), `goodreadsShelf` (`read`/`to-read`), `coverLookup`, `rating` (0–5), `dateFinished`, `featured`, `recommended`, `excerpt`, and `goodreadsLink`. The Markdown body is the review. Goodreads exports or other private working data do not belong in the Git repository.
+`title`, `author`, and `cover` are required. `cover` accepts an imported local image or an absolute image URL. Optional `coverFallback` can point to a root-relative asset in `public/` when a processed image path needs a stable recovery URL (include the site's `/my-website` base prefix on this project). Other schema fields include `yearRead`, `shelf` (`year`/`others`), `goodreadsShelf` (`read`/`to-read`), `coverLookup`, `coverFallback`, `rating` (0–5), `dateFinished`, `featured`, `recommended`, `excerpt`, and `goodreadsLink`. The Markdown body is the review. Goodreads exports or other private working data do not belong in the Git repository.
 
 ### About and settings
 

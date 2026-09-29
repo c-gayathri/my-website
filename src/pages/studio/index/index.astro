@@ -229,7 +229,7 @@ const formatDate = (date: Date) =>
       <div class="book-grid">
         {readingItems.map(({ book, cover }) => (
           <a class="book" href={sectionLink(`/studio/bookshelf/${book.id}/`)}>
-            <BookCover cover={cover} title={book.data.title} author={book.data.author} alt="" width={120} height={180} loading="lazy" coverLookup={book.data.coverLookup} />
+            <BookCover cover={cover} title={book.data.title} author={book.data.author} alt="" width={120} height={180} loading="lazy" coverLookup={book.data.coverLookup} fallbackSrc={book.data.coverFallback} />
             <span>
               <strong>{book.data.title}</strong>
               <small class="s-meta">{book.data.author}</small>

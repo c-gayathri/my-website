@@ -12,6 +12,7 @@ interface Props {
   loading?: 'eager' | 'lazy';
   class?: string;
   coverLookup?: boolean;
+  fallbackSrc?: string;
 }
 
 const {
@@ -24,6 +25,7 @@ const {
   loading = 'lazy',
   class: className,
   coverLookup = false,
+  fallbackSrc,
 } = Astro.props;
 const localCover = typeof cover !== 'string';
 const src = localCover ? cover.src : cover;
@@ -42,6 +44,7 @@ const imageHeight = height ?? (localCover ? cover.height : 900);
   data-cover-title={coverLookup ? title : undefined}
   data-cover-author={coverLookup ? author : undefined}
   data-cover-fallback={coverLookup ? placeholderCover.src : undefined}
+  data-cover-recovery={fallbackSrc}
 />
 
 <script>
@@ -83,13 +86,21 @@ const imageHeight = height ?? (localCover ? cover.height : 900);
     }
   };
 
-const coverImages = [...document.querySelectorAll<HTMLImageElement>('[data-book-cover-search]')];
+const coverImages = [...document.querySelectorAll<HTMLImageElement>('[data-book-cover-search], [data-cover-recovery]')];
   coverImages.forEach((img) => {
-    img.addEventListener('error', () => {
-      if (img.dataset.coverFallback) img.src = img.dataset.coverFallback;
-      void requestLargeCover(img);
-    }, { once: true });
+    const handleCoverError = () => {
+      if (img.dataset.coverRecovery && !img.dataset.coverRecoveryTried) {
+        img.dataset.coverRecoveryTried = 'true';
+        img.src = img.dataset.coverRecovery;
+        return;
+      }
+      if (img.dataset.coverFallback) {
+        img.src = img.dataset.coverFallback;
+        void requestLargeCover(img);
+      }
+    };
+    img.addEventListener('error', handleCoverError);
 
-    if (img.complete && img.naturalWidth === 0) void requestLargeCover(img);
+    if (img.complete && img.naturalWidth === 0) handleCoverError();
   });
 </script>

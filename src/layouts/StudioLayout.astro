@@ -121,6 +121,11 @@ const elsewhere = Object.entries(externalLinks).filter(
     background: transparent;
   }
 
+  @media (min-width: 901px) and (max-width: 1200px) {
+    .studio { --studio-header-height: 120px; }
+    .studio-full :global(.studio-nav) { background: var(--s-bg); }
+  }
+
   .studio-full .studio-main {
     flex: 1;
     min-height: 0;
