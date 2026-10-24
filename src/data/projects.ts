@@ -42,8 +42,9 @@ export const projects: Project[] = [
       },
     ],
     description: [
-      'I studied the optimisation dynamics of Direct Preference Optimisation for large language models under a simplified, architecture-motivated linear parameterisation. We establish linear convergence of gradient descent by characterising the Polyak–Łojasiewicz condition and smoothness of the DPO objective.',
-      'The results lead to concrete data-collection strategies: selecting prompts and comparisons that yield a well-conditioned embedding matrix and a low spectral ratio in the Laplacian of the comparison graph. We verify this on synthetic data and by instruction-tuning GPT-2 on the safe-RLHF dataset, and establish high-probability guarantees for maximum-likelihood estimation under the Bradley–Terry model, relating parameter-estimation error to the conditioning of the collected data.',
+      'I studied the optimisation dynamics of Direct Preference Optimisation for large language models under a simplified, architecture-motivated linear parameterisation. This is non-trivial because of the coupling of the prompt embeddings with the model weights. I establish linear convergence of gradient descent by characterising the Polyak–Łojasiewicz condition and smoothness of the DPO objective after decoupling the prompt embeddings from the model weights in the quadratic expression of the DPO loss hessian. This reveals that the convergence rate is controlled by the spectral properties of the embedding matrix and the Laplacian of the comparison graph.',
+      'We also extend the results to a generalised DPO where the sigmoid link function is replaced by a more general link function, and to the linear paired-comparison model. We also obtain high-probability finite-sample parameter-estimation guarantees for DPO. An updated version of the workshop paper with these extended results is currently under review at AISTATS 2027.',
+      'The results lead to concrete data-collection strategies for faster convergence and improved sample efficiency: selecting prompts and comparisons that yield a well-conditioned embedding matrix and a low spectral ratio in the Laplacian of the comparison graph. We verify this on synthetic data and by instruction-tuning GPT-2 on the safe-RLHF dataset.',
     ],
   },
   {
