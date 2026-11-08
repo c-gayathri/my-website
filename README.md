@@ -265,7 +265,7 @@ featured: false
 ---
 ```
 
-`title`, `author`, and `cover` are required. `cover` accepts an imported local image or an absolute image URL. Optional `coverFallback` can point to a root-relative asset in `public/` when a processed image path needs a stable recovery URL (include the site's `/my-website` base prefix on this project). Other schema fields include `yearRead`, `shelf` (`year`/`others`), `goodreadsShelf` (`read`/`to-read`), `coverLookup`, `coverFallback`, `rating` (0–5), `dateFinished`, `featured`, `recommended`, `excerpt`, and `goodreadsLink`. The Markdown body is the review. Goodreads exports or other private working data do not belong in the Git repository.
+`title`, `author`, and `cover` are required. `cover` accepts an imported local image or an absolute image URL. For a local cover stored in `src/assets/studio/covers/`, use a path relative to the book Markdown file, such as `../../assets/studio/covers/book.jpeg`; match the filename and extension exactly. Each book should have one Markdown entry: edit its existing entry if it is already in the catalog, rather than adding a second file for the same book. `npm run build` checks that local image paths resolve. Optional `coverFallback` can point to a root-relative asset in `public/` when a processed image path needs a stable recovery URL (include the site's `/my-website` base prefix on this project). Other schema fields include `yearRead`, `shelf` (`year`/`others`), `goodreadsShelf` (`read`/`to-read`), `coverLookup`, `coverFallback`, `rating` (0–5), `dateFinished`, `featured`, `recommended`, `excerpt`, and `goodreadsLink`. The Markdown body is the review. Goodreads exports or other private working data do not belong in the Git repository.
 
 ### About and settings
 

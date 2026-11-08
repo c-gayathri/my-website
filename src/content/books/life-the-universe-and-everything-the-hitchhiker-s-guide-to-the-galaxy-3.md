@@ -1,10 +1,13 @@
 ---
 demo: false
-title: "Life, the Universe and Everything (The Hitchhiker's Guide to the Galaxy, #3)"
+title: "Life, the Universe and Everything"
 author: "Douglas Adams"
-cover: "https://covers.openlibrary.org/b/isbn/9780345418906-L.jpg?default=false"
-shelf: others
+cover: "../../assets/studio/covers/hitchhikers-life-the-universe-and-everything.jpeg"
+shelf: year
 goodreadsShelf: read
-coverLookup: true
+yearRead: 2026
+rating: 5.0
+dateFinished: "18 Oct 2026"
+coverLookup: false
 goodreadsLink: "https://www.goodreads.com/book/show/8694"
 ---
